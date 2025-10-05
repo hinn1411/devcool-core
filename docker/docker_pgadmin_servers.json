@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Docker Compose",
+      "Group": "Servers",
+      "Port": 5432,
+      "Username": "hiengiang",
+      "Host": "devcool_postgres",
+      "SSLMode": "prefer",
+      "MaintenanceDB": "devcool",
+      "PassFile": "/tmp/pgpassfile"
+    }
+  }
+}
