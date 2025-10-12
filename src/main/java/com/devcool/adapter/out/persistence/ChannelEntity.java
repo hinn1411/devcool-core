@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import com.devcool.domain.model.enums.BoundaryType;
 import com.devcool.domain.model.enums.ChannelType;
@@ -12,7 +12,7 @@ import java.sql.Timestamp;
 @Table(name = "CHANNEL")
 @Getter
 @Setter
-public class Channel {
+public class ChannelEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -38,9 +38,9 @@ public class Channel {
 
     @ManyToOne
     @JoinColumn(name = "CREATOR_ID", referencedColumnName = "ID")
-    private AppUser creator;
+    private UserEntity creator;
 
     @ManyToOne
     @JoinColumn(name = "LEADER_ID", referencedColumnName = "ID")
-    private AppUser leader;
+    private UserEntity leader;
 }

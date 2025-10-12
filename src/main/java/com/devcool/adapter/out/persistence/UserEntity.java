@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import com.devcool.domain.model.enums.Role;
 import com.devcool.domain.model.enums.UserStatus;
@@ -12,7 +12,7 @@ import java.sql.Timestamp;
 @Table(name = "APP_USER") // Table mapping & constraints
 @Getter
 @Setter
-public class AppUser {
+public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "ID", nullable = false, unique = true)

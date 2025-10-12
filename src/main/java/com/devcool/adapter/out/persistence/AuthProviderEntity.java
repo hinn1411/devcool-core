@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import com.devcool.domain.model.enums.LoginType;
 import jakarta.persistence.*;
@@ -11,7 +11,7 @@ import java.sql.Timestamp;
 @Table(name = "AUTH_PROVIDER")
 @Getter
 @Setter
-public class AuthProvider {
+public class AuthProviderEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -29,5 +29,5 @@ public class AuthProvider {
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    private AppUser user;
+    private UserEntity user;
 }

@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.sql.Timestamp;
 @Table(name = "MEDIA")
 @Getter
 @Setter
-public class Media {
+public class MediaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -31,5 +31,5 @@ public class Media {
 
     @OneToOne
     @JoinColumn(name = "MESSAGE_ID", referencedColumnName = "ID")
-    private Message message;
+    private MessageEntity message;
 }

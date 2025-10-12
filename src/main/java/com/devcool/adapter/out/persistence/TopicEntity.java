@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.util.List;
 @Table(name = "TOPIC")
 @Getter
 @Setter
-public class Topic {
+public class TopicEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -26,5 +26,5 @@ public class Topic {
             joinColumns = @JoinColumn(name = "TOPIC_ID", referencedColumnName = "ID"),
             inverseJoinColumns = @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
     )
-    private List<Channel> channels;
+    private List<ChannelEntity> channels;
 }
