@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.sql.Timestamp;
 @Table(name = "FRIEND_REQUEST")
 @Getter
 @Setter
-public class FriendRequest {
+public class FriendRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -30,13 +30,13 @@ public class FriendRequest {
     // Create SENDER_ID column in FRIEND_REQUEST table
     // which reference to ID column of USER table
     @JoinColumn(name = "SENDER_ID", referencedColumnName = "ID")
-    private AppUser sender;
+    private UserEntity sender;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     // Create RECEIVER_ID column in FRIEND_REQUEST table
     // which reference to ID column of USER table
     @JoinColumn(name = "RECEIVER_ID", referencedColumnName = "ID")
-    private AppUser receiver;
+    private UserEntity receiver;
 
 
 }

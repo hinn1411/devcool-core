@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
@@ -12,7 +12,7 @@ import java.util.List;
 @Table(name = "MEMBER")
 @Getter
 @Setter
-public class Member {
+public class MemberEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "ID", nullable = false, unique = true)
@@ -34,5 +34,5 @@ public class Member {
             joinColumns = @JoinColumn(name = "MEMBER_ID", referencedColumnName = "ID"),
             inverseJoinColumns = @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
     )
-    private List<Channel> channels;
+    private List<ChannelEntity> channels;
 }

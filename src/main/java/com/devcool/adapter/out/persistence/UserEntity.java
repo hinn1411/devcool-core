@@ -1,4 +1,4 @@
-package com.devcool.domain.model;
+package com.devcool.adapter.out.persistence;
 
 import com.devcool.domain.model.enums.Role;
 import com.devcool.domain.model.enums.UserStatus;
@@ -6,13 +6,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Timestamp;
+import java.time.Instant;
 
 @Entity // Mark class as bean that can be persisted by Hibernate
 @Table(name = "APP_USER") // Table mapping & constraints
 @Getter
 @Setter
-public class AppUser {
+public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "ID", nullable = false, unique = true)
@@ -45,7 +45,7 @@ public class AppUser {
     private UserStatus status;
 
     @Column(name = "LAST_LOGIN_TIME")
-    private Timestamp lastLoginTime;
+    private Instant lastLoginTime;
 
 
 //    Bi-directional mapping
