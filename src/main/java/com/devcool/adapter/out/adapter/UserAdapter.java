@@ -1,36 +1,40 @@
 package com.devcool.adapter.out.adapter;
 
+import com.devcool.adapter.out.mapper.UserMapper;
 import com.devcool.adapter.out.persistence.UserEntity;
 import com.devcool.adapter.out.repository.UserRepository;
-import com.devcool.domain.port.out.UserRepositoryPort;
+import com.devcool.domain.model.User;
+import com.devcool.domain.port.out.UserPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 @Repository
-public class UserAdapter implements UserRepositoryPort {
+@RequiredArgsConstructor
+public class UserAdapter implements UserPort {
 
     private final UserRepository repo;
-
-    public UserAdapter(UserRepository repo) {
-        this.repo = repo;
-    }
+    private final UserMapper mapper;
 
     @Override
-    public Optional<UserEntity> findById(Integer id) {
+    public Optional<User> findById(Integer id) {
         return Optional.empty();
     }
 
     @Override
-    public Optional<UserEntity> findByEmail(String email) {
+    public Optional<User> findByEmail(String email) {
         return Optional.empty();
     }
 
     @Override
     @Transactional
-    public Integer save(UserEntity user) {
-        return 0;
+    public Integer save(User user) {
+        var userEntity = mapper.toEntity(user);
+        UserEntity savedUser = repo.save(userEntity);
+        return savedUser.getId();
+
     }
 
     @Override

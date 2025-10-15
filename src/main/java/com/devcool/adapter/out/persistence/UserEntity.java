@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Timestamp;
+import java.time.Instant;
 
 @Entity // Mark class as bean that can be persisted by Hibernate
 @Table(name = "APP_USER") // Table mapping & constraints
@@ -45,7 +45,7 @@ public class UserEntity {
     private UserStatus status;
 
     @Column(name = "LAST_LOGIN_TIME")
-    private Timestamp lastLoginTime;
+    private Instant lastLoginTime;
 
 
 //    Bi-directional mapping

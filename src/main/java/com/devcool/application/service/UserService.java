@@ -1,24 +1,28 @@
 package com.devcool.application.service;
 
 import com.devcool.adapter.out.persistence.UserEntity;
+import com.devcool.domain.model.User;
+import com.devcool.domain.model.enums.Role;
+import com.devcool.domain.model.enums.UserStatus;
 import com.devcool.domain.port.in.ChangePasswordUseCase;
 import com.devcool.domain.port.in.GetUserQuery;
 import com.devcool.domain.port.in.RegisterUserUseCase;
 import com.devcool.domain.port.in.command.RegisterUserCommand;
-import com.devcool.domain.port.out.UserRepositoryPort;
+import com.devcool.domain.port.out.UserPort;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
 public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePasswordUseCase {
 
-    private final UserRepositoryPort repo;
+    private final UserPort repo;
     private final PasswordEncoder encoder;
 
-    public UserService(UserRepositoryPort repo, PasswordEncoder encoder) {
+    public UserService(UserPort repo, PasswordEncoder encoder) {
         this.repo = repo;
         this.encoder = encoder;
     }
@@ -30,6 +34,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
     }
 
     @Override
+    @Transactional
     public Optional<UserEntity> byId(Integer id) {
         return Optional.empty();
     }
@@ -41,7 +46,21 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
 
     @Override
     @Transactional
-    public Integer register(RegisterUserCommand cmd) {
+    public Integer register(RegisterUserCommand command) {
+        User newUser = buildUser(command);
+        repo.save(newUser);
         return 0;
+    }
+
+    private User buildUser(RegisterUserCommand command) {
+        return User.builder()
+                .username(command.username())
+                .password(encoder.encode(command.rawPassword()))
+                .email(command.email())
+                .name(command.name())
+                .role(Role.USER)
+                .status(UserStatus.ACTIVE)
+                .lastLoginTime(Instant.now())
+                .build();
     }
 }

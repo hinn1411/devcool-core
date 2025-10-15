@@ -2,16 +2,22 @@ package com.devcool.domain.model;
 
 import com.devcool.domain.model.enums.Role;
 import com.devcool.domain.model.enums.UserStatus;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.Objects;
 
+@Getter
+@Setter
+@Builder
 public class User {
     private Integer id;
     private String username;
-    private String passwordHash; // store hashed password
+    private String password; // store hashed password
     private String email;
-    private boolean emailVerified;
+    private boolean isEmailVerified;
     private String name;
     private String avatar;
     private Role role;
@@ -21,8 +27,8 @@ public class User {
     // constructors, getters, behavior methods…
     // Consider invariants & methods like changePassword(), verifyEmail(), deactivate(), etc.
 
-    public void changePassword(String newHash) {
-        this.passwordHash = Objects.requireNonNull(newHash);
+    public void changePassword(String newPassword) {
+        this.password = Objects.requireNonNull(newPassword);
     }
 
     // getters/setters omitted for brevity
