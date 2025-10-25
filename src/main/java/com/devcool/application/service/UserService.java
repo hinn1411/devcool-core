@@ -1,17 +1,19 @@
 package com.devcool.application.service;
 
-import com.devcool.adapter.out.persistence.UserEntity;
-import com.devcool.domain.model.User;
-import com.devcool.domain.model.enums.Role;
-import com.devcool.domain.model.enums.UserStatus;
-import com.devcool.domain.port.in.ChangePasswordUseCase;
-import com.devcool.domain.port.in.GetUserQuery;
-import com.devcool.domain.port.in.RegisterUserUseCase;
-import com.devcool.domain.port.in.command.RegisterUserCommand;
-import com.devcool.domain.port.out.UserPort;
-import jakarta.transaction.Transactional;
+import com.devcool.domain.user.exception.EmailAlreadyUsedException;
+import com.devcool.domain.user.exception.UserNotFoundException;
+import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
+import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.model.enums.Role;
+import com.devcool.domain.user.model.enums.UserStatus;
+import com.devcool.domain.user.port.in.ChangePasswordUseCase;
+import com.devcool.domain.user.port.in.GetUserQuery;
+import com.devcool.domain.user.port.in.RegisterUserUseCase;
+import com.devcool.domain.user.port.in.command.RegisterUserCommand;
+import com.devcool.domain.user.port.out.UserPort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -19,11 +21,11 @@ import java.util.Optional;
 @Service
 public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePasswordUseCase {
 
-    private final UserPort repo;
+    private final UserPort userPort;
     private final PasswordEncoder encoder;
 
-    public UserService(UserPort repo, PasswordEncoder encoder) {
-        this.repo = repo;
+    public UserService(UserPort userPort, PasswordEncoder encoder) {
+        this.userPort = userPort;
         this.encoder = encoder;
     }
 
@@ -34,22 +36,30 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
     }
 
     @Override
-    @Transactional
-    public Optional<UserEntity> byId(Integer id) {
-        return Optional.empty();
+    @Transactional(readOnly = true)
+    public User byId(Integer id) {
+        return userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
     }
 
     @Override
-    public Optional<UserEntity> byEmail(String email) {
+    @Transactional(readOnly = true)
+    public Optional<User> byEmail(String email) {
         return Optional.empty();
     }
 
     @Override
     @Transactional
     public Integer register(RegisterUserCommand command) {
+        if (userPort.existsByUsername(command.username())) {
+            throw new UsernameAlreadyUsedException(command.username());
+        }
+
+        if (userPort.existsByEmail(command.email())) {
+            throw new EmailAlreadyUsedException(command.email());
+        }
+
         User newUser = buildUser(command);
-        repo.save(newUser);
-        return 0;
+        return userPort.save(newUser);
     }
 
     private User buildUser(RegisterUserCommand command) {
