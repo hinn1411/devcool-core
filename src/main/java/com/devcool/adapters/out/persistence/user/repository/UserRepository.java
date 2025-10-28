@@ -1,6 +1,6 @@
-package com.devcool.adapters.persistence.repository;
+package com.devcool.adapters.out.persistence.user.repository;
 
-import com.devcool.adapters.persistence.entity.UserEntity;
+import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

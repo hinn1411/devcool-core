@@ -1,4 +1,4 @@
-package com.devcool.adapters.persistence.entity;
+package com.devcool.adapters.out.persistence.entity;
 
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;

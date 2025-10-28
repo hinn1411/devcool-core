@@ -1,4 +1,4 @@
-package com.devcool.adapters.persistence.entity;
+package com.devcool.adapters.out.persistence.user.entity;
 
 import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
