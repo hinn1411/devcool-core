@@ -1,5 +1,6 @@
 package com.devcool.application.service;
 
+import com.devcool.domain.auth.out.PasswordHasherPort;
 import com.devcool.domain.user.exception.EmailAlreadyUsedException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
@@ -11,23 +12,19 @@ import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import com.devcool.domain.user.port.out.UserPort;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePasswordUseCase {
 
     private final UserPort userPort;
-    private final PasswordEncoder encoder;
+    private final PasswordHasherPort hasher;
 
-    public UserService(UserPort userPort, PasswordEncoder encoder) {
-        this.userPort = userPort;
-        this.encoder = encoder;
-    }
 
     @Override
     @Transactional
@@ -65,12 +62,11 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
     private User buildUser(RegisterUserCommand command) {
         return User.builder()
                 .username(command.username())
-                .password(encoder.encode(command.rawPassword()))
+                .password(hasher.hash(command.rawPassword()))
                 .email(command.email())
                 .name(command.name())
                 .role(Role.USER)
                 .status(UserStatus.ACTIVE)
-                .lastLoginTime(Instant.now())
                 .build();
     }
 }

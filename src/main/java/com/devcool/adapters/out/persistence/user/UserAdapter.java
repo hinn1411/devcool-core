@@ -1,8 +1,8 @@
-package com.devcool.adapters.persistence.adapter;
+package com.devcool.adapters.out.persistence.user;
 
-import com.devcool.adapters.persistence.mapper.UserMapper;
-import com.devcool.adapters.persistence.entity.UserEntity;
-import com.devcool.adapters.persistence.repository.UserRepository;
+import com.devcool.adapters.out.persistence.user.mapper.UserMapper;
+import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+import com.devcool.adapters.out.persistence.user.repository.UserRepository;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
 import lombok.AllArgsConstructor;

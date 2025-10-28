@@ -1,5 +1,6 @@
-package com.devcool.adapters.persistence.entity;
+package com.devcool.adapters.out.persistence.entity;
 
+import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
