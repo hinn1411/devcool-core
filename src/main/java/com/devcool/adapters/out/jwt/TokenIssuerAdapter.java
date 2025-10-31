@@ -29,8 +29,8 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
     private final byte[] accessKey;
     private final byte[] refreshKey;
 
-    private final static long accessTtlSec = 900;   // 15 min
-    private final static long refreshTtlSec = 1209600; // 14 days
+    private static final  long accessTtlSec = 900;   // 15 min
+    private static final  long refreshTtlSec = 1209600; // 14 days
 
     public TokenIssuerAdapter(@Value("${security.jwt.access-secret}") String accessSecret,
                               @Value("${security.jwt.refresh-secret}") String refreshSecret) {
@@ -126,7 +126,7 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
                 return null;
             }
 
-            if (!Objects.equals(claims.getStringClaim("typ"), expectedTokenType)) {
+            if (!Objects.equals(claims.getStringClaim("type"), expectedTokenType)) {
                 return  null;
             }
 

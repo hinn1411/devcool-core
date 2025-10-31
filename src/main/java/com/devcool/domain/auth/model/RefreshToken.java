@@ -11,9 +11,9 @@ import java.time.Instant;
 @Setter
 @Builder
 public class RefreshToken {
-    String jti;
-    Integer userId;
-    Instant issuedTime;
-    Instant expiredTime;
-    Instant consumedTime;
+    private String jti;
+    private Integer userId;
+    private Instant issuedTime;
+    private Instant expiredTime;
+    private Instant consumedTime;
 }

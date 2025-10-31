@@ -19,4 +19,9 @@ public class AuthAdapter implements LoadUserPort {
     public Optional<User> loadByUsername(String username) {
         return repo.findByUsername(username).map(mapper::toDomain);
     }
+
+    @Override
+    public Optional<User> loadById(Integer id) {
+        return repo.findById(id).map(mapper::toDomain);
+    }
 }
