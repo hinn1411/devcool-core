@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -69,7 +68,6 @@ public class AuthController {
 //    }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<ApiSuccessResponse<User>> getProfile(Authentication auth) {
         Integer userId = Integer.valueOf(auth.getName());
         User user = userQuery.byId(userId);
