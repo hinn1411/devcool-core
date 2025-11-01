@@ -11,7 +11,10 @@ import com.devcool.domain.auth.out.PasswordHasherPort;
 import com.devcool.domain.auth.out.RefreshTokenStorePort;
 import com.devcool.domain.auth.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +25,12 @@ import java.time.temporal.ChronoUnit;
 @Service
 @RequiredArgsConstructor
 public class AuthenticateUserService implements AuthenticateUserUseCase {
+    private static final Logger log = LoggerFactory.getLogger(AuthenticateUserService.class);
     private final LoadUserPort loadUser;
     private final PasswordHasherPort hasher;
     private final TokenIssuerPort issuer;
     private final RefreshTokenStorePort refreshStore;
+    private final UserPort userPort;
 
     @Override
     @Transactional
@@ -34,14 +39,22 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
                 .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
 
         if (!hasher.matches(command.password(), user.getPassword())) {
+            log.warn("Password does not match!");
             throw new BadCredentialsException("Bad credentials");
         }
+
+        updateLoginTime(user);
 
         TokenPair tokenPair = issuer.issue(user);
         RefreshToken refreshToken = buildRefreshToken(user, tokenPair);
         refreshStore.store(refreshToken);
         return tokenPair;
 
+    }
+
+    private void updateLoginTime(User user) {
+        user.updateLoginTime();
+        userPort.save(user);
     }
 
     private String hashJtiFrom(String refreshToken) {

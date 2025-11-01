@@ -13,6 +13,8 @@ import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import com.devcool.domain.user.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +24,21 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePasswordUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserPort userPort;
     private final PasswordHasherPort hasher;
 
 
     @Override
     @Transactional
-    public boolean change(Integer userId, String currentRawPassword, String newRawPassword) {
-        return false;
+    public boolean change(Integer id, String currentRawPassword, String newRawPassword) {
+        User user = userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        if (!hasher.matches(currentRawPassword, user.getPassword())) {
+            log.info("Password does not match!");
+            return false;
+        }
+        String newHashPassword = hasher.hash(newRawPassword);
+        return userPort.updatePassword(id, newHashPassword);
     }
 
     @Override

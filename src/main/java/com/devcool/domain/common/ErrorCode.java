@@ -7,6 +7,7 @@ public enum ErrorCode {
     PASSWORD_WEAK("USR_422"),
     VALIDATION_ERROR("VLD_401"),
     INTERNAL_SERVER_ERROR("SVR_500"),
+    FORBIDDEN("SVR_403"),
     OK("SVR_200");
 
     private final String code;

@@ -7,6 +7,7 @@ import com.devcool.domain.common.DomainException;
 import com.devcool.domain.common.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -44,6 +45,16 @@ public class ApiExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 ErrorCode.INTERNAL_SERVER_ERROR.code(),
                 "Unexpected server error",
+                Map.of("error", ex.getClass().getSimpleName())
+        ));
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbiddenRequest(Exception ex) {
+        return ResponseEntity.internalServerError().body(ApiResponseFactory.error(
+                HttpStatus.FORBIDDEN,
+                ErrorCode.FORBIDDEN.code(),
+                "You are not allowed to access this resource",
                 Map.of("error", ex.getClass().getSimpleName())
         ));
     }

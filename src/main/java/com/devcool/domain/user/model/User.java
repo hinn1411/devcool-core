@@ -30,6 +30,8 @@ public class User {
     public void changePassword(String newPassword) {
         this.password = Objects.requireNonNull(newPassword);
     }
-
+    public void updateLoginTime() {
+        this.lastLoginTime = Instant.now();
+    }
     // getters/setters omitted for brevity
 }
