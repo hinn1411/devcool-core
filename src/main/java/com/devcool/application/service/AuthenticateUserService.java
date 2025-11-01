@@ -2,6 +2,7 @@ package com.devcool.application.service;
 
 import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.adapters.out.jwt.util.JwtUtils;
+import com.devcool.domain.auth.exception.PasswordIncorrectException;
 import com.devcool.domain.auth.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.in.command.LoginCommand;
 import com.devcool.domain.auth.model.RefreshToken;
@@ -10,6 +11,7 @@ import com.devcool.domain.auth.out.LoadUserPort;
 import com.devcool.domain.auth.out.PasswordHasherPort;
 import com.devcool.domain.auth.out.RefreshTokenStorePort;
 import com.devcool.domain.auth.out.TokenIssuerPort;
+import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
@@ -36,11 +38,11 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
     @Transactional
     public TokenPair login(LoginCommand command) {
         User user = loadUser.loadByUsername(command.username())
-                .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
+                .orElseThrow(() -> new UserNotFoundException(-1));
 
         if (!hasher.matches(command.password(), user.getPassword())) {
             log.warn("Password does not match!");
-            throw new BadCredentialsException("Bad credentials");
+            throw new PasswordIncorrectException(command.password());
         }
 
         updateLoginTime(user);

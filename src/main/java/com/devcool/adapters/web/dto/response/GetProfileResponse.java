@@ -2,13 +2,19 @@ package com.devcool.adapters.web.dto.response;
 
 import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
+import lombok.*;
 
 import java.time.Instant;
 
 @Schema(name = "GetProfileResponse", description = "Get profile result payload")
+@Getter
+@Setter
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class GetProfileResponse {
     @Schema(description = "Unique identifier of the user", example = "101")
     private String id;
