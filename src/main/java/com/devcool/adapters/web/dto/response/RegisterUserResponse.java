@@ -1,20 +1,11 @@
 package com.devcool.adapters.web.dto.response;
 
-import com.devcool.domain.user.model.enums.Role;
-import com.devcool.domain.user.model.enums.UserStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
 
-@Setter
-@Getter
+@Schema(name = "RegisterUserResponse", description = "User data returned after successful registration")
 @Builder
 public class RegisterUserResponse {
-    Integer id;
-    String username;
-    String email;
-    String name;
-    String avatar;
-    Role role;
-    UserStatus status;
+    @Schema(description = "User id of the authenticated user", example = "123")
+    private Integer userId;
 }

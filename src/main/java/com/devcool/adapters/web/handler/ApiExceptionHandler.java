@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -28,7 +29,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         List<Map<String, String>> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .map(err -> Map.of("field", err.getField(), "message", err.getDefaultMessage()))
+                .map(err -> Map.of("field", err.getField(), "message", Optional.ofNullable(err.getDefaultMessage()).orElse("")))
                 .toList();
 
         return ResponseEntity.unprocessableEntity().body(ApiResponseFactory.error(

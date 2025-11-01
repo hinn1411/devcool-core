@@ -8,7 +8,8 @@ public enum ErrorCode {
     VALIDATION_ERROR("VLD_401"),
     INTERNAL_SERVER_ERROR("SVR_500"),
     FORBIDDEN("SVR_403"),
-    OK("SVR_200");
+    OK("SVR_200"),
+    CREATED("SVR_201");
 
     private final String code;
     ErrorCode(String code) { this.code = code; }
