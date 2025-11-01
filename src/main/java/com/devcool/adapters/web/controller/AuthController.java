@@ -15,8 +15,11 @@ import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +29,7 @@ import java.net.URI;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private final RegisterUserUseCase registerUser;
     private final AuthenticateUserUseCase authenticate;
     private final ChangePasswordUseCase changePassword;
@@ -65,6 +69,7 @@ public class AuthController {
 //    }
 
     @GetMapping("/profile")
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<ApiSuccessResponse<User>> getProfile(Authentication auth) {
         Integer userId = Integer.valueOf(auth.getName());
         User user = userQuery.byId(userId);

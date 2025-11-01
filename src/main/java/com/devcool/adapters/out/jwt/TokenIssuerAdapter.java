@@ -21,6 +21,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -31,6 +32,9 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
 
     private static final  long accessTtlSec = 900;   // 15 min
     private static final  long refreshTtlSec = 1209600; // 14 days
+
+    private static final String TYPE = "type";
+    private static final String ROLE = "role";
 
     public TokenIssuerAdapter(@Value("${security.jwt.access-secret}") String accessSecret,
                               @Value("${security.jwt.refresh-secret}") String refreshSecret) {
@@ -60,9 +64,9 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
     @Override
     public TokenPair issue(User user) {
         Instant now = Instant.now();
-        String accessToken = sign(String.valueOf(user.getId()), now, accessTtlSec, accessKey, TokenType.ACCESS.name(), null);
+        String accessToken = sign(user, now, accessTtlSec, accessKey, TokenType.ACCESS.name(), null);
         String refreshTokenId = UUID.randomUUID().toString();
-        String refreshToken = sign(String.valueOf(user.getId()), now, refreshTtlSec, refreshKey, TokenType.REFRESH.name(), refreshTokenId);
+        String refreshToken = sign(user, now, refreshTtlSec, refreshKey, TokenType.REFRESH.name(), refreshTokenId);
         return new TokenPair(accessToken, refreshToken);
     }
 
@@ -94,16 +98,19 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
 
 
 
-    private String sign(String sub, Instant issuedTime, long ttlSec, byte[] key, String tokenType, String jti) {
+    private String sign(User user, Instant issuedTime, long ttlSec, byte[] key, String tokenType, String jti) {
+        String userId = String.valueOf(user.getId());
+        String userRole = Optional.ofNullable(user.getRole()).map(Enum::name).orElse(null);
         try {
             Instant expiredTime = issuedTime.plusSeconds(ttlSec);
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .subject(sub)
+                    .subject(userId)
                     .issueTime(Date.from(issuedTime))
                     .expirationTime(Date.from(expiredTime))
                     .jwtID(jti)
                     .audience("devcool-api")
-                    .claim("type", tokenType)
+                    .claim(TYPE, tokenType)
+                    .claim(ROLE, userRole)
                     .build();
             MACSigner signer = new MACSigner(key);
             SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);

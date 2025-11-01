@@ -10,12 +10,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
 @Component
@@ -32,12 +33,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 if (issuer.isAccessTokenValid(token)) {
                     String subject = JwtUtils.subjectFrom(token);
+                    String role = JwtUtils.roleFrom(token);
                     User user = loader.loadById(Integer.valueOf(subject)).orElse(null);
                     if (Objects.nonNull(user)) {
                         var auth = new UsernamePasswordAuthenticationToken(
                                 subject,
                                 null,
-                                null
+                                List.of(new SimpleGrantedAuthority(role))
                         );
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }
@@ -45,7 +47,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (Exception e) {
                 // Invalid token -> Clear context
                 SecurityContextHolder.clearContext();
-
             }
         }
         filterChain.doFilter(request, response);

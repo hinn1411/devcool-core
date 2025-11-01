@@ -5,6 +5,8 @@ import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.ParseException;
+
 public class JwtUtils {
 
     private JwtUtils() {
@@ -20,6 +22,16 @@ public class JwtUtils {
     public static String subjectFrom(String token) {
         JWTClaimsSet claims = getClaims(token);
         return claims.getSubject();
+    }
+
+    public static String roleFrom(String token) {
+        JWTClaimsSet claims = getClaims(token);
+        try {
+            return claims.getStringClaim("role");
+        } catch (ParseException e) {
+            log.warn("Cannot get role from token!");
+            return null;
+        }
     }
 
     private static JWTClaimsSet getClaims(String token) {
