@@ -1,4 +1,4 @@
-package com.devcool.config;
+package com.devcool.adapters.web.config;
 
 import com.devcool.adapters.out.jwt.util.JwtUtils;
 import com.devcool.domain.auth.out.LoadUserPort;

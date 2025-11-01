@@ -1,4 +1,4 @@
-package com.devcool.config;
+package com.devcool.adapters.web.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,7 +25,9 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers( "/api/v1/auth/register", "/api/v1/auth/login", "/public/**", "/error").permitAll()
+
+                        auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html, /docs").permitAll()
+                                .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/public/**", "/error").permitAll()
                                 .requestMatchers("/api/v1/auth/profile").hasAuthority("USER")
                                 .anyRequest().authenticated())
                 .sessionManagement(session ->
