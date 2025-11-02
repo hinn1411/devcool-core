@@ -41,8 +41,8 @@ jobs:
         run: ./mvnw -B spotless:check
 
       - name: Static analysis
-        run: ./mvnw -B -q -DskipTests -DskipITs \
-          checkstyle:check pmd:check spotbugs:check || true
+        run: |
+          ./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify || true
 
       - name: Build + Tests + ITs
         run: ./mvnw -B -U -DskipITs verify

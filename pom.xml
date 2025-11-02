@@ -242,5 +242,74 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <id>static-analysis</id>
+            <build>
+                <plugins>
+                    <!-- Checkstyle -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <configuration>
+                            <!-- Use built-in Google rules; switch to your custom XML if you have one -->
+                            <configLocation>google_checks.xml</configLocation>
+                            <encoding>UTF-8</encoding>
+                            <consoleOutput>true</consoleOutput>
+                            <failsOnError>true</failsOnError>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals><goal>check</goal></goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- PMD -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-pmd-plugin</artifactId>
+                        <version>3.21.2</version>
+                        <configuration>
+                            <printFailingErrors>true</printFailingErrors>
+                            <targetJdk>21</targetJdk>
+                            <!-- Keep default rulesets for now -->
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals><goal>check</goal></goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- SpotBugs -->
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>4.8.6.6</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.github.spotbugs</groupId>
+                                <artifactId>spotbugs</artifactId>
+                                <version>4.8.6</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Low</threshold>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals><goal>check</goal></goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
