@@ -14,62 +14,61 @@ import com.devcool.domain.auth.out.TokenIssuerPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticateUserService implements AuthenticateUserUseCase {
-    private static final Logger log = LoggerFactory.getLogger(AuthenticateUserService.class);
-    private final LoadUserPort loadUser;
-    private final PasswordHasherPort hasher;
-    private final TokenIssuerPort issuer;
-    private final RefreshTokenStorePort refreshStore;
-    private final UserPort userPort;
+  private static final Logger log = LoggerFactory.getLogger(AuthenticateUserService.class);
+  private final LoadUserPort loadUser;
+  private final PasswordHasherPort hasher;
+  private final TokenIssuerPort issuer;
+  private final RefreshTokenStorePort refreshStore;
+  private final UserPort userPort;
 
-    @Override
-    @Transactional
-    public TokenPair login(LoginCommand command) {
-        User user = loadUser.loadByUsername(command.username())
-                .orElseThrow(() -> new UserNotFoundException(-1));
+  @Override
+  @Transactional
+  public TokenPair login(LoginCommand command) {
+    User user =
+        loadUser
+            .loadByUsername(command.username())
+            .orElseThrow(() -> new UserNotFoundException(-1));
 
-        if (!hasher.matches(command.password(), user.getPassword())) {
-            log.warn("Password does not match!");
-            throw new PasswordIncorrectException(command.password());
-        }
-
-        updateLoginTime(user);
-
-        TokenPair tokenPair = issuer.issue(user);
-        RefreshToken refreshToken = buildRefreshToken(user, tokenPair);
-        refreshStore.store(refreshToken);
-        return tokenPair;
-
+    if (!hasher.matches(command.password(), user.getPassword())) {
+      log.warn("Password does not match!");
+      throw new PasswordIncorrectException(command.password());
     }
 
-    private void updateLoginTime(User user) {
-        user.updateLoginTime();
-        userPort.save(user);
-    }
+    updateLoginTime(user);
 
-    private String hashJtiFrom(String refreshToken) {
-        return HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
-    }
+    TokenPair tokenPair = issuer.issue(user);
+    RefreshToken refreshToken = buildRefreshToken(user, tokenPair);
+    refreshStore.store(refreshToken);
+    return tokenPair;
+  }
 
-    private RefreshToken buildRefreshToken(User user, TokenPair tokenPair) {
-        return RefreshToken.builder()
-                .jti(hashJtiFrom(tokenPair.refreshToken()))
-                .userId(user.getId())
-                .issuedTime(Instant.now())
-                .expiredTime(Instant.now().plus(7, ChronoUnit.DAYS))
-                .consumedTime(null)
-                .build();
-    }
+  private void updateLoginTime(User user) {
+    user.updateLoginTime();
+    userPort.save(user);
+  }
+
+  private String hashJtiFrom(String refreshToken) {
+    return HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
+  }
+
+  private RefreshToken buildRefreshToken(User user, TokenPair tokenPair) {
+    return RefreshToken.builder()
+        .jti(hashJtiFrom(tokenPair.refreshToken()))
+        .userId(user.getId())
+        .issuedTime(Instant.now())
+        .expiredTime(Instant.now().plus(7, ChronoUnit.DAYS))
+        .consumedTime(null)
+        .build();
+  }
 }

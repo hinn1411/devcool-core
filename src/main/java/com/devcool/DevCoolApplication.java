@@ -7,10 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class DevCoolApplication {
-    private static final Logger log = LoggerFactory.getLogger(DevCoolApplication.class);
+  private static final Logger log = LoggerFactory.getLogger(DevCoolApplication.class);
 
-	public static void main(String[] args) {
-		SpringApplication.run(DevCoolApplication.class, args);
-	}
-
+  public static void main(String[] args) {
+    SpringApplication.run(DevCoolApplication.class, args);
+  }
 }

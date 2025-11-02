@@ -12,9 +12,9 @@ import lombok.*;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class LoginResponse {
-    @Schema(description = "Unique identifier of the user", example = "101")
-    private String accessToken;
+  @Schema(description = "Unique identifier of the user", example = "101")
+  private String accessToken;
 
-    @Schema(description = "Registered username", example = "hien_giang")
-    private String refreshToken;
+  @Schema(description = "Registered username", example = "hien_giang")
+  private String refreshToken;
 }

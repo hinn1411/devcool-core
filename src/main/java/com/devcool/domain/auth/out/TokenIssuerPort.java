@@ -5,8 +5,11 @@ import com.devcool.domain.auth.model.TokenSubject;
 import com.devcool.domain.user.model.User;
 
 public interface TokenIssuerPort {
-    TokenPair issue(User user);
-    boolean isAccessTokenValid(String accessToken);
-    TokenSubject verifyRefresh(String refreshToken); // Return subject + jti
-    TokenPair rotate(User user, String oldRefreshJti); // Optional rotation
+  TokenPair issue(User user);
+
+  boolean isAccessTokenValid(String accessToken);
+
+  TokenSubject verifyRefresh(String refreshToken); // Return subject + jti
+
+  TokenPair rotate(User user, String oldRefreshJti); // Optional rotation
 }

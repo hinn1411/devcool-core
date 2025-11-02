@@ -5,5 +5,4 @@ import com.devcool.adapters.web.dto.wrapper.ApiSuccessResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "GetProfileSuccess")
-public class GetProfileSuccess extends ApiSuccessResponse<GetProfileResponse> {
-}
+public class GetProfileSuccess extends ApiSuccessResponse<GetProfileResponse> {}
