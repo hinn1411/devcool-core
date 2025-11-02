@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>21</java.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <maven.compiler.release>21</maven.compiler.release>
 	</properties>
 	<dependencies>
         <dependency>
@@ -274,7 +275,7 @@
                         <version>3.21.2</version>
                         <configuration>
                             <printFailingErrors>true</printFailingErrors>
-                            <targetJdk>21</targetJdk>
+                            <failOnViolation>true</failOnViolation>
                             <!-- Keep default rulesets for now -->
                         </configuration>
                         <executions>
