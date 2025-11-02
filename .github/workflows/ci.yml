@@ -37,25 +37,25 @@ jobs:
       - name: Validate Maven Wrapper
         run: mvn -v && ./mvnw -v
 
-      - name: Formatting check (Spotless)
+      - name: Formatting check
         run: ./mvnw -B spotless:check
 
-      - name: Static analysis (Checkstyle/PMD/SpotBugs) — optional
+      - name: Static analysis
         run: ./mvnw -B -q -DskipTests -DskipITs \
           checkstyle:check pmd:check spotbugs:check || true
 
       - name: Build + Tests + ITs
         run: ./mvnw -B -U -DskipITs verify
 
-      - name: SonarQube / SonarCloud analysis (Maven scanner)
-        if: env.SONAR_TOKEN != ''
+      - name: Sonar analysis
+        if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
         run: >
           ./mvnw -B verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar
           -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
-          -Dsonar.login=${{ env.SONAR_TOKEN }}
+          -Dsonar.token=${{ env.SONAR_TOKEN }}
           -Dsonar.organization=${{ env.SONAR_ORGANIZATION_KEY }}
           -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
