@@ -1,6 +1,8 @@
 name: Java CI with Maven
 run-name: ${{ github.actor }} is testing
 on: [push]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
