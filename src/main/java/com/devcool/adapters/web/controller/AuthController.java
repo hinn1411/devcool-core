@@ -112,6 +112,8 @@ public class AuthController {
   public ResponseEntity<ApiSuccessResponse<LoginResponse>> login(
       @Valid @RequestBody LoginRequest request) {
     LoginCommand command = new LoginCommand(request.username(), request.password());
+    LoginCommand nullCommand = null;
+    nullCommand.password();
     TokenPair tokens = authenticate.login(command);
     LoginResponse response = mapper.toLoginResponse(tokens);
     return ResponseEntity.ok(
