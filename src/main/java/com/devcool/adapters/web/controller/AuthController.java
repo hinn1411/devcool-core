@@ -29,6 +29,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 
 @Tag(name = "Auth")
 @RestController
@@ -120,11 +119,11 @@ public class AuthController {
             HttpStatus.OK, ErrorCode.OK.code(), "Login successfully", response));
   }
 
-    @PostMapping("/password")
-    public ResponseEntity<ApiSuccessResponse<Boolean>> changePassword(@Valid @RequestBody
-                                                                      ChangePasswordRequest request) {
-        return null;
-    }
+  @PostMapping("/password")
+  public ResponseEntity<ApiSuccessResponse<Boolean>> changePassword(
+      @Valid @RequestBody ChangePasswordRequest request) {
+    return null;
+  }
 
   @Operation(
       summary = "Get my profile",
