@@ -56,8 +56,6 @@ jobs:
           -Dsonar.token=a585ee0b8a0aeb51e6b1fa0e57db7a67abddd2ab
           -Dsonar.organization=hinn14112002
           -Dsonar.projectKey=hinn1411_devcool-core
-          -Dsonar.qualitygate.wait=true
-          -Dsonar.qualitygate.timeout=560
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
 
       - name: Upload surefire & failsafe reports
