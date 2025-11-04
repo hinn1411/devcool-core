@@ -43,6 +43,12 @@ jobs:
       - name: Build + Tests + ITs
         run: ./mvnw -B -U -DskipITs verify
 
+      - name: Debug Sonar vars (masked)
+        run: |
+          echo "ORG=${{ env.SONAR_ORG }}"
+          echo "PROJECT=${{ env.SONAR_PROJECT }}"
+          echo "HOST=https://sonarcloud.io"
+
       - name: Sonar analysis + enforce Quality Gate
         if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         env:
