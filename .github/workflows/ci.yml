@@ -43,12 +43,6 @@ jobs:
       - name: Build + Tests + ITs
         run: ./mvnw -B -U -DskipITs verify
 
-      - name: Debug Sonar vars (masked)
-        run: |
-          echo "ORG=${{ env.SONAR_ORG }}"
-          echo "PROJECT=${{ env.SONAR_PROJECT }}"
-          echo "HOST=https://sonarcloud.io"
-
       - name: Sonar analysis + enforce Quality Gate
         if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         env:
@@ -59,9 +53,9 @@ jobs:
           ./mvnw -B verify
           sonar:sonar
           -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=${SONAR_TOKEN}
-          -Dsonar.organization=${SONAR_ORG}
-          -Dsonar.projectKey=${SONAR_PROJECT}
+          -Dsonar.token=b42bae7d62069c7860c95a876e8378120b59981c
+          -Dsonar.organization=hinn1411
+          -Dsonar.projectKey=hinn1411_devcool-core
           -Dsonar.qualitygate.wait=true
           -Dsonar.qualitygate.timeout=550
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
