@@ -48,14 +48,17 @@ jobs:
       - name: Build + Tests + ITs
         run: ./mvnw -B -U -DskipITs verify
 
-      - name: Sonar analysis
+      - name: Sonar analysis + enforce Quality Gate
         if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         run: >
-          ./mvnw -B sonar:sonar
+          ./mvnw -B verify
+          org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar
           -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
           -Dsonar.token=${{ env.SONAR_TOKEN }}
           -Dsonar.organization=${{ env.SONAR_ORGANIZATION_KEY }}
           -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+          -Dsonar.qualitygate.wait=true
+          -Dsonar.qualitygate.timeout=600
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
 
       - name: Upload surefire & failsafe reports
