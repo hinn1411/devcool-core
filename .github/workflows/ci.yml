@@ -14,11 +14,6 @@ jobs:
     env:
       # Keep outputs consistent
       MAVEN_OPTS: -Duser.language=en -Duser.region=US -Dfile.encoding=UTF-8
-      # Sonar token is optional; if not set, Sonar step is skipped
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      SONAR_ORGANIZATION_KEY: ${{ secrets.SONAR_ORGANIZATION_KEY }}
-      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
       # Testcontainers works out-of-the-box on GitHub runners (Docker is available)
       # You usually don't need to set anything, but leaving hooks here for clarity:
       # TESTCONTAINERS_RYUK_DISABLED: "false"
@@ -50,13 +45,17 @@ jobs:
 
       - name: Sonar analysis + enforce Quality Gate
         if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORG:  hinn1411
+          SONAR_PROJECT: hinn1411_devcool-core
         run: >
           ./mvnw -B verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar
-          -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
-          -Dsonar.token=${{ env.SONAR_TOKEN }}
-          -Dsonar.organization=${{ env.SONAR_ORGANIZATION_KEY }}
-          -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.token=${SONAR_TOKEN}
+          -Dsonar.organization=${SONAR_ORG}
+          -Dsonar.projectKey=${SONAR_PROJECT}
           -Dsonar.qualitygate.wait=true
           -Dsonar.qualitygate.timeout=600
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
