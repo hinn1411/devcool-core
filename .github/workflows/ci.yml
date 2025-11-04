@@ -57,7 +57,7 @@ jobs:
           -Dsonar.organization=${SONAR_ORG}
           -Dsonar.projectKey=${SONAR_PROJECT}
           -Dsonar.qualitygate.wait=true
-          -Dsonar.qualitygate.timeout=500
+          -Dsonar.qualitygate.timeout=550
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
 
       - name: Upload surefire & failsafe reports
