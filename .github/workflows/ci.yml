@@ -51,7 +51,7 @@ jobs:
           SONAR_PROJECT: hinn1411_devcool-core
         run: >
           ./mvnw -B verify
-          org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar
+          sonar:sonar
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.token=${SONAR_TOKEN}
           -Dsonar.organization=${SONAR_ORG}
