@@ -53,11 +53,11 @@ jobs:
           ./mvnw -B verify
           sonar:sonar
           -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.token=b42bae7d62069c7860c95a876e8378120b59981c
+          -Dsonar.token=ac07c799d44071cb3f13684a875b7723befbbae2
           -Dsonar.organization=hinn1411
           -Dsonar.projectKey=hinn1411_devcool-core
           -Dsonar.qualitygate.wait=true
-          -Dsonar.qualitygate.timeout=550
+          -Dsonar.qualitygate.timeout=560
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
 
       - name: Upload surefire & failsafe reports
