@@ -1,10 +1,9 @@
 package com.devcool.adapters.out.persistence.entity;
 
 import jakarta.persistence.*;
+import java.sql.Timestamp;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.sql.Timestamp;
 
 @Entity
 @Table(name = "MESSAGE")
@@ -12,26 +11,26 @@ import java.sql.Timestamp;
 @Setter
 public class MessageEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE)
+  private Integer id;
 
-    @Column(name = "CONTENT",length = 1000, nullable = true)
-    private String content;
+  @Column(name = "CONTENT", length = 1000, nullable = true)
+  private String content;
 
-    @Column(name = "CREATED_TIME", nullable = false)
-    private Timestamp createdTime;
+  @Column(name = "CREATED_TIME", nullable = false)
+  private Timestamp createdTime;
 
-    @Column(name = "DELETED_TIME", nullable = true)
-    private Timestamp deletedTime;
+  @Column(name = "DELETED_TIME", nullable = true)
+  private Timestamp deletedTime;
 
-    @Column(name = "EDITED_TIME", nullable = false)
-    private Timestamp editedTime;
+  @Column(name = "EDITED_TIME", nullable = false)
+  private Timestamp editedTime;
 
-    @OneToOne(mappedBy = "message")
-    private MediaEntity media;
+  @OneToOne(mappedBy = "message")
+  private MediaEntity media;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
-    private ChannelEntity channel;
+  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
+  private ChannelEntity channel;
 }

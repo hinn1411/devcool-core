@@ -15,22 +15,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping("/api/v1/users")
 public class UserController {
-    private final GetUserQuery getUser;
+  private final GetUserQuery getUser;
 
-    public UserController(GetUserQuery getUser) {
-        this.getUser = getUser;
-    }
+  public UserController(GetUserQuery getUser) {
+    this.getUser = getUser;
+  }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiSuccessResponse<User>> getProfile(@PathVariable Integer id) {
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiSuccessResponse<User>> getProfile(@PathVariable Integer id) {
 
-        User user = getUser.byId(id);
-        return ResponseEntity.ok(ApiResponseFactory.success(
-                HttpStatus.OK,
-                ErrorCode.OK.code(),
-                "Get profile successfully",
-                user
-        ));
-    }
-
+    User user = getUser.byId(id);
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Get profile successfully", user));
+  }
 }
