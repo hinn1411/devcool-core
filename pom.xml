@@ -30,6 +30,7 @@
 		<java.version>21</java.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <maven.compiler.release>21</maven.compiler.release>
+        <sonar.organization>hinn14112002</sonar.organization>
 	</properties>
 	<dependencies>
         <dependency>
