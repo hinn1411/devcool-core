@@ -19,6 +19,8 @@ import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Component;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TokenIssuerAdapter implements TokenIssuerPort {
 
+  private static final Logger log = LoggerFactory.getLogger(TokenIssuerAdapter.class);
   private final byte[] accessKey;
   private final byte[] refreshKey;
 
@@ -145,8 +148,12 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
       }
 
       return jwt;
+    } catch (ParseException e) {
+      log.warn("Cannot parse token");
+      return null;
     } catch (Exception e) {
-      throw new BadCredentialsException("Invalid token", e);
+      log.error("Cannot verify token. Cause by", e);
+      return null;
     }
   }
 }

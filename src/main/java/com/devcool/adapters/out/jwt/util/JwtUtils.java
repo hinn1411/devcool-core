@@ -1,8 +1,14 @@
 package com.devcool.adapters.out.jwt.util;
 
+import com.devcool.adapters.out.crypto.util.HashUtils;
+import com.devcool.domain.auth.model.RefreshToken;
+import com.devcool.domain.auth.model.TokenPair;
+import com.devcool.domain.user.model.User;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.text.ParseException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,5 +46,19 @@ public class JwtUtils {
       log.warn("Invalid JWT token!");
       throw new IllegalArgumentException("Invalid JWT token", e);
     }
+  }
+
+  private static String hashJtiFrom(String refreshToken) {
+    return HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
+  }
+
+  public static RefreshToken buildRefreshToken(User user, TokenPair tokenPair) {
+    return RefreshToken.builder()
+        .jti(hashJtiFrom(tokenPair.refreshToken()))
+        .userId(user.getId())
+        .issuedTime(Instant.now())
+        .expiredTime(Instant.now().plus(7, ChronoUnit.DAYS))
+        .consumedTime(null)
+        .build();
   }
 }

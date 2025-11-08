@@ -28,7 +28,11 @@ public class SecurityConfig {
                 auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html, /docs")
                     .permitAll()
                     .requestMatchers(
-                        "/api/v1/auth/register", "/api/v1/auth/login", "/public/**", "/error")
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/refresh_token",
+                        "/public/**",
+                        "/error")
                     .permitAll()
                     .requestMatchers("/api/v1/auth/profile")
                     .hasAuthority("USER")

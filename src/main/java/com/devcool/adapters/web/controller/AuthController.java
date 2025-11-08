@@ -6,6 +6,7 @@ import com.devcool.adapters.web.dto.request.LoginRequest;
 import com.devcool.adapters.web.dto.request.RegisterUserRequest;
 import com.devcool.adapters.web.dto.response.GetProfileResponse;
 import com.devcool.adapters.web.dto.response.LoginResponse;
+import com.devcool.adapters.web.dto.response.RefreshTokenResponse;
 import com.devcool.adapters.web.dto.response.RegisterUserResponse;
 import com.devcool.adapters.web.dto.schema.GetProfileSuccess;
 import com.devcool.adapters.web.dto.schema.LoginSuccess;
@@ -14,6 +15,7 @@ import com.devcool.adapters.web.dto.wrapper.ApiErrorResponse;
 import com.devcool.adapters.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.web.util.ApiResponseFactory;
 import com.devcool.domain.auth.in.AuthenticateUserUseCase;
+import com.devcool.domain.auth.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.in.command.LoginCommand;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.common.ErrorCode;
@@ -30,10 +32,15 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +56,7 @@ public class AuthController {
   private final ChangePasswordUseCase changePassword;
   private final GetUserQuery userQuery;
   private final AuthDtoMapper mapper;
+  private final RefreshTokenUseCase tokenRefresher;
 
   @Operation(
       summary = "Register account",
@@ -111,12 +119,23 @@ public class AuthController {
   @PostMapping("/login")
   public ResponseEntity<ApiSuccessResponse<LoginResponse>> login(
       @Valid @RequestBody LoginRequest request) {
+
     LoginCommand command = new LoginCommand(request.username(), request.password());
     TokenPair tokens = authenticate.login(command);
+    ResponseCookie cookie =
+        ResponseCookie.from("rt", tokens.refreshToken())
+            .httpOnly(true)
+            .secure(true)
+            .sameSite("Strict")
+            .path("/api/v1/auth/refresh")
+            .maxAge(Duration.between(Instant.now(), Instant.now().plus(7, ChronoUnit.DAYS)))
+            .build();
     LoginResponse response = mapper.toLoginResponse(tokens);
-    return ResponseEntity.ok(
-        ApiResponseFactory.success(
-            HttpStatus.OK, ErrorCode.OK.code(), "Login successfully", response));
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+        .body(
+            ApiResponseFactory.success(
+                HttpStatus.OK, ErrorCode.OK.code(), "Login successfully", response));
   }
 
   @PostMapping("/password")
@@ -150,5 +169,25 @@ public class AuthController {
     return ResponseEntity.ok(
         ApiResponseFactory.success(
             HttpStatus.OK, ErrorCode.OK.code(), "Get user profile successfully", response));
+  }
+
+  @PostMapping("/refresh_token")
+  public ResponseEntity<ApiSuccessResponse<RefreshTokenResponse>> refreshToken(
+      @CookieValue("rt") String refreshToken) {
+    TokenPair tokenPair = tokenRefresher.refresh(refreshToken);
+    ResponseCookie newCookie =
+        ResponseCookie.from("rt", tokenPair.refreshToken())
+            .httpOnly(true)
+            .secure(true)
+            .sameSite("Strict")
+            .path("/api/v1/auth/refresh")
+            .maxAge(Duration.between(Instant.now(), Instant.now().plus(7, ChronoUnit.DAYS)))
+            .build();
+    RefreshTokenResponse response = mapper.toRefreshTokenResponse(tokenPair);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, newCookie.toString())
+        .body(
+            ApiResponseFactory.success(
+                HttpStatus.OK, ErrorCode.OK.code(), "Refresh token successfully", response));
   }
 }

@@ -1,6 +1,5 @@
 package com.devcool.application.service;
 
-import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.adapters.out.jwt.util.JwtUtils;
 import com.devcool.domain.auth.exception.PasswordIncorrectException;
 import com.devcool.domain.auth.in.AuthenticateUserUseCase;
@@ -14,13 +13,10 @@ import com.devcool.domain.auth.out.TokenIssuerPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +29,6 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
   private final UserPort userPort;
 
   @Override
-  @Transactional
   public TokenPair login(LoginCommand command) {
     User user =
         loadUser
@@ -48,27 +43,15 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
     updateLoginTime(user);
 
     TokenPair tokenPair = issuer.issue(user);
-    RefreshToken refreshToken = buildRefreshToken(user, tokenPair);
+    RefreshToken refreshToken = JwtUtils.buildRefreshToken(user, tokenPair);
+    refreshStore.deleteOldRefreshTokens(user.getId());
     refreshStore.store(refreshToken);
+
     return tokenPair;
   }
 
   private void updateLoginTime(User user) {
     user.updateLoginTime();
     userPort.save(user);
-  }
-
-  private String hashJtiFrom(String refreshToken) {
-    return HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
-  }
-
-  private RefreshToken buildRefreshToken(User user, TokenPair tokenPair) {
-    return RefreshToken.builder()
-        .jti(hashJtiFrom(tokenPair.refreshToken()))
-        .userId(user.getId())
-        .issuedTime(Instant.now())
-        .expiredTime(Instant.now().plus(7, ChronoUnit.DAYS))
-        .consumedTime(null)
-        .build();
   }
 }
