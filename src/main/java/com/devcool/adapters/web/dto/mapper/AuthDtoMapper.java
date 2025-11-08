@@ -3,6 +3,7 @@ package com.devcool.adapters.web.dto.mapper;
 import com.devcool.adapters.web.dto.request.RegisterUserRequest;
 import com.devcool.adapters.web.dto.response.GetProfileResponse;
 import com.devcool.adapters.web.dto.response.LoginResponse;
+import com.devcool.adapters.web.dto.response.RefreshTokenResponse;
 import com.devcool.adapters.web.dto.response.RegisterUserResponse;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.user.model.User;
@@ -18,6 +19,13 @@ public class AuthDtoMapper {
 
   public LoginResponse toLoginResponse(TokenPair tokenPair) {
     return LoginResponse.builder()
+        .accessToken(tokenPair.accessToken())
+        .refreshToken(tokenPair.refreshToken())
+        .build();
+  }
+
+  public RefreshTokenResponse toRefreshTokenResponse(TokenPair tokenPair) {
+    return RefreshTokenResponse.builder()
         .accessToken(tokenPair.accessToken())
         .refreshToken(tokenPair.refreshToken())
         .build();

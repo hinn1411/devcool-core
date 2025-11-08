@@ -5,5 +5,7 @@ import com.devcool.domain.auth.model.RefreshToken;
 public interface RefreshTokenStorePort {
   void store(RefreshToken refreshToken);
 
-  boolean consume(String jtiHash); // Automatically mark used/ revoke
+  boolean consumeIfValid(String jtiHash);
+
+  void deleteOldRefreshTokens(Integer userId);
 }

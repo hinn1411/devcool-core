@@ -5,8 +5,6 @@ import com.devcool.adapters.out.persistence.auth.mapper.RefreshTokenMapper;
 import com.devcool.adapters.out.persistence.auth.repository.RefreshTokenRepository;
 import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.out.RefreshTokenStorePort;
-import java.time.Instant;
-import java.util.Objects;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,21 +26,14 @@ public class RefreshTokenAdapter implements RefreshTokenStorePort {
   }
 
   @Override
-  @Transactional(readOnly = true)
-  public boolean consume(String jtiHash) {
-    RefreshTokenEntity refreshTokenEntity =
-        repo.findById(jtiHash)
-            .orElseGet(
-                () -> {
-                  log.info("Given jti not found");
-                  return null;
-                });
-    if (Objects.isNull(refreshTokenEntity)
-        || refreshTokenEntity.getExpiredTime().isBefore(Instant.now())
-        || Objects.nonNull(refreshTokenEntity.getConsumedTime())) {
-      return false;
-    }
-    refreshTokenEntity.setConsumedTime(Instant.now());
-    return true;
+  @Transactional
+  public boolean consumeIfValid(String jtiHash) {
+    return repo.consumeIfValid(jtiHash) > 0;
+  }
+
+  @Override
+  @Transactional
+  public void deleteOldRefreshTokens(Integer userId) {
+    repo.deleteAllByUserId(String.valueOf(userId));
   }
 }
