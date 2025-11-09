@@ -12,8 +12,8 @@ import com.devcool.adapters.web.dto.wrapper.ApiErrorResponse;
 import com.devcool.adapters.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.web.util.ApiResponseFactory;
 import com.devcool.domain.auth.in.AuthenticateUserUseCase;
+import com.devcool.domain.auth.in.LogoutUseCase;
 import com.devcool.domain.auth.in.RefreshTokenUseCase;
-import com.devcool.domain.auth.in.RevokeTokenUseCase;
 import com.devcool.domain.auth.in.command.LoginCommand;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.common.ErrorCode;
@@ -56,7 +56,7 @@ public class AuthController {
   private final GetUserQuery userQuery;
   private final AuthDtoMapper mapper;
   private final RefreshTokenUseCase tokenRefresher;
-  private final RevokeTokenUseCase tokenRevoker;
+  private final LogoutUseCase tokenRevoker;
 
   @Operation(
       summary = "Register account",
@@ -198,7 +198,7 @@ public class AuthController {
       return ResponseEntity.badRequest().build();
     }
 
-    tokenRevoker.revoke(refreshToken);
+    tokenRevoker.revokeRefreshToken(refreshToken);
     Integer userId = Integer.valueOf(auth.getName());
     tokenRevoker.updateAccessTokenVersion(userId);
 
