@@ -38,10 +38,19 @@ public class JwtUtils {
     }
   }
 
+  public static Integer versionFrom(String token) {
+    JWTClaimsSet claims = getClaims(token);
+    try {
+      return claims.getIntegerClaim("version");
+    } catch (ParseException e) {
+      log.warn("Cannot get version from token!");
+      return -1;
+    }
+  }
+
   private static JWTClaimsSet getClaims(String token) {
     try {
-      SignedJWT jwt = SignedJWT.parse(token);
-      return jwt.getJWTClaimsSet();
+      return SignedJWT.parse(token).getJWTClaimsSet();
     } catch (Exception e) {
       log.warn("Invalid JWT token!");
       throw new IllegalArgumentException("Invalid JWT token", e);

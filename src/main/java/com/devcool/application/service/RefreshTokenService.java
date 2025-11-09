@@ -3,14 +3,17 @@ package com.devcool.application.service;
 import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.adapters.out.jwt.util.JwtUtils;
 import com.devcool.domain.auth.in.RefreshTokenUseCase;
+import com.devcool.domain.auth.in.RevokeTokenUseCase;
 import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.model.TokenSubject;
+import com.devcool.domain.auth.out.AccessTokenPort;
 import com.devcool.domain.auth.out.LoadUserPort;
 import com.devcool.domain.auth.out.RefreshTokenStorePort;
 import com.devcool.domain.auth.out.TokenIssuerPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,11 +22,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class RefreshTokenService implements RefreshTokenUseCase {
+public class RefreshTokenService implements RefreshTokenUseCase, RevokeTokenUseCase {
   private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
   private final TokenIssuerPort issuer;
   private final LoadUserPort loadUser;
+  private final UserPort userPort;
   private final RefreshTokenStorePort refreshStore;
+  private final AccessTokenPort accessTokenPort;
 
   @Override
   public TokenPair refresh(String rawRefreshToken) {
@@ -48,5 +53,21 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     refreshStore.store(refreshToken);
 
     return tokenPair;
+  }
+
+  @Override
+  public void revoke(String refreshToken) {
+    String jti = JwtUtils.jtiFrom(refreshToken);
+    String hashJti = HashUtils.sha256(jti);
+    if (!refreshStore.revoke(hashJti)) {
+      log.warn("Cannot revoke token!");
+    }
+  }
+
+  @Override
+  public void updateAccessTokenVersion(Integer userId) {
+    if (!accessTokenPort.updateVersion(userId)) {
+      log.warn("Cannot update access token version");
+    }
   }
 }

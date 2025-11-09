@@ -51,6 +51,9 @@ public class UserEntity {
   @Column(name = "LAST_LOGIN_TIME")
   private Instant lastLoginTime;
 
+  @Column(name = "TOKEN_VERSION")
+  private Integer tokenVersion = 1;
+
   //    Bi-directional mapping
   //    @OneToMany(mappedBy = "senders", fetch = FetchType.LAZY)
   //    private List<FriendRequest> sendingRequests;

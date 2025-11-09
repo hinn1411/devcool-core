@@ -69,10 +69,8 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
   @Override
   public TokenPair issue(User user) {
     Instant now = Instant.now();
-    String accessToken = sign(user, now, accessTtlSec, accessKey, TokenType.ACCESS.name(), null);
-    String refreshTokenId = UUID.randomUUID().toString();
-    String refreshToken =
-        sign(user, now, refreshTtlSec, refreshKey, TokenType.REFRESH.name(), refreshTokenId);
+    String accessToken = sign(user, now, accessTtlSec, accessKey, TokenType.ACCESS.name());
+    String refreshToken = sign(user, now, refreshTtlSec, refreshKey, TokenType.REFRESH.name());
     return new TokenPair(accessToken, refreshToken);
   }
 
@@ -102,10 +100,10 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
     return issue(user);
   }
 
-  private String sign(
-      User user, Instant issuedTime, long ttlSec, byte[] key, String tokenType, String jti) {
+  private String sign(User user, Instant issuedTime, long ttlSec, byte[] key, String tokenType) {
     String userId = String.valueOf(user.getId());
     String userRole = Optional.ofNullable(user.getRole()).map(Enum::name).orElse(null);
+    String tokenId = UUID.randomUUID().toString();
     try {
       Instant expiredTime = issuedTime.plusSeconds(ttlSec);
       JWTClaimsSet claims =
@@ -113,10 +111,11 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
               .subject(userId)
               .issueTime(Date.from(issuedTime))
               .expirationTime(Date.from(expiredTime))
-              .jwtID(jti)
+              .jwtID(tokenId)
               .audience("devcool-api")
               .claim(TYPE, tokenType)
               .claim(ROLE, userRole)
+              .claim("version", user.getTokenVersion())
               .build();
       MACSigner signer = new MACSigner(key);
       SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
@@ -132,18 +131,22 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
       SignedJWT jwt = SignedJWT.parse(token);
       boolean isTokenVerified = jwt.verify(new MACVerifier(key));
       if (!isTokenVerified) {
+        log.warn("Token is invalid!");
         return null;
       }
       JWTClaimsSet claims = jwt.getJWTClaimsSet();
       if (claims.getExpirationTime().toInstant().isBefore(Instant.now())) {
+        log.warn("Token is expired!");
         return null;
       }
 
       if (!Objects.equals(claims.getStringClaim("type"), expectedTokenType)) {
+        log.warn("Token type is mismatched!");
         return null;
       }
 
       if (!claims.getAudience().contains("devcool-api")) {
+        log.warn("Invalid audience!");
         return null;
       }
 
