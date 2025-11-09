@@ -8,4 +8,6 @@ public interface RefreshTokenStorePort {
   boolean consumeIfValid(String jtiHash);
 
   void deleteOldRefreshTokens(Integer userId);
+
+  boolean revoke(String jtiHash);
 }

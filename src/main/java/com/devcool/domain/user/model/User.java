@@ -22,6 +22,7 @@ public class User {
   private Role role;
   private UserStatus status;
   private Instant lastLoginTime;
+  private Integer tokenVersion;
 
   // constructors, getters, behavior methods…
   // Consider invariants & methods like changePassword(), verifyEmail(), deactivate(), etc.

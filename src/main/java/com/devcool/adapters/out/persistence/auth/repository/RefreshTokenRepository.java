@@ -5,18 +5,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, String> {
 
-  @Transactional
   @Modifying
   @Query(
       value =
           """
       UPDATE refresh_token
          SET consumed_time = now()
-       WHERE jti = :jtiHash
+      WHERE jti = :jtiHash
          AND consumed_time IS NULL
          AND expired_time > now()
       """,
@@ -24,4 +22,16 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
   int consumeIfValid(@Param("jtiHash") String jtiHash);
 
   void deleteAllByUserId(String userId);
+
+  @Modifying
+  @Query(
+      value =
+          """
+      UPDATE refresh_token
+        SET consumed_time = now()
+      WHERE jti = :jtiHash
+        AND consumed_time IS NULL
+      """,
+      nativeQuery = true)
+  int revoke(@Param("jtiHash") String jtiHash);
 }

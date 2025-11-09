@@ -36,4 +36,10 @@ public class RefreshTokenAdapter implements RefreshTokenStorePort {
   public void deleteOldRefreshTokens(Integer userId) {
     repo.deleteAllByUserId(String.valueOf(userId));
   }
+
+  @Override
+  @Transactional
+  public boolean revoke(String jtiHash) {
+    return repo.revoke(jtiHash) > 0;
+  }
 }
