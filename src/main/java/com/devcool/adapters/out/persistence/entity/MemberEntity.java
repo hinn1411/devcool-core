@@ -1,5 +1,6 @@
 package com.devcool.adapters.out.persistence.entity;
 
+import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
 import java.sql.Timestamp;
