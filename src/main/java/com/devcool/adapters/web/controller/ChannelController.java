@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
+
 @RestController
 @RequestMapping("/api/v1/channels")
 @RequiredArgsConstructor
@@ -32,6 +34,8 @@ public class ChannelController {
     CreateChannelCommand command = mapper.toCreateChannelCommand(request, userId);
     Integer channelId = channelCreator.createChannel(command);
     CreateChannelResponse response = mapper.toCreateChannelResponse(channelId);
-    return ResponseEntity.ok(ApiResponseFactory.success(HttpStatus.CREATED, ErrorCode.CREATED.code(), "Create channel successfully", response));
+    return ResponseEntity
+        .created(URI.create("/api/v1/channels"))
+        .body(ApiResponseFactory.success(HttpStatus.CREATED, ErrorCode.CREATED.code(), "Create channel successfully", response));
   }
 }
