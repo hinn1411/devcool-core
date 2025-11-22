@@ -1,10 +1,12 @@
-package com.devcool.adapters.out.persistence.entity;
+package com.devcool.adapters.out.persistence.channel.entity;
 
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
-import com.devcool.domain.model.enums.BoundaryType;
-import com.devcool.domain.model.enums.ChannelType;
+import com.devcool.domain.channel.model.enums.BoundaryType;
+import com.devcool.domain.channel.model.enums.ChannelType;
 import jakarta.persistence.*;
-import java.sql.Timestamp;
+
+import java.time.Instant;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,13 +26,13 @@ public class ChannelEntity {
 
   @Column(name = "BOUNDARY", nullable = false)
   @Enumerated
-  private BoundaryType boundary;
+  private BoundaryType boundaryType;
 
   @Column(name = "TOTAL_OF_MEMBERS", nullable = false)
   private Integer totalOfMembers;
 
   @Column(name = "EXPIRED_TIME")
-  private Timestamp expiredTime;
+  private Instant expiredTime;
 
   @Column(name = "CHANNEL_TYPE", nullable = false)
   @Enumerated

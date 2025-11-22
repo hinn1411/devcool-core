@@ -8,4 +8,8 @@ public class UserNotFoundException extends DomainException {
   public UserNotFoundException(Integer id) {
     super(ErrorCode.USER_NOT_FOUND, "User not found", Map.of("userId", id));
   }
+
+  public UserNotFoundException(String username) {
+    super(ErrorCode.USER_NOT_FOUND, "User not found", Map.of("userName", username));
+  }
 }

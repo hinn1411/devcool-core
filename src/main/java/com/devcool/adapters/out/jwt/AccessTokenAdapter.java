@@ -1,4 +1,4 @@
-package com.devcool.adapters.out.persistence;
+package com.devcool.adapters.out.jwt;
 
 import com.devcool.adapters.out.persistence.user.repository.UserRepository;
 import com.devcool.domain.auth.out.AccessTokenPort;
