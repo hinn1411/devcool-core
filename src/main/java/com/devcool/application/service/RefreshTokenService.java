@@ -2,6 +2,7 @@ package com.devcool.application.service;
 
 import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.adapters.out.jwt.util.JwtUtils;
+import com.devcool.domain.auth.exception.RefreshTokenInvalidException;
 import com.devcool.domain.auth.in.LogoutUseCase;
 import com.devcool.domain.auth.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.model.RefreshToken;
@@ -18,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +58,10 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
 
   @Override
   public void revokeRefreshToken(String refreshToken) {
+    if (Objects.isNull(refreshToken)) {
+      throw new RefreshTokenInvalidException("Empty refresh token");
+    }
+
     String jti = JwtUtils.jtiFrom(refreshToken);
     String hashJti = HashUtils.sha256(jti);
     if (!refreshStore.revoke(hashJti)) {
@@ -64,6 +71,9 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
 
   @Override
   public void updateAccessTokenVersion(Integer userId) {
+    if (Objects.isNull(userId)) {
+      throw new UserNotFoundException(userId);
+    }
     if (!accessTokenPort.updateVersion(userId)) {
       log.warn("Cannot update access token version");
     }
