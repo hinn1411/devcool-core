@@ -74,6 +74,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
         .name(command.name())
         .role(Role.USER)
         .status(UserStatus.ACTIVE)
+        .tokenVersion(1)
         .build();
   }
 }

@@ -4,10 +4,7 @@ import com.devcool.adapters.web.dto.mapper.AuthDtoMapper;
 import com.devcool.adapters.web.dto.request.ChangePasswordRequest;
 import com.devcool.adapters.web.dto.request.LoginRequest;
 import com.devcool.adapters.web.dto.request.RegisterUserRequest;
-import com.devcool.adapters.web.dto.response.GetProfileResponse;
-import com.devcool.adapters.web.dto.response.LoginResponse;
-import com.devcool.adapters.web.dto.response.RefreshTokenResponse;
-import com.devcool.adapters.web.dto.response.RegisterUserResponse;
+import com.devcool.adapters.web.dto.response.*;
 import com.devcool.adapters.web.dto.schema.GetProfileSuccess;
 import com.devcool.adapters.web.dto.schema.LoginSuccess;
 import com.devcool.adapters.web.dto.schema.RegisterUserSuccess;
@@ -15,6 +12,7 @@ import com.devcool.adapters.web.dto.wrapper.ApiErrorResponse;
 import com.devcool.adapters.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.web.util.ApiResponseFactory;
 import com.devcool.domain.auth.in.AuthenticateUserUseCase;
+import com.devcool.domain.auth.in.LogoutUseCase;
 import com.devcool.domain.auth.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.in.command.LoginCommand;
 import com.devcool.domain.auth.model.TokenPair;
@@ -31,10 +29,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +38,11 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Tag(name = "Auth")
 @RestController
@@ -57,6 +56,7 @@ public class AuthController {
   private final GetUserQuery userQuery;
   private final AuthDtoMapper mapper;
   private final RefreshTokenUseCase tokenRefresher;
+  private final LogoutUseCase tokenRevoker;
 
   @Operation(
       summary = "Register account",
@@ -189,5 +189,27 @@ public class AuthController {
         .body(
             ApiResponseFactory.success(
                 HttpStatus.OK, ErrorCode.OK.code(), "Refresh token successfully", response));
+  }
+
+  @PostMapping("/logout")
+  public ResponseEntity<ApiSuccessResponse<LogoutResponse>> logout(
+      @CookieValue("rt") String refreshToken, Authentication auth) {
+
+    tokenRevoker.revokeRefreshToken(refreshToken);
+    Integer userId = Integer.valueOf(auth.getName());
+    tokenRevoker.updateAccessTokenVersion(userId);
+
+    ResponseCookie expiredCookie =
+        ResponseCookie.from("rt", "")
+            .httpOnly(true)
+            .secure(true)
+            .sameSite("Strict")
+            .path("/api/v1/auth/refresh")
+            .maxAge(0)
+            .build();
+
+    return ResponseEntity.noContent()
+        .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+        .build();
   }
 }

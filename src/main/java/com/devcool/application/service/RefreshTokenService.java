@@ -2,10 +2,13 @@ package com.devcool.application.service;
 
 import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.adapters.out.jwt.util.JwtUtils;
+import com.devcool.domain.auth.exception.RefreshTokenInvalidException;
+import com.devcool.domain.auth.in.LogoutUseCase;
 import com.devcool.domain.auth.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.model.TokenSubject;
+import com.devcool.domain.auth.out.AccessTokenPort;
 import com.devcool.domain.auth.out.LoadUserPort;
 import com.devcool.domain.auth.out.RefreshTokenStorePort;
 import com.devcool.domain.auth.out.TokenIssuerPort;
@@ -17,13 +20,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
-public class RefreshTokenService implements RefreshTokenUseCase {
+public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
   private final TokenIssuerPort issuer;
   private final LoadUserPort loadUser;
   private final RefreshTokenStorePort refreshStore;
+  private final AccessTokenPort accessTokenPort;
 
   @Override
   public TokenPair refresh(String rawRefreshToken) {
@@ -48,5 +54,28 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     refreshStore.store(refreshToken);
 
     return tokenPair;
+  }
+
+  @Override
+  public void revokeRefreshToken(String refreshToken) {
+    if (Objects.isNull(refreshToken)) {
+      throw new RefreshTokenInvalidException("Empty refresh token");
+    }
+
+    String jti = JwtUtils.jtiFrom(refreshToken);
+    String hashJti = HashUtils.sha256(jti);
+    if (!refreshStore.revoke(hashJti)) {
+      log.warn("Cannot revoke token!");
+    }
+  }
+
+  @Override
+  public void updateAccessTokenVersion(Integer userId) {
+    if (Objects.isNull(userId)) {
+      throw new UserNotFoundException(userId);
+    }
+    if (!accessTokenPort.updateVersion(userId)) {
+      log.warn("Cannot update access token version");
+    }
   }
 }

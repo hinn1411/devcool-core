@@ -28,26 +28,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
+
     String header = request.getHeader("Authorization");
-    if (Objects.nonNull(header) && header.startsWith("Bearer ")) {
-      String token = header.substring(7);
-      try {
-        if (issuer.isAccessTokenValid(token)) {
-          String subject = JwtUtils.subjectFrom(token);
-          String role = JwtUtils.roleFrom(token);
-          User user = loader.loadById(Integer.valueOf(subject)).orElse(null);
-          if (Objects.nonNull(user)) {
-            var auth =
-                new UsernamePasswordAuthenticationToken(
-                    subject, null, List.of(new SimpleGrantedAuthority(role)));
-            SecurityContextHolder.getContext().setAuthentication(auth);
-          }
-        }
-      } catch (Exception e) {
-        // Invalid token -> Clear context
-        SecurityContextHolder.clearContext();
-      }
+    if (Objects.isNull(header) || !header.startsWith("Bearer ")) {
+      logger.warn("Token format is invalid!");
+      SecurityContextHolder.clearContext();
+      filterChain.doFilter(request, response);
+      return;
     }
+
+    String token = header.substring(7);
+    if (!issuer.isAccessTokenValid(token)) {
+      logger.warn("Access token is invalid!");
+      SecurityContextHolder.clearContext();
+      filterChain.doFilter(request, response);
+      return;
+    }
+
+    String subject = JwtUtils.subjectFrom(token);
+    String role = JwtUtils.roleFrom(token);
+    Integer currentVersion = JwtUtils.versionFrom(token);
+    User user = loader.loadById(Integer.valueOf(subject)).orElse(null);
+    if (Objects.isNull(user) || currentVersion < user.getTokenVersion()) {
+      SecurityContextHolder.clearContext();
+      filterChain.doFilter(request, response);
+      return;
+    }
+
+    var auth =
+        new UsernamePasswordAuthenticationToken(
+            subject, null, List.of(new SimpleGrantedAuthority(role)));
+    SecurityContextHolder.getContext().setAuthentication(auth);
     filterChain.doFilter(request, response);
   }
 }
