@@ -10,10 +10,12 @@ public class ChannelDtoMapper {
 
   public CreateChannelResponse toCreateChannelResponse(Integer channelId) {
     return CreateChannelResponse.builder().channelId(channelId).build();
-
   }
-  public CreateChannelCommand toCreateChannelCommand(CreateChannelRequest request, Integer creatorId) {
-    return new CreateChannelCommand(request.name(),
+
+  public CreateChannelCommand toCreateChannelCommand(
+      CreateChannelRequest request, Integer creatorId) {
+    return new CreateChannelCommand(
+        request.name(),
         request.boundaryType(),
         request.expiredTime(),
         request.channelType(),

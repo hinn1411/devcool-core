@@ -3,7 +3,6 @@ package com.devcool.domain.channel.model.converters;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-
 import java.util.Objects;
 
 @Converter(autoApply = false)

@@ -9,6 +9,7 @@ import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.common.ErrorCode;
 import jakarta.validation.Valid;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/channels")
@@ -34,8 +33,12 @@ public class ChannelController {
     CreateChannelCommand command = mapper.toCreateChannelCommand(request, userId);
     Integer channelId = channelCreator.createChannel(command);
     CreateChannelResponse response = mapper.toCreateChannelResponse(channelId);
-    return ResponseEntity
-        .created(URI.create("/api/v1/channels"))
-        .body(ApiResponseFactory.success(HttpStatus.CREATED, ErrorCode.CREATED.code(), "Create channel successfully", response));
+    return ResponseEntity.created(URI.create("/api/v1/channels"))
+        .body(
+            ApiResponseFactory.success(
+                HttpStatus.CREATED,
+                ErrorCode.CREATED.code(),
+                "Create channel successfully",
+                response));
   }
 }

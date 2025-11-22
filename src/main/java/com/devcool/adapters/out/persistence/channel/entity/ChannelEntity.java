@@ -4,9 +4,7 @@ import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import jakarta.persistence.*;
-
 import java.time.Instant;
-
 import lombok.Getter;
 import lombok.Setter;
 

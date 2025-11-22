@@ -19,11 +19,16 @@ public class ChannelService implements CreateChannelUseCase {
   private final LoadUserPort userPort;
   private final ChannelPort channelPort;
 
-
   @Override
   public Integer createChannel(CreateChannelCommand command) {
-    User creator = userPort.loadById(command.creatorId()).orElseThrow(() -> new UserNotFoundException(command.creatorId()));
-    User leader = userPort.loadByUsername(command.leader()).orElseThrow(() -> new UserNotFoundException(command.leader()));
+    User creator =
+        userPort
+            .loadById(command.creatorId())
+            .orElseThrow(() -> new UserNotFoundException(command.creatorId()));
+    User leader =
+        userPort
+            .loadByUsername(command.leader())
+            .orElseThrow(() -> new UserNotFoundException(command.leader()));
     Channel channel = buildChannel(command, creator, leader);
     return channelPort.save(channel);
   }
