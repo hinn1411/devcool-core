@@ -16,7 +16,7 @@ public class User {
   private String username;
   private String password; // store hashed password
   private String email;
-  private boolean isEmailVerified;
+  private boolean emailVerified;
   private String name;
   private String avatar;
   private Role role;

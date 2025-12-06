@@ -33,7 +33,7 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
     User user =
         loadUser
             .loadByUsername(command.username())
-            .orElseThrow(() -> new UserNotFoundException(-1));
+            .orElseThrow(() -> new UserNotFoundException(command.username()));
 
     if (!hasher.matches(command.password(), user.getPassword())) {
       log.warn("Password does not match!");
