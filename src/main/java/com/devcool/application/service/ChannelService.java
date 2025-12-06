@@ -1,47 +1,41 @@
 package com.devcool.application.service;
 
-import com.devcool.domain.auth.out.LoadUserPort;
-import com.devcool.domain.channel.model.Channel;
+import com.devcool.domain.channel.exception.InvalidChannelConfigException;
+import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
-import com.devcool.domain.channel.port.out.ChannelPort;
-import com.devcool.domain.user.exception.UserNotFoundException;
-import com.devcool.domain.user.model.User;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
 @Service
-@RequiredArgsConstructor
 public class ChannelService implements CreateChannelUseCase {
   private static final Logger log = LoggerFactory.getLogger(ChannelService.class);
-  private final LoadUserPort userPort;
-  private final ChannelPort channelPort;
+  private final Map<ChannelType, ChannelCreationStrategy> strategies;
+
+  public ChannelService(List<ChannelCreationStrategy> strategies) {
+    this.strategies = new EnumMap<>(ChannelType.class);
+    strategies.forEach(
+        strategy -> this.strategies.put(strategy.getSupportedType(), strategy)
+    );
+  }
 
   @Override
   public Integer createChannel(CreateChannelCommand command) {
-    User creator =
-        userPort
-            .loadById(command.creatorId())
-            .orElseThrow(() -> new UserNotFoundException(command.creatorId()));
-    User leader =
-        userPort
-            .loadByUsername(command.leader())
-            .orElseThrow(() -> new UserNotFoundException(command.leader()));
-    Channel channel = buildChannel(command, creator, leader);
-    return channelPort.save(channel);
-  }
+    ChannelType type = command.channelType();
 
-  private Channel buildChannel(CreateChannelCommand command, User creator, User leader) {
-    return Channel.builder()
-        .name(command.name())
-        .boundaryType(command.boundaryType())
-        .expiredTime(command.expiredTime())
-        .channelType(command.channelType())
-        .totalOfMembers(1)
-        .creator(creator)
-        .leader(leader)
-        .build();
+    ChannelCreationStrategy strategy = strategies.get(type);
+    if (Objects.isNull(type)) {
+      log.warn("No channel creation strategy registered for type null");
+      throw new InvalidChannelConfigException("Unsupported channel type: " + type);
+    }
+
+    return strategy.createChannel(command);
   }
 }

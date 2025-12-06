@@ -5,6 +5,7 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import java.time.Instant;
+import java.util.List;
 
 @Schema(name = "CreateChannelRequest", description = "Channel for creation")
 public record CreateChannelRequest(
@@ -12,4 +13,5 @@ public record CreateChannelRequest(
     @NotNull BoundaryType boundaryType,
     @FutureOrPresent Instant expiredTime,
     @NotNull ChannelType channelType,
-    String leader) {}
+    Integer leaderId,
+    @Size(min = 1, max = 10) List<Integer> memberIds) {}

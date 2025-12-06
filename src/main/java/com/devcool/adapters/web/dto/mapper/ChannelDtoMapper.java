@@ -20,6 +20,7 @@ public class ChannelDtoMapper {
         request.expiredTime(),
         request.channelType(),
         creatorId,
-        request.leader());
+        request.leaderId(),
+        request.memberIds());
   }
 }

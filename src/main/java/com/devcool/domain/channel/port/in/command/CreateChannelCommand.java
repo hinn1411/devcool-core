@@ -3,6 +3,7 @@ package com.devcool.domain.channel.port.in.command;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import java.time.Instant;
+import java.util.List;
 
 public record CreateChannelCommand(
     String name,
@@ -10,4 +11,5 @@ public record CreateChannelCommand(
     Instant expiredTime,
     ChannelType channelType,
     Integer creatorId,
-    String leader) {}
+    Integer leaderId,
+    List<Integer> memberIds) {}
