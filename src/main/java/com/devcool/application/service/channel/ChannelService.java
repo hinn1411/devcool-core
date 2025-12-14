@@ -5,14 +5,13 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ChannelService implements CreateChannelUseCase {
@@ -21,9 +20,7 @@ public class ChannelService implements CreateChannelUseCase {
 
   public ChannelService(List<ChannelCreationStrategy> strategies) {
     this.strategies = new EnumMap<>(ChannelType.class);
-    strategies.forEach(
-        strategy -> this.strategies.put(strategy.getSupportedType(), strategy)
-    );
+    strategies.forEach(strategy -> this.strategies.put(strategy.getSupportedType(), strategy));
   }
 
   @Override

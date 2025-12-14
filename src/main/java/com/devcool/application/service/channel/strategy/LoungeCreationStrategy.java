@@ -11,18 +11,18 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class LoungeCreationStrategy extends AbstractChannelCreationStrategy implements ChannelCreationStrategy {
+public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
+    implements ChannelCreationStrategy {
 
   public LoungeCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
@@ -43,10 +43,10 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy impl
       throw new UserDuplicateException(command.memberIds());
     }
     if (members.size() < distinctMemberIds.size()) {
-      Set<Integer> foundIds = members.stream().map(member -> member.getUser().getId())
-          .collect(Collectors.toSet());
-      List<Integer> missingIds = distinctMemberIds.stream().filter(id -> !foundIds.contains(id))
-          .toList();
+      Set<Integer> foundIds =
+          members.stream().map(member -> member.getUser().getId()).collect(Collectors.toSet());
+      List<Integer> missingIds =
+          distinctMemberIds.stream().filter(id -> !foundIds.contains(id)).toList();
       throw new UserNotFoundException(missingIds);
     }
     User creator = loadUser(command.creatorId());

@@ -10,16 +10,16 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.model.User;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy implements ChannelCreationStrategy {
+public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
+    implements ChannelCreationStrategy {
   public PrivateChatCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
   }

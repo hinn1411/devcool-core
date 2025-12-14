@@ -2,7 +2,6 @@ package com.devcool.domain.user.exception;
 
 import com.devcool.domain.common.DomainException;
 import com.devcool.domain.common.ErrorCode;
-
 import java.util.List;
 import java.util.Map;
 

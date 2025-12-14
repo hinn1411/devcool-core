@@ -5,7 +5,9 @@ import com.devcool.adapters.out.persistence.member.mapper.MemberMapper;
 import com.devcool.domain.channel.model.Channel;
 import org.mapstruct.Mapper;
 
-@Mapper(componentModel = "spring", uses = {MemberMapper.class})
+@Mapper(
+    componentModel = "spring",
+    uses = {MemberMapper.class})
 public interface ChannelMapper {
 
   Channel toDomain(ChannelEntity entity);

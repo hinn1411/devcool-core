@@ -6,13 +6,12 @@ import com.devcool.adapters.out.persistence.channel.repository.ChannelRepository
 import com.devcool.adapters.out.persistence.entity.MemberEntity;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import java.util.ArrayList;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.Objects;
 
 @Repository
 @RequiredArgsConstructor
@@ -27,7 +26,7 @@ public class ChannelAdapter implements ChannelPort {
     if (Objects.isNull(entity.getMembers())) {
       entity.setMembers(new ArrayList<>());
     }
-    for (MemberEntity member: entity.getMembers()) {
+    for (MemberEntity member : entity.getMembers()) {
       member.setChannel(entity);
     }
     ChannelEntity saved = repo.save(entity);

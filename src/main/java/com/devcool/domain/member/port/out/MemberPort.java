@@ -4,5 +4,4 @@ import com.devcool.domain.member.model.Member;
 
 public interface MemberPort {
   Integer save(Member member);
-
 }

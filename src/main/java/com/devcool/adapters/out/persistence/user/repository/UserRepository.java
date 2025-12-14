@@ -1,7 +1,6 @@
 package com.devcool.adapters.out.persistence.user.repository;
 
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

@@ -4,10 +4,9 @@ import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.Instant;
 
 @Entity
 @Table(name = "MEMBER")

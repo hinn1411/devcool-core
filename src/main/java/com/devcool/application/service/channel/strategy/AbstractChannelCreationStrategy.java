@@ -8,11 +8,10 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
-import lombok.RequiredArgsConstructor;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class AbstractChannelCreationStrategy {
@@ -20,9 +19,7 @@ public abstract class AbstractChannelCreationStrategy {
   protected final ChannelPort channelPort;
 
   protected User loadUser(Integer id) {
-    return userPort
-        .loadById(id)
-        .orElseThrow(() -> new UserNotFoundException(id));
+    return userPort.loadById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
   private List<User> loadUsers(List<Integer> memberIds) {
@@ -34,14 +31,13 @@ public abstract class AbstractChannelCreationStrategy {
 
     Instant joinedTime = Instant.now();
     MemberType role = MemberType.MEMBER;
-    return users.stream().map(user -> Member.builder()
-        .joinedTime(joinedTime)
-        .role(role)
-        .user(user)
-        .build()).toList();
+    return users.stream()
+        .map(user -> Member.builder().joinedTime(joinedTime).role(role).user(user).build())
+        .toList();
   }
 
-  protected Channel buildChannel(CreateChannelCommand command, User creator, User leader, List<Member> members) {
+  protected Channel buildChannel(
+      CreateChannelCommand command, User creator, User leader, List<Member> members) {
     return Channel.builder()
         .name(command.name())
         .boundaryType(command.boundaryType())

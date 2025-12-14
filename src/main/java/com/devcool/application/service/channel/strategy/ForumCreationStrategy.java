@@ -9,20 +9,21 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.model.User;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ForumCreationStrategy extends AbstractChannelCreationStrategy implements ChannelCreationStrategy {
+public class ForumCreationStrategy extends AbstractChannelCreationStrategy
+    implements ChannelCreationStrategy {
 
   public ForumCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
   }
+
   @Override
   public ChannelType getSupportedType() {
     return ChannelType.FORUM;
