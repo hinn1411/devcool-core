@@ -1,4 +1,4 @@
-package com.devcool.application.service;
+package com.devcool.application.service.channel;
 
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -31,7 +31,7 @@ public class ChannelService implements CreateChannelUseCase {
     ChannelType type = command.channelType();
 
     ChannelCreationStrategy strategy = strategies.get(type);
-    if (Objects.isNull(type)) {
+    if (Objects.isNull(strategy)) {
       log.warn("No channel creation strategy registered for type null");
       throw new InvalidChannelConfigException("Unsupported channel type: " + type);
     }

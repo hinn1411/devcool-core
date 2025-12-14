@@ -7,11 +7,18 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.member.model.Member;
+import com.devcool.domain.user.exception.UserDuplicateException;
+import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -30,14 +37,33 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy impl
   public Integer createChannel(CreateChannelCommand command) {
     validate(command);
 
+    List<Member> members = getMembers(command.memberIds());
+    Set<Integer> distinctMemberIds = new HashSet<>(command.memberIds());
+    if (distinctMemberIds.size() < command.memberIds().size()) {
+      throw new UserDuplicateException(command.memberIds());
+    }
+    if (members.size() < distinctMemberIds.size()) {
+      Set<Integer> foundIds = members.stream().map(member -> member.getUser().getId())
+          .collect(Collectors.toSet());
+      List<Integer> missingIds = distinctMemberIds.stream().filter(id -> !foundIds.contains(id))
+          .toList();
+      throw new UserNotFoundException(missingIds);
+    }
     User creator = loadUser(command.creatorId());
-    Channel channel = buildChannel(command, creator, null);
+    Channel channel = buildChannel(command, creator, null, members);
     return channelPort.save(channel);
   }
 
   private void validate(CreateChannelCommand command) {
+    ChannelType channelType = command.channelType();
     int totalOfMembers = command.memberIds().size();
     Integer leaderId = command.leaderId();
+
+    if (!Objects.equals(channelType, ChannelType.LOUNGE)) {
+      log.info("Channel type must be LOUNGE");
+      throw new InvalidChannelConfigException("Channel type must be LOUNGE");
+    }
+
     if (!(1 <= totalOfMembers && totalOfMembers <= 10)) {
       log.info("Total members allowed are from 1 to 10");
       throw new InvalidChannelConfigException("Total members allowed are from 1 to 10");

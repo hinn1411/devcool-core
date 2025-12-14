@@ -7,11 +7,13 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.model.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -30,17 +32,24 @@ public class ForumCreationStrategy extends AbstractChannelCreationStrategy imple
   public Integer createChannel(CreateChannelCommand command) {
     validate(command);
 
+    List<Member> members = getMembers(command.memberIds());
     User creator = loadUser(command.creatorId());
     User leader = loadUser(command.leaderId());
 
-    Channel channel = buildChannel(command, creator, leader);
+    Channel channel = buildChannel(command, creator, leader, members);
     return channelPort.save(channel);
   }
 
   private void validate(CreateChannelCommand command) {
+    ChannelType channelType = command.channelType();
     int totalOfMembers = command.memberIds().size();
     Integer leaderId = command.leaderId();
     Instant expiredTime = command.expiredTime();
+
+    if (!Objects.equals(channelType, ChannelType.FORUM)) {
+      log.info("Channel type must be FORUM");
+      throw new InvalidChannelConfigException("Channel type must be FORUM");
+    }
 
     if (!(1 <= totalOfMembers && totalOfMembers <= 10)) {
       log.info("Total members allowed are from 1 to 10");

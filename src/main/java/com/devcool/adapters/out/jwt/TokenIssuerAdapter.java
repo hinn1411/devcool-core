@@ -32,7 +32,7 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
   private final byte[] accessKey;
   private final byte[] refreshKey;
 
-  private static final long accessTtlSec = 900; // 15 min
+  private static final long accessTtlSec = 3600; // 15 min
   private static final long refreshTtlSec = 1209600; // 14 days
 
   private static final String TYPE = "type";

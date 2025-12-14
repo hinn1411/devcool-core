@@ -1,6 +1,9 @@
 package com.devcool.adapters.out.persistence.user.repository;
 
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,4 +29,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
       """,
       nativeQuery = true)
   int updateTokenVersion(@Param("userId") Integer userId);
+
+  List<UserEntity> findByIdIn(Collection<Integer> ids);
 }

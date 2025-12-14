@@ -2,6 +2,7 @@ package com.devcool.domain.common;
 
 public enum ErrorCode {
   USER_NOT_FOUND("USR_404"),
+  USER_DUPLICATE("USR_405"),
   EMAIL_ALREADY_USED("USR_409"),
   USERNAME_ALREADY_USED("USR_410"),
   PASSWORD_WEAK("USR_422"),

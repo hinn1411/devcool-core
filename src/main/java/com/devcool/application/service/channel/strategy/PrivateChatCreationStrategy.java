@@ -8,11 +8,13 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.model.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -31,16 +33,23 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
   public Integer createChannel(CreateChannelCommand command) {
     validate(command);
 
+    List<Member> members = getMembers(command.memberIds());
     User creator = loadUser(command.creatorId());
-    Channel channel = buildChannel(command, creator, null);
+    Channel channel = buildChannel(command, creator, null, members);
     return channelPort.save(channel);
   }
 
   private void validate(CreateChannelCommand command) {
+    ChannelType channelType = command.channelType();
     BoundaryType boundaryType = command.boundaryType();
     int totalOfMembers = command.memberIds().size();
     Integer leaderId = command.leaderId();
     Instant expiredTime = command.expiredTime();
+
+    if (!Objects.equals(channelType, ChannelType.PRIVATE_CHAT)) {
+      log.info("Channel type must be PRIVATE_CHAT");
+      throw new InvalidChannelConfigException("Channel type must be PRIVATE_CHAT");
+    }
 
     if (Objects.nonNull(leaderId)) {
       log.info("Private chat does not have leader");
