@@ -32,7 +32,7 @@ public class UserEntity {
   private String email;
 
   @Column(name = "EMAIL_VERIFIED")
-  private Boolean isEmailVerified;
+  private Boolean emailVerified;
 
   @Column(name = "NAME", length = 50)
   private String name;

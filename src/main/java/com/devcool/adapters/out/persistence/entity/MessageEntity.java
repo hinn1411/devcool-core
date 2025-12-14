@@ -1,5 +1,6 @@
 package com.devcool.adapters.out.persistence.entity;
 
+import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import jakarta.persistence.*;
 import java.sql.Timestamp;
 import lombok.Getter;

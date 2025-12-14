@@ -4,6 +4,8 @@ import com.devcool.adapters.out.persistence.user.mapper.UserMapper;
 import com.devcool.adapters.out.persistence.user.repository.UserRepository;
 import com.devcool.domain.auth.out.LoadUserPort;
 import com.devcool.domain.user.model.User;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -22,5 +24,14 @@ public class AuthAdapter implements LoadUserPort {
   @Override
   public Optional<User> loadById(Integer id) {
     return repo.findById(id).map(mapper::toDomain);
+  }
+
+  @Override
+  public List<User> loadByIds(List<Integer> ids) {
+    if (Objects.isNull(ids) || ids.isEmpty()) {
+      return List.of();
+    }
+
+    return repo.findByIdIn(ids).stream().map(mapper::toDomain).toList();
   }
 }

@@ -1,10 +1,13 @@
-package com.devcool.adapters.out.persistence.entity;
+package com.devcool.adapters.out.persistence.channel.entity;
 
+import com.devcool.adapters.out.persistence.entity.MemberEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
-import com.devcool.domain.model.enums.BoundaryType;
-import com.devcool.domain.model.enums.ChannelType;
+import com.devcool.domain.channel.model.enums.BoundaryType;
+import com.devcool.domain.channel.model.enums.ChannelType;
 import jakarta.persistence.*;
-import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,17 +26,17 @@ public class ChannelEntity {
   private String name;
 
   @Column(name = "BOUNDARY", nullable = false)
-  @Enumerated
-  private BoundaryType boundary;
+  @Enumerated(EnumType.STRING)
+  private BoundaryType boundaryType;
 
   @Column(name = "TOTAL_OF_MEMBERS", nullable = false)
   private Integer totalOfMembers;
 
   @Column(name = "EXPIRED_TIME")
-  private Timestamp expiredTime;
+  private Instant expiredTime;
 
   @Column(name = "CHANNEL_TYPE", nullable = false)
-  @Enumerated
+  @Enumerated(EnumType.STRING)
   private ChannelType channelType;
 
   @ManyToOne
@@ -43,4 +46,7 @@ public class ChannelEntity {
   @ManyToOne
   @JoinColumn(name = "LEADER_ID", referencedColumnName = "ID")
   private UserEntity leader;
+
+  @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<MemberEntity> members = new ArrayList<>();
 }

@@ -1,9 +1,10 @@
 package com.devcool.adapters.out.persistence.entity;
 
+import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
-import java.sql.Timestamp;
-import java.util.List;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,20 +18,18 @@ public class MemberEntity {
   @Column(name = "ID", nullable = false, unique = true)
   private Integer id;
 
-  @Column(name = "USER_ID", nullable = false)
-  private String userId;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "USER_ID", referencedColumnName = "ID", nullable = false)
+  private UserEntity user;
+
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID", nullable = false)
+  private ChannelEntity channel;
 
   @Column(name = "ROLE", nullable = false)
-  @Enumerated
+  @Enumerated(EnumType.STRING)
   private MemberType role;
 
   @Column(name = "JOINED_TIME", nullable = false)
-  private Timestamp joinedTime;
-
-  @ManyToMany
-  @JoinTable(
-      name = "MEMBERS_OF_CHANNELS",
-      joinColumns = @JoinColumn(name = "MEMBER_ID", referencedColumnName = "ID"),
-      inverseJoinColumns = @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID"))
-  private List<ChannelEntity> channels;
+  private Instant joinedTime;
 }
