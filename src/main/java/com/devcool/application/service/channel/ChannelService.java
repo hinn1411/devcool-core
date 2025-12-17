@@ -1,24 +1,32 @@
 package com.devcool.application.service.channel;
 
+import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
+import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
+import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
+import com.devcool.domain.channel.port.out.ChannelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
 @Service
-public class ChannelService implements CreateChannelUseCase {
+public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase {
   private static final Logger log = LoggerFactory.getLogger(ChannelService.class);
   private final Map<ChannelType, ChannelCreationStrategy> strategies;
+  private final ChannelPort channelPort;
 
-  public ChannelService(List<ChannelCreationStrategy> strategies) {
+  public ChannelService(List<ChannelCreationStrategy> strategies, ChannelPort channelPort) {
+    this.channelPort = channelPort;
     this.strategies = new EnumMap<>(ChannelType.class);
     strategies.forEach(strategy -> this.strategies.put(strategy.getSupportedType(), strategy));
   }
@@ -34,5 +42,22 @@ public class ChannelService implements CreateChannelUseCase {
     }
 
     return strategy.createChannel(command);
+  }
+
+
+  @Override
+  public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
+    Channel existedChannel = channelPort.findById(channelId)
+        .orElseThrow(() -> new ChannelNotFoundException("Channel not found"));
+    Channel channel = updateChannel(existedChannel, command);
+    return channelPort.update(channel);
+  }
+
+  private Channel updateChannel(Channel channel, UpdateChannelCommand command) {
+    channel.setName(command.name());
+    channel.setChannelType(command.channelType());
+    channel.setExpiredTime(command.expiredTime());
+    channel.setChannelType(command.channelType());
+    return channel;
   }
 }

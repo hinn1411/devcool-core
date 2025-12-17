@@ -3,15 +3,14 @@ package com.devcool.adapters.out.persistence.channel;
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.channel.mapper.ChannelMapper;
 import com.devcool.adapters.out.persistence.channel.repository.ChannelRepository;
-import com.devcool.adapters.out.persistence.entity.MemberEntity;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.out.ChannelPort;
-import java.util.ArrayList;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -21,15 +20,21 @@ public class ChannelAdapter implements ChannelPort {
   private final ChannelMapper mapper;
 
   @Override
+  public Optional<Channel> findById(Integer id) {
+    return repo.findById(id).map(mapper::toDomain);
+  }
+
+  @Override
   public Integer save(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
-    if (Objects.isNull(entity.getMembers())) {
-      entity.setMembers(new ArrayList<>());
-    }
-    for (MemberEntity member : entity.getMembers()) {
-      member.setChannel(entity);
-    }
     ChannelEntity saved = repo.save(entity);
     return saved.getId();
+  }
+
+  @Override
+  public boolean update(Channel channel) {
+    ChannelEntity entity = mapper.toEntity(channel);
+    repo.save(entity);
+    return true;
   }
 }
