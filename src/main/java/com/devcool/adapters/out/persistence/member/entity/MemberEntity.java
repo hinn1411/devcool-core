@@ -1,17 +1,24 @@
-package com.devcool.adapters.out.persistence.entity;
+package com.devcool.adapters.out.persistence.member.entity;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
-import java.time.Instant;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
-@Table(name = "MEMBER")
+@Table(name = "MEMBER",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_member_channel_user",
+        columnNames = {"CHANNEL_ID", "USER_ID"}
+    ))
 @Getter
 @Setter
+@Builder
 public class MemberEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)

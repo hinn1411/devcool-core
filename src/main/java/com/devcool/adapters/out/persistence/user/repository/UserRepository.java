@@ -4,6 +4,8 @@ import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -30,4 +32,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
   int updateTokenVersion(@Param("userId") Integer userId);
 
   List<UserEntity> findByIdIn(Collection<Integer> ids);
+
+  @Query(value = "SELECT id FROM app_user WHERE id in :userIds", nativeQuery = true)
+  Set<Integer> findExistingIds(@Param("userIds") Collection<Integer> userIds);
 }

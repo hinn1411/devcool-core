@@ -4,6 +4,8 @@ import com.devcool.domain.common.DomainException;
 import com.devcool.domain.common.ErrorCode;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class UserNotFoundException extends DomainException {
   public UserNotFoundException(Integer id) {
@@ -16,5 +18,9 @@ public class UserNotFoundException extends DomainException {
 
   public UserNotFoundException(List<Integer> ids) {
     super(ErrorCode.USER_NOT_FOUND, "Users not found", Map.of("userIds", ids));
+  }
+
+  public UserNotFoundException(Set<Integer> ids) {
+    super(ErrorCode.USER_NOT_FOUND, "Users not found", Map.of("userIds", Optional.ofNullable(ids).stream().toList()));
   }
 }

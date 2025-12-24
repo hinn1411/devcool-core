@@ -1,6 +1,6 @@
 package com.devcool.adapters.out.persistence.channel.entity;
 
-import com.devcool.adapters.out.persistence.entity.MemberEntity;
+import com.devcool.adapters.out.persistence.member.entity.MemberEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -8,6 +8,8 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 

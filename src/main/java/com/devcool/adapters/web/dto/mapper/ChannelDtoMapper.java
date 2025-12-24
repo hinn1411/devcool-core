@@ -1,9 +1,12 @@
 package com.devcool.adapters.web.dto.mapper;
 
+import com.devcool.adapters.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.web.dto.request.UpdateChannelRequest;
+import com.devcool.adapters.web.dto.response.AddMembersResponse;
 import com.devcool.adapters.web.dto.response.CreateChannelResponse;
 import com.devcool.adapters.web.dto.response.UpdateChannelResponse;
+import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import org.springframework.stereotype.Component;
@@ -36,5 +39,13 @@ public class ChannelDtoMapper {
 
   public UpdateChannelResponse toUpdateChannelResponse(boolean isChannelUpdated) {
     return UpdateChannelResponse.builder().channelUpdated(isChannelUpdated).build();
+  }
+
+  public AddMembersCommand toAddMembersCommand(AddMembersRequest request) {
+    return new AddMembersCommand(request.userIds());
+  }
+
+  public AddMembersResponse toAddMembersResponse(boolean isMemberAdded) {
+    return AddMembersResponse.builder().memberAdded(isMemberAdded).build();
   }
 }

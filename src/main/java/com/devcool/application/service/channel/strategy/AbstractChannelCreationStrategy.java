@@ -49,4 +49,7 @@ public abstract class AbstractChannelCreationStrategy {
         .members(members)
         .build();
   }
+  private void addCreator(List<Member> members, User creator) {
+
+  }
 }
