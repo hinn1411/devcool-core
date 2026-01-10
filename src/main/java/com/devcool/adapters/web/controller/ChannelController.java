@@ -1,14 +1,17 @@
 package com.devcool.adapters.web.controller;
 
 import com.devcool.adapters.web.dto.mapper.ChannelDtoMapper;
+import com.devcool.adapters.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.web.dto.request.UpdateChannelRequest;
+import com.devcool.adapters.web.dto.response.AddMembersResponse;
 import com.devcool.adapters.web.dto.response.CreateChannelResponse;
 import com.devcool.adapters.web.dto.response.UpdateChannelResponse;
 import com.devcool.adapters.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.web.util.ApiResponseFactory;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
+import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.common.ErrorCode;
@@ -56,5 +59,18 @@ public class ChannelController {
     return ResponseEntity.ok(
         ApiResponseFactory.success(
             HttpStatus.OK, ErrorCode.OK.code(), "Update channel successfully", response));
+  }
+
+  @PostMapping("/{channelId}/members")
+  ResponseEntity<ApiSuccessResponse<AddMembersResponse>> addMembers(
+      @Valid @RequestBody AddMembersRequest request,
+      @PathVariable Integer channelId
+  ) {
+    AddMembersCommand command = mapper.toAddMembersCommand(request);
+    boolean isMemberAdded =  channelUpdater.addMember(channelId, command);
+    AddMembersResponse response = mapper.toAddMembersResponse(isMemberAdded);
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Add new members successfully", response));
   }
 }

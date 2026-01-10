@@ -37,11 +37,11 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
   public Integer createChannel(CreateChannelCommand command) {
     validate(command);
 
-    List<Member> members = getMembers(command.memberIds());
     Set<Integer> distinctMemberIds = new HashSet<>(command.memberIds());
     if (distinctMemberIds.size() < command.memberIds().size()) {
       throw new UserDuplicateException(command.memberIds());
     }
+    List<Member> members = getMembers(command.memberIds());
     if (members.size() < distinctMemberIds.size()) {
       Set<Integer> foundIds =
           members.stream().map(member -> member.getUser().getId()).collect(Collectors.toSet());

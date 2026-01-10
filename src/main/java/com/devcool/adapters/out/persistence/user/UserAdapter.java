@@ -5,10 +5,14 @@ import com.devcool.adapters.out.persistence.user.mapper.UserMapper;
 import com.devcool.adapters.out.persistence.user.repository.UserRepository;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
-import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @AllArgsConstructor
@@ -18,8 +22,15 @@ public class UserAdapter implements UserPort {
   private final UserMapper mapper;
 
   @Override
+  @Transactional(readOnly = true)
   public Optional<User> findById(Integer id) {
     return repo.findById(id).map(mapper::toDomain);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<User> findByIds(Collection<Integer> ids) {
+    return repo.findByIdIn(ids).stream().map(mapper::toDomain).toList();
   }
 
   @Override
@@ -58,4 +69,10 @@ public class UserAdapter implements UserPort {
   public boolean remove(Integer id) {
     return false;
   }
+
+  @Override
+  public Set<Integer> findExistingUserIds(Set<Integer> userIds) {
+    return repo.findExistingIds(userIds);
+  }
+
 }

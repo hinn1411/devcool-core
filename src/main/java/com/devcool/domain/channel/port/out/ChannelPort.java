@@ -6,6 +6,8 @@ import java.util.Optional;
 
 public interface ChannelPort {
   Optional<Channel> findById(Integer id);
+  boolean existById(Integer id);
   Integer save(Channel channel);
   boolean update(Channel channel);
+  boolean increaseTotalMembers(Integer channelId, Integer newMembers);
 }

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -25,8 +26,14 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
+  public boolean existById(Integer id) {
+    return repo.existsById(id);
+  }
+
+  @Override
   public Integer save(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
+    entity.getMembers().forEach(m -> m.setChannel(entity));
     ChannelEntity saved = repo.save(entity);
     return saved.getId();
   }
@@ -34,7 +41,14 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean update(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
+    entity.getMembers().forEach(m -> m.setChannel(entity));
     repo.save(entity);
     return true;
+  }
+
+  @Override
+  @Transactional
+  public boolean increaseTotalMembers(Integer channelId, Integer newMembers) {
+    return repo.increaseTotalMembers(channelId, newMembers) > 0;
   }
 }
