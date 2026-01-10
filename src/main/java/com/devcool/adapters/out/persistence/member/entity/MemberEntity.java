@@ -4,9 +4,7 @@ import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.model.enums.MemberType;
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 
@@ -18,6 +16,8 @@ import java.time.Instant;
     ))
 @Getter
 @Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class MemberEntity {
   @Id
@@ -25,11 +25,11 @@ public class MemberEntity {
   @Column(name = "ID", nullable = false, unique = true)
   private Integer id;
 
-  @ManyToOne(optional = false)
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
   @JoinColumn(name = "USER_ID", referencedColumnName = "ID", nullable = false)
   private UserEntity user;
 
-  @ManyToOne(optional = false)
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
   @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID", nullable = false)
   private ChannelEntity channel;
 

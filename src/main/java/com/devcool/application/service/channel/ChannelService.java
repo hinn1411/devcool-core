@@ -78,10 +78,10 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
       throw new ChannelNotFoundException("Channel is not found");
     }
 
-    List<Member> existedMembers = memberPort.findMembersOfChannelByIds(channelId, existingUserIds);
-    if (!existedMembers.isEmpty()) {
-      List<Integer> existedIds = existedMembers.stream().map(Member::getId).toList();
-      throw new MemberAlreadyInChannelException(existedIds);
+    List<Member> alreadyMembers = memberPort.findMembersOfChannelByUserIds(channelId, existingUserIds);
+    if (!alreadyMembers.isEmpty()) {
+      List<Integer> existedMemberIds = alreadyMembers.stream().map(Member::getId).toList();
+      throw new MemberAlreadyInChannelException(existedMemberIds);
     }
 
     channelPort.increaseTotalMembers(channelId, command.userIds().size());

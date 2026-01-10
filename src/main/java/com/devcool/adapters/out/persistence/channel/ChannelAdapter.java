@@ -33,6 +33,7 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public Integer save(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
+    entity.getMembers().forEach(m -> m.setChannel(entity));
     ChannelEntity saved = repo.save(entity);
     return saved.getId();
   }
@@ -40,6 +41,7 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean update(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
+    entity.getMembers().forEach(m -> m.setChannel(entity));
     repo.save(entity);
     return true;
   }

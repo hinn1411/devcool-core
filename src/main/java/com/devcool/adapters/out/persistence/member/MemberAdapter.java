@@ -24,8 +24,8 @@ public class MemberAdapter implements MemberPort {
   private final EntityManager em;
 
   @Override
-  public List<Member> findMembersOfChannelByIds(Integer channelId, Set<Integer> ids) {
-    return repo.findByChannel_IdAndIdIn(channelId, ids).stream().map(mapper::toDomain).toList();
+  public List<Member> findMembersOfChannelByUserIds(Integer channelId, Set<Integer> ids) {
+    return repo.findByChannel_IdAndUser_IdIn(channelId, ids).stream().map(mapper::toDomain).toList();
   }
 
   @Override
