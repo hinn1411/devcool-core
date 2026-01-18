@@ -3,11 +3,11 @@ package com.devcool.adapters.web.dto.mapper;
 import com.devcool.adapters.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.web.dto.request.UpdateChannelRequest;
-import com.devcool.adapters.web.dto.response.AddMembersResponse;
-import com.devcool.adapters.web.dto.response.CreateChannelResponse;
-import com.devcool.adapters.web.dto.response.UpdateChannelResponse;
+import com.devcool.adapters.web.dto.response.*;
+import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
+import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import org.springframework.stereotype.Component;
 
@@ -47,5 +47,22 @@ public class ChannelDtoMapper {
 
   public AddMembersResponse toAddMembersResponse(boolean isMemberAdded) {
     return AddMembersResponse.builder().memberAdded(isMemberAdded).build();
+  }
+
+  public GetChannelCommand toGetChannelCommand(Integer memberId, Integer cursorId, Integer limit) {
+    return new GetChannelCommand(memberId, cursorId, limit);
+  }
+
+
+  public GetChannelResponse toGetChannelResponse(ChannelListPage page) {
+    return GetChannelResponse.builder()
+        .channels(page.items().stream().map(item -> new ChannelListItemResponse(
+            item.id(),
+            item.name(),
+            item.channelType().name(),
+            item.boundaryType().name()
+        )).toList())
+        .nextCursorId(page.cursorId())
+        .hasMore(page.hasMore()).build();
   }
 }

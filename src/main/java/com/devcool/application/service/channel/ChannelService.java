@@ -4,12 +4,15 @@ import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.exception.MemberAlreadyInChannelException;
 import com.devcool.domain.channel.model.Channel;
+import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
+import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
+import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
@@ -23,7 +26,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase {
+public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase, GetChannelQuery {
   private static final Logger log = LoggerFactory.getLogger(ChannelService.class);
   private final Map<ChannelType, ChannelCreationStrategy> creationStrategies;
   private final ChannelPort channelPort;
@@ -94,5 +97,13 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
     channel.setExpiredTime(command.expiredTime());
     channel.setChannelType(command.channelType());
     return channel;
+  }
+
+  @Override
+  public ChannelListPage getChannels(GetChannelCommand command) {
+    log.info("Get Channels by member Id");
+    return channelPort.loadChannels(command.memberId(),
+        command.cursorId(),
+        command.limit());
   }
 }
