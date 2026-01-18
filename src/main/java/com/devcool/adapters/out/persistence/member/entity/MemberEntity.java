@@ -12,7 +12,7 @@ import java.time.Instant;
 @Table(name = "MEMBER",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_member_channel_user",
-        columnNames = {"CHANNEL_ID", "USER_ID"}
+        columnNames = {"USER_ID", "CHANNEL_ID"}
     ))
 @Getter
 @Setter
