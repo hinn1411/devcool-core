@@ -1,9 +1,0 @@
-package com.devcool.adapters.web.dto.response;
-
-public record ChannelListItemResponse (
-    Integer id,
-    String name,
-    String channelType,
-    String boundaryType
-) {
-}

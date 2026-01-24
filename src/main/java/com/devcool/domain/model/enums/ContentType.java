@@ -4,5 +4,5 @@ public enum ContentType {
   TEXT,
   MARKDOWN,
   IMAGE,
-  VI
+  VIDEO
 }
