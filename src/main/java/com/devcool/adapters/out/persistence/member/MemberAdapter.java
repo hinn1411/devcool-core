@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -24,8 +25,13 @@ public class MemberAdapter implements MemberPort {
   private final EntityManager em;
 
   @Override
-  public List<Member> findMembersOfChannelByUserIds(Integer channelId, Set<Integer> ids) {
-    return repo.findByChannel_IdAndUser_IdIn(channelId, ids).stream().map(mapper::toDomain).toList();
+  public List<Member> findMembersOfChannelByUserIds(Integer channelId, Set<Integer> userIds) {
+    return repo.findByChannel_IdAndUser_IdIn(channelId, userIds).stream().map(mapper::toDomain).toList();
+  }
+
+  @Override
+  public Optional<Member> findMemberOfChannelByUserId(Integer channelId, Integer userId) {
+    return repo.findByChannel_IdAndUser_Id(channelId, userId).map(mapper::toDomain);
   }
 
   @Override

@@ -1,4 +1,4 @@
-package com.devcool.domain.channel.exception;
+package com.devcool.domain.member.exception;
 
 import com.devcool.domain.common.DomainException;
 import com.devcool.domain.common.ErrorCode;
