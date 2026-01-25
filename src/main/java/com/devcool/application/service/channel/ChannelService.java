@@ -2,7 +2,7 @@ package com.devcool.application.service.channel;
 
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
-import com.devcool.domain.channel.exception.MemberAlreadyInChannelException;
+import com.devcool.domain.member.exception.MemberAlreadyInChannelException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -58,7 +58,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
     Channel existedChannel = channelPort.findById(channelId)
-        .orElseThrow(() -> new ChannelNotFoundException("Channel not found"));
+        .orElseThrow(() -> new ChannelNotFoundException(channelId));
     Channel channel = updateChannel(existedChannel, command);
     return channelPort.update(channel);
   }
@@ -78,7 +78,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
 
     boolean isChannelExisted = channelPort.existById(channelId);
     if (!isChannelExisted) {
-      throw new ChannelNotFoundException("Channel is not found");
+      throw new ChannelNotFoundException(channelId);
     }
 
     List<Member> alreadyMembers = memberPort.findMembersOfChannelByUserIds(channelId, existingUserIds);

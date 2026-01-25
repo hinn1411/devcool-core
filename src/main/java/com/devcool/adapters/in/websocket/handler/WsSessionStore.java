@@ -9,17 +9,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class WsSessionStore {
 
-  private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+  public final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
-  private void put(WebSocketSession session) {
+  public void put(WebSocketSession session) {
     sessions.put(session.getId(), session);
   }
 
-  private void String(String connectionId) {
+  public void remove(String connectionId) {
     sessions.remove(connectionId);
   }
 
-  private WebSocketSession get(String connectionId) {
+  public WebSocketSession get(String connectionId) {
     return sessions.get(connectionId);
   }
 }
