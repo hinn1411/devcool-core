@@ -38,6 +38,10 @@ public class JwtUtils {
     }
   }
 
+  public static String  userIdFrom(String token) {
+    return subjectFrom(token);
+  }
+
   public static Integer versionFrom(String token) {
     JWTClaimsSet claims = getClaims(token);
     try {

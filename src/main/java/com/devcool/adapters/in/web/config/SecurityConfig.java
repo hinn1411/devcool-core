@@ -1,5 +1,6 @@
 package com.devcool.adapters.in.web.config;
 
+import com.devcool.adapters.in.web.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,13 +20,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
   private final JwtAuthFilter jwtAuthFilter;
+  private final String[] publicPaths = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html, /docs"};
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html, /docs")
+                auth.requestMatchers(publicPaths)
                     .permitAll()
                     .requestMatchers(
                         "/api/v1/auth/register",
@@ -34,7 +36,8 @@ public class SecurityConfig {
                         "/api/v1/auth/logout",
                         "/public/**",
                         "/error",
-                        "/ws")
+                        "/ws",
+                        "/api/v1/channels")
                     .permitAll()
                     .requestMatchers("/api/v1/auth/profile")
                     .hasAuthority("USER")
