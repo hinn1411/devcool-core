@@ -80,7 +80,7 @@ public class ChannelController {
         response));
   }
 
-  @GetMapping("/")
+  @GetMapping
   ResponseEntity<ApiSuccessResponse<GetChannelResponse>> getChannels(@RequestParam(required = false) Integer cursorId,
                                                                      @RequestParam(defaultValue = "20") int limit,
                                                                      Authentication auth) {

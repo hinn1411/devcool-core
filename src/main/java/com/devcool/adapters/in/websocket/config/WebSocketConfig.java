@@ -1,4 +1,4 @@
-package com.devcool.adapters.in.websocket;
+package com.devcool.adapters.in.websocket.config;
 
 import com.devcool.adapters.in.websocket.handler.RawWebSocketHandler;
 import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;

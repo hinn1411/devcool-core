@@ -66,7 +66,7 @@ public class ApiExceptionHandler {
             ApiResponseFactory.error(
                 HttpStatus.FORBIDDEN,
                 ErrorCode.FORBIDDEN.code(),
-                "You are not allowed to access this resource",
+                ex.getMessage(),
                 Map.of("error", ex.getClass().getSimpleName())));
   }
 }

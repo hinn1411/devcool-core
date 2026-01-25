@@ -35,4 +35,8 @@ public class User {
     this.lastLoginTime = Instant.now();
   }
   // getters/setters omitted for brevity
+
+  public boolean isTokenVersionValid(Integer currentVersion) {
+    return tokenVersion >= currentVersion;
+  }
 }
