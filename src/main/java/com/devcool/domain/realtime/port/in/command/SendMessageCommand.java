@@ -1,4 +1,12 @@
 package com.devcool.domain.realtime.port.in.command;
 
-public record SendMessageCommand () {
+import com.devcool.domain.model.enums.ContentType;
+
+public record SendMessageCommand(
+    String connectionId,
+    Integer userId,
+    Integer channelId,
+    ContentType contentType,
+    String content
+) {
 }

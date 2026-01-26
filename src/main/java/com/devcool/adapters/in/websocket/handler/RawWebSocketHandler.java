@@ -1,10 +1,12 @@
 package com.devcool.adapters.in.websocket.handler;
 
-import com.devcool.adapters.in.websocket.dto.WsClientAction;
 import com.devcool.adapters.in.websocket.dto.WsClientFrame;
+import com.devcool.adapters.in.websocket.dto.WsMessageType;
 import com.devcool.adapters.in.websocket.dto.WsServerFrame;
 import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
+import com.devcool.domain.realtime.port.in.WsSendMessageUseCase;
 import com.devcool.domain.realtime.port.in.WsSubscribeUseCase;
+import com.devcool.domain.realtime.port.in.command.SendMessageCommand;
 import com.devcool.domain.realtime.port.in.command.SubscribeCommand;
 import com.devcool.domain.realtime.port.out.ConnectionRegistryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +29,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   private final WsSessionStore sessionStore;
   private final ConnectionRegistryPort connectionRegistryPort;
   private final WsSubscribeUseCase subscribeUseCase;
+  private final WsSendMessageUseCase sendMessageUseCase;
 
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
@@ -34,7 +37,6 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     Integer userId = getUserId(session);
     String connectionId = session.getId();
     connectionRegistryPort.registerConnection(connectionId, userId);
-
   }
 
   @Override
@@ -48,39 +50,47 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     } catch (Exception ex) {
       session.sendMessage(new TextMessage(
           objectMapper.writeValueAsString(
-              new WsServerFrame("ERROR", null, "Invalid JSON"))));
+              new WsServerFrame(WsMessageType.ERROR, null, "Invalid JSON"))));
       return;
     }
 
     if (Objects.isNull(clientFrame.action())) {
       session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-          new WsServerFrame("ERROR", clientFrame.clientMsgId(), "Missing action")
-      )));
-      return;
-    }
-
-    if (clientFrame.action() == WsClientAction.PING) {
-      session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-          new WsServerFrame("ACK", clientFrame.clientMsgId(), "PONG")
+          new WsServerFrame(WsMessageType.ERROR, clientFrame.clientMsgId(), "Missing action")
       )));
       return;
     }
 
     switch (clientFrame.action()) {
-      case WsClientAction.SUBSCRIBE -> {
+      case WsMessageType.PING -> {
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+            new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "PONG")
+        )));
+      }
+      case WsMessageType.SUBSCRIBE -> {
         subscribeUseCase.subscribe(new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            new WsServerFrame("ACK", clientFrame.clientMsgId(), Map.of("description", "Subscribe successfully"))
+            new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), Map.of("description", "Subscribe successfully"))
         )));
+      }
+      case WsMessageType.SEND_MESSAGE -> {
+        sendMessageUseCase.sendMessage(new SendMessageCommand(
+            connectionId, userId,
+            clientFrame.channelId(),
+            clientFrame.contentType(),
+            clientFrame.content()
+        ));
+        session.sendMessage(new TextMessage(
+            objectMapper.writeValueAsString(
+                new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "SENT")
+            )));
       }
       default -> {
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            new WsServerFrame("ERROR", clientFrame.clientMsgId(), "Unsupported action")
+            new WsServerFrame(WsMessageType.ERROR, clientFrame.clientMsgId(), "Unsupported action")
         )));
       }
     }
-
-
   }
 
   @Override
