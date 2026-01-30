@@ -41,15 +41,17 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
     if (distinctMemberIds.size() < command.memberIds().size()) {
       throw new UserDuplicateException(command.memberIds());
     }
-    List<Member> members = getMembers(command.memberIds());
-    if (members.size() < distinctMemberIds.size()) {
+    List<User> users = loadUsers(command.memberIds());
+    if (users.size() < distinctMemberIds.size()) {
       Set<Integer> foundIds =
-          members.stream().map(member -> member.getUser().getId()).collect(Collectors.toSet());
+          users.stream().map(User::getId).collect(Collectors.toSet());
       List<Integer> missingIds =
           distinctMemberIds.stream().filter(id -> !foundIds.contains(id)).toList();
       throw new UserNotFoundException(missingIds);
     }
+
     User creator = loadUser(command.creatorId());
+    List<Member> members = toMembers(users, creator);
     Channel channel = buildChannel(command, creator, null, members);
     return channelPort.save(channel);
   }
