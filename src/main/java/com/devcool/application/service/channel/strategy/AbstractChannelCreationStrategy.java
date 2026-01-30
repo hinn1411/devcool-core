@@ -9,8 +9,11 @@ import com.devcool.domain.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public abstract class AbstractChannelCreationStrategy {
     return userPort.loadById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
-  private List<User> loadUsers(List<Integer> memberIds) {
+  protected List<User> loadUsers(List<Integer> memberIds) {
     return userPort.loadByIds(memberIds);
   }
 
@@ -36,6 +39,20 @@ public abstract class AbstractChannelCreationStrategy {
         .toList();
   }
 
+  protected Member toMember(User user, MemberType memberType, Instant joinedTime) {
+    return Member.builder().user(user).role(memberType).joinedTime(joinedTime).build();
+  }
+
+  protected List<Member> toMembers(List<User> users, User creator) {
+    Instant joinedTime = Instant.now();
+    List<Member> members = users.stream()
+        .map(user -> toMember(user, MemberType.MEMBER, joinedTime))
+        .collect(Collectors.toCollection(ArrayList::new));
+    members.add(toMember(creator, MemberType.CREATOR, joinedTime));
+    return members;
+  }
+
+
   protected Channel buildChannel(
       CreateChannelCommand command, User creator, User leader, List<Member> members) {
     return Channel.builder()
@@ -48,8 +65,5 @@ public abstract class AbstractChannelCreationStrategy {
         .leader(leader)
         .members(members)
         .build();
-  }
-  private void addCreator(List<Member> members, User creator) {
-
   }
 }
