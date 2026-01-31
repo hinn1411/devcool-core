@@ -7,7 +7,7 @@ import com.devcool.adapters.out.persistence.member.repository.MemberRepository;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
-import com.devcool.domain.model.enums.MemberType;
+import com.devcool.domain.member.model.enums.MemberType;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

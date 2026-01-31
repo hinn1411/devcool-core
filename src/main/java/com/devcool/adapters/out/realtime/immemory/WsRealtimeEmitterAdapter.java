@@ -1,7 +1,7 @@
 package com.devcool.adapters.out.realtime.immemory;
 
 import com.devcool.adapters.in.websocket.handler.WsSessionStore;
-import com.devcool.domain.realtime.port.out.RealtimeEmitterPort;
+import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

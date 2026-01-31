@@ -1,10 +1,12 @@
-package com.devcool.adapters.out.persistence.entity;
+package com.devcool.adapters.out.persistence.message.entity;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.domain.chat.model.enums.ContentType;
 import jakarta.persistence.*;
-import java.sql.Timestamp;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.Instant;
 
 @Entity
 @Table(name = "MESSAGE")
@@ -16,22 +18,26 @@ public class MessageEntity {
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Integer id;
 
+  @Column(name = "SENDER_USER_ID", nullable = false)
+  private Integer senderUserId;
+
   @Column(name = "CONTENT", length = 1000, nullable = true)
   private String content;
 
+  @Column(name = "CONTENT_TYPE", nullable = false)
+  @Enumerated(EnumType.STRING)
+  private ContentType contentType;
+
   @Column(name = "CREATED_TIME", nullable = false)
-  private Timestamp createdTime;
+  private Instant createdTime;
 
   @Column(name = "DELETED_TIME", nullable = true)
-  private Timestamp deletedTime;
+  private Instant deletedTime;
 
-  @Column(name = "EDITED_TIME", nullable = false)
-  private Timestamp editedTime;
+  @Column(name = "EDITED_TIME", nullable = true)
+  private Instant editedTime;
 
-  @OneToOne(mappedBy = "message")
-  private MediaEntity media;
-
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
   private ChannelEntity channel;
 }

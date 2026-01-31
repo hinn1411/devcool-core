@@ -5,7 +5,7 @@ import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
-import com.devcool.domain.model.enums.MemberType;
+import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import java.time.Instant;

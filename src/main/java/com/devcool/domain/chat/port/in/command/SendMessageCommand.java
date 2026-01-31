@@ -1,6 +1,6 @@
-package com.devcool.domain.realtime.port.in.command;
+package com.devcool.domain.chat.port.in.command;
 
-import com.devcool.domain.model.enums.ContentType;
+import com.devcool.domain.chat.model.enums.ContentType;
 
 public record SendMessageCommand(
     String connectionId,

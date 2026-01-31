@@ -1,4 +1,4 @@
-package com.devcool.domain.realtime.port.in.command;
+package com.devcool.domain.chat.port.in.command;
 
 public record SubscribeCommand(
     String connectionId,

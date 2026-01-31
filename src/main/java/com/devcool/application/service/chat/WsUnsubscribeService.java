@@ -1,7 +1,7 @@
-package com.devcool.application.service.realtime;
+package com.devcool.application.service.chat;
 
-import com.devcool.domain.realtime.port.in.WsUnsubscribeUseCase;
-import com.devcool.domain.realtime.port.in.command.UnsubscribeCommand;
+import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
+import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

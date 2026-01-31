@@ -1,4 +1,4 @@
-package com.devcool.domain.realtime.port.out;
+package com.devcool.domain.chat.port.out;
 
 import java.util.Set;
 

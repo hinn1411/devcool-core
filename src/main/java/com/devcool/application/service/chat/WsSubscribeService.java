@@ -1,4 +1,4 @@
-package com.devcool.application.service.realtime;
+package com.devcool.application.service.chat;
 
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.model.Channel;
@@ -6,32 +6,27 @@ import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
-import com.devcool.domain.realtime.port.in.WsSendMessageUseCase;
-import com.devcool.domain.realtime.port.in.command.SendMessageCommand;
-import com.devcool.domain.realtime.port.out.ConnectionRegistryPort;
-import com.devcool.domain.realtime.port.out.RealtimeEmitterPort;
+import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.command.SubscribeCommand;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
-public class WsSendMessageService implements WsSendMessageUseCase {
+public class WsSubscribeService implements WsSubscribeUseCase {
 
-  private static final Logger log = LoggerFactory.getLogger(WsSendMessageService.class);
-  private final ConnectionRegistryPort connectionRegistryPort;
-  private final RealtimeEmitterPort realtimeEmitterPort;
-
+  private static final Logger log = LoggerFactory.getLogger(WsSubscribeService.class);
   private final ChannelPort channelPort;
   private final MemberPort memberPort;
+  private final ConnectionRegistryPort connectionRegistryPort;
 
   @Override
   @Transactional
-  public void sendMessage(SendMessageCommand command) {
+  public void subscribe(SubscribeCommand command) {
     // Validate channel status later
     Channel channel = channelPort.findById(command.channelId())
         .orElseThrow(() -> {
@@ -45,26 +40,7 @@ public class WsSendMessageService implements WsSendMessageUseCase {
           throw new MemberNotFoundException(command.userId());
         });
 
-    Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
+    connectionRegistryPort.subscribe(command.connectionId(), command.channelId());
 
-    var payload = new OutboundWsEvent(
-        "MESSAGE",
-        command.channelId(),
-        command.userId(),
-        command.contentType().name(),
-        command.content()
-    );
-
-    for (String connectionId : connections) {
-      realtimeEmitterPort.sendMessageToConnection(connectionId, payload);
-    }
   }
-
-  public record OutboundWsEvent(
-      String type,
-      Integer channelId,
-      Integer senderId,
-      String contentType,
-      String content
-  ) {}
 }

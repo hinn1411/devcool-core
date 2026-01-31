@@ -1,6 +1,6 @@
 package com.devcool.adapters.out.realtime.immemory;
 
-import com.devcool.domain.realtime.port.out.ConnectionRegistryPort;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

@@ -4,11 +4,11 @@ import com.devcool.adapters.in.websocket.dto.WsClientFrame;
 import com.devcool.adapters.in.websocket.dto.WsMessageType;
 import com.devcool.adapters.in.websocket.dto.WsServerFrame;
 import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
-import com.devcool.domain.realtime.port.in.WsSendMessageUseCase;
-import com.devcool.domain.realtime.port.in.WsSubscribeUseCase;
-import com.devcool.domain.realtime.port.in.command.SendMessageCommand;
-import com.devcool.domain.realtime.port.in.command.SubscribeCommand;
-import com.devcool.domain.realtime.port.out.ConnectionRegistryPort;
+import com.devcool.domain.chat.port.in.SendMessageUseCase;
+import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.command.SendMessageCommand;
+import com.devcool.domain.chat.port.in.command.SubscribeCommand;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -29,7 +29,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   private final WsSessionStore sessionStore;
   private final ConnectionRegistryPort connectionRegistryPort;
   private final WsSubscribeUseCase subscribeUseCase;
-  private final WsSendMessageUseCase sendMessageUseCase;
+  private final SendMessageUseCase sendMessageUseCase;
 
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
@@ -75,7 +75,8 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
       }
       case WsMessageType.SEND_MESSAGE -> {
         sendMessageUseCase.sendMessage(new SendMessageCommand(
-            connectionId, userId,
+            connectionId,
+            userId,
             clientFrame.channelId(),
             clientFrame.contentType(),
             clientFrame.content()

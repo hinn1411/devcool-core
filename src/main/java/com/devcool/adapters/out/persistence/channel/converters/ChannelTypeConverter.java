@@ -1,4 +1,4 @@
-package com.devcool.domain.channel.model.converters;
+package com.devcool.adapters.out.persistence.channel.converters;
 
 import com.devcool.domain.channel.model.enums.ChannelType;
 import jakarta.persistence.AttributeConverter;

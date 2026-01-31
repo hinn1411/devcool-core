@@ -1,6 +1,6 @@
 package com.devcool.domain.member.model;
 
-import com.devcool.domain.model.enums.MemberType;
+import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.model.User;
 import java.time.Instant;
 import lombok.Builder;
