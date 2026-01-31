@@ -1,6 +1,6 @@
 package com.devcool.adapters.in.websocket.dto;
 
-import com.devcool.domain.model.enums.ContentType;
+import com.devcool.domain.chat.model.enums.ContentType;
 
 public record WsClientFrame (
     WsMessageType action,

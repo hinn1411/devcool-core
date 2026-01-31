@@ -2,7 +2,7 @@ package com.devcool.adapters.out.persistence.member.entity;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
-import com.devcool.domain.model.enums.MemberType;
+import com.devcool.domain.member.model.enums.MemberType;
 import jakarta.persistence.*;
 import lombok.*;
 

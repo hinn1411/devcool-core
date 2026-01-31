@@ -1,33 +1,35 @@
-package com.devcool.application.service.realtime;
+package com.devcool.application.service.chat;
 
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.model.Message;
+import com.devcool.domain.chat.port.in.SaveMessageUseCase;
+import com.devcool.domain.chat.port.in.command.SaveMessageCommand;
+import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
-import com.devcool.domain.realtime.port.in.WsSubscribeUseCase;
-import com.devcool.domain.realtime.port.in.command.SubscribeCommand;
-import com.devcool.domain.realtime.port.out.ConnectionRegistryPort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
-public class WsSubscribeService implements WsSubscribeUseCase {
-
-  private static final Logger log = LoggerFactory.getLogger(WsSubscribeService.class);
+public class MessageService implements SaveMessageUseCase {
+  private static final Logger log = LoggerFactory.getLogger(MessageService.class);
   private final ChannelPort channelPort;
   private final MemberPort memberPort;
-  private final ConnectionRegistryPort connectionRegistryPort;
+  private final MessagePort messagePort;
 
   @Override
   @Transactional
-  public void subscribe(SubscribeCommand command) {
-    // Validate channel status later
+  public Integer save(SaveMessageCommand command) {
+    // Check dup message by clientMsgId
     Channel channel = channelPort.findById(command.channelId())
         .orElseThrow(() -> {
           log.warn("Channel id {} does not exist", command.channelId());
@@ -36,11 +38,23 @@ public class WsSubscribeService implements WsSubscribeUseCase {
     // Validate member permission later
     Member member = memberPort.findMemberOfChannelByUserId(command.channelId(), command.userId())
         .orElseThrow(() -> {
-          log.info("User id {} does not exist in channel id {}", command.userId(), command.channelId());
+          log.warn("User id {} does not exist in channel id {}", command.userId(), command.channelId());
           throw new MemberNotFoundException(command.userId());
         });
 
-    connectionRegistryPort.subscribe(command.connectionId(), command.channelId());
+    Message message = toMessage(command, channel);
+    return messagePort.save(message);
+  }
 
+  private Message toMessage(SaveMessageCommand command, Channel channel) {
+    return Message.builder()
+        .contentType(command.contentType())
+        .content(command.content())
+        .createdTime(Instant.now())
+        .senderUserId(command.userId())
+        .deletedTime(null)
+        .editedTime(null)
+        .channel(channel)
+        .build();
   }
 }

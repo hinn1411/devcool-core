@@ -1,5 +1,6 @@
 package com.devcool.adapters.out.persistence.entity;
 
+import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import jakarta.persistence.*;
 import java.sql.Timestamp;
 import lombok.Getter;
@@ -28,7 +29,7 @@ public class MediaEntity {
   @Column(name = "CREATED_TIME", nullable = false)
   private Timestamp createdTime;
 
-  @OneToOne
+  @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "MESSAGE_ID", referencedColumnName = "ID")
   private MessageEntity message;
 }

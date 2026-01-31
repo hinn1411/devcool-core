@@ -1,4 +1,4 @@
-package com.devcool.domain.model.enums;
+package com.devcool.domain.member.model.enums;
 
 public enum MemberType {
   MEMBER,
