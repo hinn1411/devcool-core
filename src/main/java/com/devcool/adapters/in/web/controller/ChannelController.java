@@ -37,7 +37,7 @@ public class ChannelController {
   private final UpdateChannelUseCase channelUpdater;
   private final GetChannelQuery channelQuerier;
 
-  @PostMapping("/")
+  @PostMapping
   ResponseEntity<ApiSuccessResponse<CreateChannelResponse>> createChannel(
       @Valid @RequestBody CreateChannelRequest request, Authentication auth) {
     Integer userId = Integer.valueOf(auth.getName());
