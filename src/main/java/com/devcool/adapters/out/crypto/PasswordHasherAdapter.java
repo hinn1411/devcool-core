@@ -1,6 +1,6 @@
 package com.devcool.adapters.out.crypto;
 
-import com.devcool.domain.auth.out.PasswordHasherPort;
+import com.devcool.domain.auth.port.out.PasswordHasherPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;

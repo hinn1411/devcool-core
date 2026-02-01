@@ -1,7 +1,7 @@
 package com.devcool.adapters.in.websocket.security;
 
-import com.devcool.domain.auth.out.LoadUserPort;
-import com.devcool.domain.auth.out.TokenIssuerPort;
+import com.devcool.domain.auth.port.out.LoadUserPort;
+import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

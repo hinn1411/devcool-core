@@ -1,4 +1,4 @@
-package com.devcool.domain.auth.out;
+package com.devcool.domain.auth.port.out;
 
 public interface PasswordHasherPort {
   String hash(CharSequence rawPassword);

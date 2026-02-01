@@ -1,8 +1,8 @@
 package com.devcool.adapters.in.web.security;
 
 import com.devcool.adapters.out.jwt.util.JwtUtils;
-import com.devcool.domain.auth.out.LoadUserPort;
-import com.devcool.domain.auth.out.TokenIssuerPort;
+import com.devcool.domain.auth.port.out.LoadUserPort;
+import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

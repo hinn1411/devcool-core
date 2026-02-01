@@ -1,4 +1,4 @@
-package com.devcool.domain.auth.in;
+package com.devcool.domain.auth.port.in;
 
 public interface LogoutUseCase {
   void revokeRefreshToken(String refreshToken);

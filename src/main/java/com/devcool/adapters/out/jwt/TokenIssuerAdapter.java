@@ -3,7 +3,7 @@ package com.devcool.adapters.out.jwt;
 import com.devcool.adapters.out.jwt.enums.TokenType;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.model.TokenSubject;
-import com.devcool.domain.auth.out.TokenIssuerPort;
+import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
