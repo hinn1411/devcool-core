@@ -1,4 +1,4 @@
-package com.devcool.domain.auth.out;
+package com.devcool.domain.auth.port.out;
 
 import com.devcool.domain.user.model.User;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.devcool.application.service.channel.strategy;
 
-import com.devcool.domain.auth.out.LoadUserPort;
+import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;

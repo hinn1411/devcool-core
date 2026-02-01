@@ -1,6 +1,6 @@
 package com.devcool.application.service;
 
-import com.devcool.domain.auth.out.PasswordHasherPort;
+import com.devcool.domain.auth.port.out.PasswordHasherPort;
 import com.devcool.domain.user.exception.EmailAlreadyUsedException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.exception.UsernameAlreadyUsedException;

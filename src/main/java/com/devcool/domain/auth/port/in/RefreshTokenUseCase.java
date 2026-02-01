@@ -1,4 +1,4 @@
-package com.devcool.domain.auth.in;
+package com.devcool.domain.auth.port.in;
 
 import com.devcool.domain.auth.model.TokenPair;
 
