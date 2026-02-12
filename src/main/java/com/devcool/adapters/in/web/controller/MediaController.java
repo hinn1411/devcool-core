@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/medias")
 @RequiredArgsConstructor
@@ -24,15 +26,18 @@ public class MediaController {
   private final MediaDtoMapper mapper;
 
   @PostMapping("/upload")
-  public ResponseEntity<ApiSuccessResponse<Boolean>> uploadMedia(@RequestParam("file") MultipartFile file,
+  public ResponseEntity<ApiSuccessResponse<Map<String, String>>> uploadMedia(@RequestParam("file") MultipartFile file,
                                                                  @RequestParam Integer channelId,
                                                                  Authentication auth) {
     Integer userId = Integer.valueOf(auth.getName());
     UploadMediaCommand command = mapper.toUploadMediaCommand(file, userId, channelId);
-    boolean isSuccess = uploadUseCase.upload(command);
+    String key = uploadUseCase.upload(command);
 
     return ResponseEntity.ok(
-        ApiResponseFactory.success(HttpStatus.OK, ErrorCode.OK.code(), "Upload media successfully", isSuccess)
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(),
+            "Upload media successfully",
+            Map.of("key", key))
     );
 
   }

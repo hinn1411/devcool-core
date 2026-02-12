@@ -1,9 +1,9 @@
 package com.devcool.domain.media.port.in.command;
 
-import java.io.InputStream;
+import org.springframework.web.multipart.MultipartFile;
 
 public record UploadMediaCommand(
-    InputStream content,
+    MultipartFile file,
     long size,
     String contentType,
     Integer userId,

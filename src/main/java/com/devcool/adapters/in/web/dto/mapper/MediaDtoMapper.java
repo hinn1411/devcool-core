@@ -6,8 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 @Component
 public class MediaDtoMapper {
 
@@ -16,17 +14,12 @@ public class MediaDtoMapper {
   public UploadMediaCommand toUploadMediaCommand(MultipartFile file,
                                                  Integer userId,
                                                  Integer channelId) {
-    try {
       return new UploadMediaCommand(
-          file.getInputStream(),
+          file,
           file.getSize(),
           file.getContentType(),
           userId,
           channelId
       );
-    } catch (IOException e) {
-      log.error("Cannot get media stream. Cause by {}", e.getMessage());
-      throw new RuntimeException(e);
-    }
   }
 }
