@@ -1,7 +1,6 @@
 services:
   postgres:
-    container_name: devcool_postgres
-    image: 'postgres:15'
+    image: postgres:15
     environment:
       POSTGRES_DB: devcool
       POSTGRES_PASSWORD: 123456789
@@ -9,7 +8,7 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hiengiang} -d ${POSTGRES_DB:-devcool}"]
@@ -18,7 +17,6 @@ services:
       retries: 10
 
   pgadmin:
-    container_name: devcool_pgadmin
     image: dpage/pgadmin4:latest
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@localhost.com
@@ -30,14 +28,15 @@ services:
       - pgadmin:/var/lib/pgadmin
       - ./docker_pgadmin_servers.json:/pgadmin4/servers.json
     ports:
-      - '5050:5050'
+      - "5050:5050"
     depends_on:
       postgres:
         condition: service_healthy
     entrypoint:
       - "/bin/sh"
       - "-c"
-      - "/bin/echo 'devcool_postgres:5432:*:hiengiang:123456789' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+      - "/bin/echo 'postgres:5432:*:hiengiang:123456789' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+
 volumes:
   postgres:
   pgadmin:

@@ -4,16 +4,14 @@ import com.devcool.adapters.in.web.dto.mapper.MediaDtoMapper;
 import com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.in.web.util.ApiResponseFactory;
 import com.devcool.domain.common.ErrorCode;
+import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
 import com.devcool.domain.media.port.in.UploadMediaUseCase;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
@@ -23,6 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MediaController {
   private final UploadMediaUseCase uploadUseCase;
+  private final GetMediaUrlUseCase getMediaUrlUseCase;
   private final MediaDtoMapper mapper;
 
   @PostMapping("/upload")
@@ -39,6 +38,20 @@ public class MediaController {
             "Upload media successfully",
             Map.of("key", key))
     );
+  }
 
+  @GetMapping("/presigned-url")
+  public ResponseEntity<ApiSuccessResponse<Map<String, String>>> getPresignedUrl(
+      @RequestParam String key
+  ) {
+    GetMediaUrlUseCase.PresignedUrlResult result = getMediaUrlUseCase.getPresignedUrl(key);
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(),
+            "Get presigned url successfully",
+            Map.of("url", result.url(),
+                "expiresAt", result.expiresAt().toString())
+        )
+    );
   }
 }
