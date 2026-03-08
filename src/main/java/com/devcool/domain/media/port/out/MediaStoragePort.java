@@ -11,24 +11,11 @@ public interface MediaStoragePort {
   PresignedGetResult presignGet(PresignGetRequest request);
 
   record UploadRequest(
-      String objectKey,
-      InputStream inputStream,
-      long contentLength,
-      String contentType
-  ) {}
+      String objectKey, InputStream inputStream, long contentLength, String contentType) {}
 
-  record UploadResult(
-      String bucket,
-      String objectKey
-  ) {}
+  record UploadResult(String bucket, String objectKey) {}
 
-  record PresignGetRequest(
-      String objectKey,
-      Duration expiresIn
-  ) {}
+  record PresignGetRequest(String objectKey, Duration expiresIn) {}
 
-  record PresignedGetResult(
-      String url,
-      Instant expiresAt
-  ) {}
+  record PresignedGetResult(String url, Instant expiresAt) {}
 }

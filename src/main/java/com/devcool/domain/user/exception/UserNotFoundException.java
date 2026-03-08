@@ -21,6 +21,9 @@ public class UserNotFoundException extends DomainException {
   }
 
   public UserNotFoundException(Set<Integer> ids) {
-    super(ErrorCode.USER_NOT_FOUND, "Users not found", Map.of("userIds", Optional.ofNullable(ids).stream().toList()));
+    super(
+        ErrorCode.USER_NOT_FOUND,
+        "Users not found",
+        Map.of("userIds", Optional.ofNullable(ids).stream().toList()));
   }
 }

@@ -38,7 +38,7 @@ public class JwtUtils {
     }
   }
 
-  public static String  userIdFrom(String token) {
+  public static String userIdFrom(String token) {
     return subjectFrom(token);
   }
 

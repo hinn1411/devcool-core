@@ -6,13 +6,12 @@ import com.devcool.domain.chat.port.in.command.SaveMessageCommand;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
+import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.Objects;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +31,13 @@ public class WsSendMessageService implements SendMessageUseCase {
 
     Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
 
-    var payload = new OutboundWsEvent(
-        "MESSAGE",
-        command.channelId(),
-        command.userId(),
-        command.contentType().name(),
-        command.content()
-    );
+    var payload =
+        new OutboundWsEvent(
+            "MESSAGE",
+            command.channelId(),
+            command.userId(),
+            command.contentType().name(),
+            command.content());
 
     String currentConnectionId = command.connectionId();
     for (String connectionId : connections) {
@@ -53,15 +52,9 @@ public class WsSendMessageService implements SendMessageUseCase {
         sendCommand.content(),
         sendCommand.contentType(),
         sendCommand.channelId(),
-        sendCommand.userId()
-    );
+        sendCommand.userId());
   }
 
   public record OutboundWsEvent(
-      String type,
-      Integer channelId,
-      Integer senderId,
-      String contentType,
-      String content
-  ) {}
+      String type, Integer channelId, Integer senderId, String contentType, String content) {}
 }

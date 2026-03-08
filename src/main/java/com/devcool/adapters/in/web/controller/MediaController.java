@@ -7,14 +7,13 @@ import com.devcool.domain.common.ErrorCode;
 import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
 import com.devcool.domain.media.port.in.UploadMediaUseCase;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/medias")
@@ -25,33 +24,28 @@ public class MediaController {
   private final MediaDtoMapper mapper;
 
   @PostMapping("/upload")
-  public ResponseEntity<ApiSuccessResponse<Map<String, String>>> uploadMedia(@RequestParam("file") MultipartFile file,
-                                                                 @RequestParam Integer channelId,
-                                                                 Authentication auth) {
+  public ResponseEntity<ApiSuccessResponse<Map<String, String>>> uploadMedia(
+      @RequestParam("file") MultipartFile file,
+      @RequestParam Integer channelId,
+      Authentication auth) {
     Integer userId = Integer.valueOf(auth.getName());
     UploadMediaCommand command = mapper.toUploadMediaCommand(file, userId, channelId);
     String key = uploadUseCase.upload(command);
 
     return ResponseEntity.ok(
         ApiResponseFactory.success(
-            HttpStatus.OK, ErrorCode.OK.code(),
-            "Upload media successfully",
-            Map.of("key", key))
-    );
+            HttpStatus.OK, ErrorCode.OK.code(), "Upload media successfully", Map.of("key", key)));
   }
 
   @GetMapping("/presigned-url")
   public ResponseEntity<ApiSuccessResponse<Map<String, String>>> getPresignedUrl(
-      @RequestParam String key
-  ) {
+      @RequestParam String key) {
     GetMediaUrlUseCase.PresignedUrlResult result = getMediaUrlUseCase.getPresignedUrl(key);
     return ResponseEntity.ok(
         ApiResponseFactory.success(
-            HttpStatus.OK, ErrorCode.OK.code(),
+            HttpStatus.OK,
+            ErrorCode.OK.code(),
             "Get presigned url successfully",
-            Map.of("url", result.url(),
-                "expiresAt", result.expiresAt().toString())
-        )
-    );
+            Map.of("url", result.url(), "expiresAt", result.expiresAt().toString())));
   }
 }

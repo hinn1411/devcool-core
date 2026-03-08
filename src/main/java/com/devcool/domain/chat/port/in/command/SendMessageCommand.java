@@ -7,6 +7,4 @@ public record SendMessageCommand(
     Integer userId,
     Integer channelId,
     ContentType contentType,
-    String content
-) {
-}
+    String content) {}

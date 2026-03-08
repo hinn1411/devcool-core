@@ -5,6 +5,5 @@ import java.time.Instant;
 public interface GetMediaUrlUseCase {
   PresignedUrlResult getPresignedUrl(String objectKey);
 
-  record PresignedUrlResult(String url, Instant expiresAt) {
-  }
+  record PresignedUrlResult(String url, Instant expiresAt) {}
 }

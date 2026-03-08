@@ -10,16 +10,15 @@ import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -48,48 +47,59 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     try {
       clientFrame = objectMapper.readValue(message.getPayload(), WsClientFrame.class);
     } catch (Exception ex) {
-      session.sendMessage(new TextMessage(
-          objectMapper.writeValueAsString(
-              new WsServerFrame(WsMessageType.ERROR, null, "Invalid JSON"))));
+      session.sendMessage(
+          new TextMessage(
+              objectMapper.writeValueAsString(
+                  new WsServerFrame(WsMessageType.ERROR, null, "Invalid JSON"))));
       return;
     }
 
     if (Objects.isNull(clientFrame.action())) {
-      session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-          new WsServerFrame(WsMessageType.ERROR, clientFrame.clientMsgId(), "Missing action")
-      )));
+      session.sendMessage(
+          new TextMessage(
+              objectMapper.writeValueAsString(
+                  new WsServerFrame(
+                      WsMessageType.ERROR, clientFrame.clientMsgId(), "Missing action"))));
       return;
     }
 
     switch (clientFrame.action()) {
       case WsMessageType.PING -> {
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "PONG")
-        )));
+        session.sendMessage(
+            new TextMessage(
+                objectMapper.writeValueAsString(
+                    new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "PONG"))));
       }
       case WsMessageType.SUBSCRIBE -> {
-        subscribeUseCase.subscribe(new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), Map.of("description", "Subscribe successfully"))
-        )));
+        subscribeUseCase.subscribe(
+            new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
+        session.sendMessage(
+            new TextMessage(
+                objectMapper.writeValueAsString(
+                    new WsServerFrame(
+                        WsMessageType.ACK,
+                        clientFrame.clientMsgId(),
+                        Map.of("description", "Subscribe successfully")))));
       }
       case WsMessageType.SEND_MESSAGE -> {
-        sendMessageUseCase.sendMessage(new SendMessageCommand(
-            connectionId,
-            userId,
-            clientFrame.channelId(),
-            clientFrame.contentType(),
-            clientFrame.content()
-        ));
-        session.sendMessage(new TextMessage(
-            objectMapper.writeValueAsString(
-                new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "SENT")
-            )));
+        sendMessageUseCase.sendMessage(
+            new SendMessageCommand(
+                connectionId,
+                userId,
+                clientFrame.channelId(),
+                clientFrame.contentType(),
+                clientFrame.content()));
+        session.sendMessage(
+            new TextMessage(
+                objectMapper.writeValueAsString(
+                    new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "SENT"))));
       }
       default -> {
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-            new WsServerFrame(WsMessageType.ERROR, clientFrame.clientMsgId(), "Unsupported action")
-        )));
+        session.sendMessage(
+            new TextMessage(
+                objectMapper.writeValueAsString(
+                    new WsServerFrame(
+                        WsMessageType.ERROR, clientFrame.clientMsgId(), "Unsupported action"))));
       }
     }
   }
@@ -104,5 +114,4 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   private Integer getUserId(WebSocketSession session) {
     return (Integer) session.getAttributes().get(WsAuthHandShakeInterceptor.ATTR_USER_ID);
   }
-
 }
