@@ -2,11 +2,10 @@ package com.devcool.domain.chat.model;
 
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.chat.model.enums.ContentType;
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.Instant;
 
 @Getter
 @Setter

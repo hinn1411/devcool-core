@@ -31,10 +31,8 @@ public class ChannelDtoMapper {
   }
 
   public UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request) {
-    return new UpdateChannelCommand(request.name(),
-        request.boundaryType(),
-        request.expiredTime(),
-        request.channelType());
+    return new UpdateChannelCommand(
+        request.name(), request.boundaryType(), request.expiredTime(), request.channelType());
   }
 
   public UpdateChannelResponse toUpdateChannelResponse(boolean isChannelUpdated) {
@@ -53,16 +51,20 @@ public class ChannelDtoMapper {
     return new GetChannelCommand(memberId, cursorId, limit);
   }
 
-
   public GetChannelResponse toGetChannelResponse(ChannelListPage page) {
     return GetChannelResponse.builder()
-        .channels(page.items().stream().map(item -> new ChannelListItemResponse(
-            item.id(),
-            item.name(),
-            item.channelType().name(),
-            item.boundaryType().name()
-        )).toList())
+        .channels(
+            page.items().stream()
+                .map(
+                    item ->
+                        new ChannelListItemResponse(
+                            item.id(),
+                            item.name(),
+                            item.channelType().name(),
+                            item.boundaryType().name()))
+                .toList())
         .nextCursorId(page.cursorId())
-        .hasMore(page.hasMore()).build();
+        .hasMore(page.hasMore())
+        .build();
   }
 }

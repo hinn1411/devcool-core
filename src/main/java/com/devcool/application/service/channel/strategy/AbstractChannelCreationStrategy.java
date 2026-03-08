@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -45,13 +44,13 @@ public abstract class AbstractChannelCreationStrategy {
 
   protected List<Member> toMembers(List<User> users, User creator) {
     Instant joinedTime = Instant.now();
-    List<Member> members = users.stream()
-        .map(user -> toMember(user, MemberType.MEMBER, joinedTime))
-        .collect(Collectors.toCollection(ArrayList::new));
+    List<Member> members =
+        users.stream()
+            .map(user -> toMember(user, MemberType.MEMBER, joinedTime))
+            .collect(Collectors.toCollection(ArrayList::new));
     members.add(toMember(creator, MemberType.CREATOR, joinedTime));
     return members;
   }
-
 
   protected Channel buildChannel(
       CreateChannelCommand command, User creator, User leader, List<Member> members) {

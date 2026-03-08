@@ -11,15 +11,8 @@ public class MediaDtoMapper {
 
   private static final Logger log = LoggerFactory.getLogger(MediaDtoMapper.class);
 
-  public UploadMediaCommand toUploadMediaCommand(MultipartFile file,
-                                                 Integer userId,
-                                                 Integer channelId) {
-      return new UploadMediaCommand(
-          file,
-          file.getSize(),
-          file.getContentType(),
-          userId,
-          channelId
-      );
+  public UploadMediaCommand toUploadMediaCommand(
+      MultipartFile file, Integer userId, Integer channelId) {
+    return new UploadMediaCommand(file, file.getSize(), file.getContentType(), userId, channelId);
   }
 }

@@ -1,16 +1,16 @@
 package com.devcool.adapters.out.realtime.immemory;
 
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
-import org.springframework.stereotype.Component;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.stereotype.Component;
 
 @Component
 public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort {
   private final Map<String, Integer> connectionToUser = new ConcurrentHashMap<>();
   private final Map<Integer, Set<String>> channelToConnections = new ConcurrentHashMap<>();
+
   @Override
   public void registerConnection(String connectionId, Integer userId) {
     connectionToUser.put(connectionId, userId);
@@ -28,7 +28,8 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
 
   @Override
   public void subscribe(String connectionId, Integer channelId) {
-    channelToConnections.computeIfAbsent(channelId, k -> ConcurrentHashMap.newKeySet())
+    channelToConnections
+        .computeIfAbsent(channelId, k -> ConcurrentHashMap.newKeySet())
         .add(connectionId);
   }
 

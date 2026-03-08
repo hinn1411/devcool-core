@@ -15,10 +15,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
   private final RawWebSocketHandler handler;
   private final WsAuthHandShakeInterceptor authInterceptor;
+
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    registry.addHandler(handler, "/ws")
-        .addInterceptors(authInterceptor)
-        .setAllowedOrigins("*");
+    registry.addHandler(handler, "/ws").addInterceptors(authInterceptor).setAllowedOrigins("*");
   }
 }

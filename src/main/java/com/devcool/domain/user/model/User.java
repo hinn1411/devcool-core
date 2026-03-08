@@ -34,6 +34,7 @@ public class User {
   public void updateLoginTime() {
     this.lastLoginTime = Instant.now();
   }
+
   // getters/setters omitted for brevity
 
   public boolean isTokenVersionValid(Integer currentVersion) {

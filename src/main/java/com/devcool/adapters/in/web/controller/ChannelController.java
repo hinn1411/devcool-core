@@ -20,13 +20,12 @@ import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.common.ErrorCode;
 import jakarta.validation.Valid;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/channels")
@@ -55,9 +54,7 @@ public class ChannelController {
 
   @PatchMapping("/{channelId}")
   ResponseEntity<ApiSuccessResponse<UpdateChannelResponse>> updateChannel(
-      @Valid @RequestBody UpdateChannelRequest request,
-      @PathVariable Integer channelId
-  ) {
+      @Valid @RequestBody UpdateChannelRequest request, @PathVariable Integer channelId) {
     UpdateChannelCommand command = mapper.toUpdateChannelCommand(request);
     boolean isChannelUpdated = channelUpdater.updateChannel(channelId, command);
     UpdateChannelResponse response = mapper.toUpdateChannelResponse(isChannelUpdated);
@@ -68,29 +65,26 @@ public class ChannelController {
 
   @PostMapping("/{channelId}/members")
   ResponseEntity<ApiSuccessResponse<AddMembersResponse>> addMembers(
-      @Valid @RequestBody AddMembersRequest request,
-      @PathVariable Integer channelId
-  ) {
+      @Valid @RequestBody AddMembersRequest request, @PathVariable Integer channelId) {
     AddMembersCommand command = mapper.toAddMembersCommand(request);
-    boolean isMemberAdded =  channelUpdater.addMember(channelId, command);
+    boolean isMemberAdded = channelUpdater.addMember(channelId, command);
     AddMembersResponse response = mapper.toAddMembersResponse(isMemberAdded);
-    return ResponseEntity.ok(ApiResponseFactory.success(HttpStatus.OK,
-        ErrorCode.OK.code(),
-        "Add new members successfully",
-        response));
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Add new members successfully", response));
   }
 
   @GetMapping
-  ResponseEntity<ApiSuccessResponse<GetChannelResponse>> getChannels(@RequestParam(required = false) Integer cursorId,
-                                                                     @RequestParam(defaultValue = "20") int limit,
-                                                                     Authentication auth) {
+  ResponseEntity<ApiSuccessResponse<GetChannelResponse>> getChannels(
+      @RequestParam(required = false) Integer cursorId,
+      @RequestParam(defaultValue = "20") int limit,
+      Authentication auth) {
     Integer userId = Integer.valueOf(auth.getName());
     GetChannelCommand command = mapper.toGetChannelCommand(userId, cursorId, limit);
     ChannelListPage channels = channelQuerier.getChannels(command);
     GetChannelResponse response = mapper.toGetChannelResponse(channels);
-    return ResponseEntity.ok(ApiResponseFactory.success(HttpStatus.OK,
-        ErrorCode.OK.code(),
-        "Get channels by userId successfully",
-        response));
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Get channels by userId successfully", response));
   }
 }

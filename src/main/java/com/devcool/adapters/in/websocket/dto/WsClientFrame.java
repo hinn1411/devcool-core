@@ -2,10 +2,10 @@ package com.devcool.adapters.in.websocket.dto;
 
 import com.devcool.domain.chat.model.enums.ContentType;
 
-public record WsClientFrame (
+public record WsClientFrame(
     WsMessageType action,
     Integer channelId,
     ContentType contentType,
     String content,
     String clientMsgId // Idempotent key
-) { }
+    ) {}

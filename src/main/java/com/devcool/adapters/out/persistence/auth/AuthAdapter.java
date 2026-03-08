@@ -74,5 +74,4 @@ public class AuthAdapter implements LoadUserPort, RefreshTokenStorePort, AccessT
   public boolean updateVersion(Integer userId) {
     return userRepo.updateTokenVersion(userId) > 0;
   }
-
 }

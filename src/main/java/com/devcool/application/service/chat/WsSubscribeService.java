@@ -3,12 +3,12 @@ package com.devcool.application.service.chat;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.out.ChannelPort;
-import com.devcool.domain.member.exception.MemberNotFoundException;
-import com.devcool.domain.member.model.Member;
-import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.devcool.domain.member.exception.MemberNotFoundException;
+import com.devcool.domain.member.model.Member;
+import com.devcool.domain.member.port.out.MemberPort;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,19 +28,27 @@ public class WsSubscribeService implements WsSubscribeUseCase {
   @Transactional
   public void subscribe(SubscribeCommand command) {
     // Validate channel status later
-    Channel channel = channelPort.findById(command.channelId())
-        .orElseThrow(() -> {
-          log.warn("Channel id {} does not exist", command.channelId());
-          throw new ChannelNotFoundException(command.channelId());
-        });
+    Channel channel =
+        channelPort
+            .findById(command.channelId())
+            .orElseThrow(
+                () -> {
+                  log.warn("Channel id {} does not exist", command.channelId());
+                  throw new ChannelNotFoundException(command.channelId());
+                });
     // Validate member permission later
-    Member member = memberPort.findMemberOfChannelByUserId(command.channelId(), command.userId())
-        .orElseThrow(() -> {
-          log.info("User id {} does not exist in channel id {}", command.userId(), command.channelId());
-          throw new MemberNotFoundException(command.userId());
-        });
+    Member member =
+        memberPort
+            .findMemberOfChannelByUserId(command.channelId(), command.userId())
+            .orElseThrow(
+                () -> {
+                  log.info(
+                      "User id {} does not exist in channel id {}",
+                      command.userId(),
+                      command.channelId());
+                  throw new MemberNotFoundException(command.userId());
+                });
 
     connectionRegistryPort.subscribe(command.connectionId(), command.channelId());
-
   }
 }

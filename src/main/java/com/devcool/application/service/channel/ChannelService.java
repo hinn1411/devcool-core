@@ -2,7 +2,6 @@ package com.devcool.application.service.channel;
 
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
-import com.devcool.domain.member.exception.MemberAlreadyInChannelException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -15,15 +14,15 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.member.exception.MemberAlreadyInChannelException;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.port.out.UserPort;
+import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
 
 @Service
 public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase, GetChannelQuery {
@@ -33,10 +32,15 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   private final MemberPort memberPort;
   private final UserPort userPort;
 
-  public ChannelService(List<ChannelCreationStrategy> creationStrategies, ChannelPort channelPort, MemberPort memberPort, UserPort userPort) {
+  public ChannelService(
+      List<ChannelCreationStrategy> creationStrategies,
+      ChannelPort channelPort,
+      MemberPort memberPort,
+      UserPort userPort) {
     this.channelPort = channelPort;
     this.creationStrategies = new EnumMap<>(ChannelType.class);
-    creationStrategies.forEach(strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
+    creationStrategies.forEach(
+        strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
     this.memberPort = memberPort;
     this.userPort = userPort;
   }
@@ -54,11 +58,10 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
     return strategy.createChannel(command);
   }
 
-
   @Override
   public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
-    Channel existedChannel = channelPort.findById(channelId)
-        .orElseThrow(() -> new ChannelNotFoundException(channelId));
+    Channel existedChannel =
+        channelPort.findById(channelId).orElseThrow(() -> new ChannelNotFoundException(channelId));
     Channel channel = updateChannel(existedChannel, command);
     return channelPort.update(channel);
   }
@@ -72,7 +75,8 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
 
     Set<Integer> existingUserIds = userPort.findExistingUserIds(distinctMemberIds);
     if (existingUserIds.size() < distinctMemberIds.size()) {
-      List<Integer> missingIds = distinctMemberIds.stream().filter(id -> !existingUserIds.contains(id)).toList();
+      List<Integer> missingIds =
+          distinctMemberIds.stream().filter(id -> !existingUserIds.contains(id)).toList();
       throw new UserNotFoundException(missingIds);
     }
 
@@ -81,7 +85,8 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
       throw new ChannelNotFoundException(channelId);
     }
 
-    List<Member> alreadyMembers = memberPort.findMembersOfChannelByUserIds(channelId, existingUserIds);
+    List<Member> alreadyMembers =
+        memberPort.findMembersOfChannelByUserIds(channelId, existingUserIds);
     if (!alreadyMembers.isEmpty()) {
       List<Integer> existedMemberIds = alreadyMembers.stream().map(Member::getId).toList();
       throw new MemberAlreadyInChannelException(existedMemberIds);
@@ -102,8 +107,6 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   public ChannelListPage getChannels(GetChannelCommand command) {
     log.info("Get Channels by member Id");
-    return channelPort.loadChannels(command.memberId(),
-        command.cursorId(),
-        command.limit());
+    return channelPort.loadChannels(command.memberId(), command.cursorId(), command.limit());
   }
 }

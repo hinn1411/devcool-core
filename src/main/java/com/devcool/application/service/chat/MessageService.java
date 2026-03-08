@@ -10,13 +10,12 @@ import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -30,17 +29,26 @@ public class MessageService implements SaveMessageUseCase {
   @Transactional
   public Integer save(SaveMessageCommand command) {
     // Check dup message by clientMsgId
-    Channel channel = channelPort.findById(command.channelId())
-        .orElseThrow(() -> {
-          log.warn("Channel id {} does not exist", command.channelId());
-          throw new ChannelNotFoundException(command.channelId());
-        });
+    Channel channel =
+        channelPort
+            .findById(command.channelId())
+            .orElseThrow(
+                () -> {
+                  log.warn("Channel id {} does not exist", command.channelId());
+                  throw new ChannelNotFoundException(command.channelId());
+                });
     // Validate member permission later
-    Member member = memberPort.findMemberOfChannelByUserId(command.channelId(), command.userId())
-        .orElseThrow(() -> {
-          log.warn("User id {} does not exist in channel id {}", command.userId(), command.channelId());
-          throw new MemberNotFoundException(command.userId());
-        });
+    Member member =
+        memberPort
+            .findMemberOfChannelByUserId(command.channelId(), command.userId())
+            .orElseThrow(
+                () -> {
+                  log.warn(
+                      "User id {} does not exist in channel id {}",
+                      command.userId(),
+                      command.channelId());
+                  throw new MemberNotFoundException(command.userId());
+                });
 
     Message message = toMessage(command, channel);
     return messagePort.save(message);

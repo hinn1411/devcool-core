@@ -1,7 +1,6 @@
 package com.devcool.domain.user.port.out;
 
 import com.devcool.domain.user.model.User;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

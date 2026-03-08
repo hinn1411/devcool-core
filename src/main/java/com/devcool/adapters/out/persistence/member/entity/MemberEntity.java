@@ -4,16 +4,16 @@ import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.member.model.enums.MemberType;
 import jakarta.persistence.*;
+import java.time.Instant;
 import lombok.*;
 
-import java.time.Instant;
-
 @Entity
-@Table(name = "MEMBER",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_member_channel_user",
-        columnNames = {"USER_ID", "CHANNEL_ID"}
-    ))
+@Table(
+    name = "MEMBER",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uk_member_channel_user",
+            columnNames = {"USER_ID", "CHANNEL_ID"}))
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

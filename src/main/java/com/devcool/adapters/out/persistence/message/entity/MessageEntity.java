@@ -3,10 +3,9 @@ package com.devcool.adapters.out.persistence.message.entity;
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.domain.chat.model.enums.ContentType;
 import jakarta.persistence.*;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.Instant;
 
 @Entity
 @Table(name = "MESSAGE")
