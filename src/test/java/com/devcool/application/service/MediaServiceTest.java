@@ -26,31 +26,32 @@ import org.springframework.mock.web.MockMultipartFile;
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
 
+  private static final int USER_ID = 1;
+  private static final int CHANNEL_ID = 42;
+
   @Mock private MediaStoragePort storagePort;
 
   @InjectMocks private MediaService mediaService;
 
+  // ── upload ──────────────────────────────────────────────────────────────────
+
   @Test
   void upload_withValidJpegFile_returnsKeyMatchingExpectedFormat() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "photo.jpg", "image/jpeg", "image-data".getBytes());
-    UploadMediaCommand command =
-        new UploadMediaCommand(file, file.getSize(), file.getContentType(), 1, 42);
-    when(storagePort.upload(any()))
-        .thenReturn(new MediaStoragePort.UploadResult("bucket", "someKey"));
+    stubUpload();
+    UploadMediaCommand command = makeCommand("photo.jpg", "image/jpeg");
 
     String key = mediaService.upload(command);
 
-    assertThat(key).matches("channel/42/\\d{4}/\\d{2}/\\d{2}/[a-f0-9\\-]+\\.jpg");
+    assertThat(key)
+        .matches("channel/%d/\\d{4}/\\d{2}/\\d{2}/[a-f0-9\\-]+\\.jpg".formatted(CHANNEL_ID));
   }
 
   @Test
   void upload_forwardsCorrectMetadataToStoragePort() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "video.mp4", "video/mp4", "video-data".getBytes());
+    stubUpload();
+    MockMultipartFile file = makeFile("video.mp4", "video/mp4");
     UploadMediaCommand command =
-        new UploadMediaCommand(file, file.getSize(), file.getContentType(), 1, 10);
-    when(storagePort.upload(any())).thenReturn(new MediaStoragePort.UploadResult("bucket", "key"));
+        new UploadMediaCommand(file, file.getSize(), file.getContentType(), USER_ID, 10);
 
     String key = mediaService.upload(command);
 
@@ -66,8 +67,9 @@ class MediaServiceTest {
 
   @Test
   void upload_withEmptyFile_throwsInvalidMediaContentException() {
-    MockMultipartFile file = new MockMultipartFile("file", "empty.jpg", "image/jpeg", new byte[0]);
-    UploadMediaCommand command = new UploadMediaCommand(file, 0, "image/jpeg", 1, 1);
+    MockMultipartFile empty = new MockMultipartFile("file", "empty.jpg", "image/jpeg", new byte[0]);
+    UploadMediaCommand command =
+        new UploadMediaCommand(empty, 0, "image/jpeg", USER_ID, CHANNEL_ID);
 
     assertThatThrownBy(() -> mediaService.upload(command))
         .isInstanceOf(InvalidMediaContentException.class);
@@ -76,10 +78,7 @@ class MediaServiceTest {
 
   @Test
   void upload_withUnsupportedContentType_throwsUnsupportedMediaTypeException() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "doc.pdf", "application/pdf", "data".getBytes());
-    UploadMediaCommand command =
-        new UploadMediaCommand(file, file.getSize(), "application/pdf", 1, 1);
+    UploadMediaCommand command = makeCommand("doc.pdf", "application/pdf");
 
     assertThatThrownBy(() -> mediaService.upload(command))
         .isInstanceOf(UnsupportedMediaTypeException.class);
@@ -88,14 +87,14 @@ class MediaServiceTest {
 
   @Test
   void upload_withUnsupportedFileExtension_throwsUnsupportedMediaTypeException() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "image.bmp", "image/jpeg", "data".getBytes());
-    UploadMediaCommand command = new UploadMediaCommand(file, file.getSize(), "image/jpeg", 1, 1);
+    UploadMediaCommand command = makeCommand("image.bmp", "image/jpeg");
 
     assertThatThrownBy(() -> mediaService.upload(command))
         .isInstanceOf(UnsupportedMediaTypeException.class);
     verifyNoInteractions(storagePort);
   }
+
+  // ── getPresignedUrl ──────────────────────────────────────────────────────────
 
   @Test
   void getPresignedUrl_withValidKey_returnsUrlAndExpiry() {
@@ -138,5 +137,21 @@ class MediaServiceTest {
     assertThatThrownBy(() -> mediaService.getPresignedUrl("   "))
         .isInstanceOf(InvalidObjectKeyException.class);
     verifyNoInteractions(storagePort);
+  }
+
+  // ── helpers ──────────────────────────────────────────────────────────────────
+
+  private static MockMultipartFile makeFile(String filename, String contentType) {
+    return new MockMultipartFile("file", filename, contentType, "data".getBytes());
+  }
+
+  private static UploadMediaCommand makeCommand(String filename, String contentType) {
+    MockMultipartFile file = makeFile(filename, contentType);
+    return new UploadMediaCommand(file, file.getSize(), file.getContentType(), USER_ID, CHANNEL_ID);
+  }
+
+  private void stubUpload() {
+    when(storagePort.upload(any()))
+        .thenReturn(new MediaStoragePort.UploadResult("bucket", "someKey"));
   }
 }

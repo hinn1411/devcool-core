@@ -32,6 +32,8 @@ class S3StorageAdapterTest {
 
   private static final String BUCKET = "test-bucket";
   private static final String OBJECT_KEY = "channel/1/2026/03/08/uuid.jpg";
+  private static final String PRESIGN_URL =
+      "https://test-bucket.s3.amazonaws.com/" + OBJECT_KEY + "?sig=abc";
 
   @Mock private S3Client s3Client;
   @Mock private S3Presigner s3Presigner;
@@ -44,16 +46,13 @@ class S3StorageAdapterTest {
     adapter = new S3StorageAdapter(s3Client, s3Presigner, awsProps);
   }
 
+  // ── upload ──────────────────────────────────────────────────────────────────
+
   @Test
   void upload_sendsCorrectPutObjectRequestToS3() {
-    when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
-        .thenReturn(PutObjectResponse.builder().build());
+    stubPutObject();
 
-    MediaStoragePort.UploadRequest request =
-        new MediaStoragePort.UploadRequest(
-            OBJECT_KEY, new ByteArrayInputStream("data".getBytes()), 4L, "image/jpeg");
-
-    adapter.upload(request);
+    adapter.upload(anUploadRequest());
 
     ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
     verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
@@ -66,42 +65,31 @@ class S3StorageAdapterTest {
 
   @Test
   void upload_returnsResultWithBucketAndObjectKey() {
-    when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
-        .thenReturn(PutObjectResponse.builder().build());
+    stubPutObject();
 
-    MediaStoragePort.UploadRequest request =
-        new MediaStoragePort.UploadRequest(
-            OBJECT_KEY, new ByteArrayInputStream("data".getBytes()), 4L, "image/jpeg");
-
-    MediaStoragePort.UploadResult result = adapter.upload(request);
+    MediaStoragePort.UploadResult result = adapter.upload(anUploadRequest());
 
     assertThat(result.bucket()).isEqualTo(BUCKET);
     assertThat(result.objectKey()).isEqualTo(OBJECT_KEY);
   }
 
+  // ── presignGet ───────────────────────────────────────────────────────────────
+
   @Test
   void presignGet_buildsCorrectPresignRequestAndReturnsUrl() throws MalformedURLException {
-    String expectedUrl = "https://test-bucket.s3.amazonaws.com/" + OBJECT_KEY + "?sig=abc";
-    PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
-    when(presigned.url()).thenReturn(new URL(expectedUrl));
-    when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
-
+    stubPresigner(PRESIGN_URL);
     MediaStoragePort.PresignGetRequest request =
         new MediaStoragePort.PresignGetRequest(OBJECT_KEY, Duration.ofMinutes(10));
 
     MediaStoragePort.PresignedGetResult result = adapter.presignGet(request);
 
-    assertThat(result.url()).isEqualTo(expectedUrl);
+    assertThat(result.url()).isEqualTo(PRESIGN_URL);
     assertThat(result.expiresAt()).isAfter(Instant.now().minus(Duration.ofSeconds(5)));
   }
 
   @Test
   void presignGet_passesObjectKeyAndTtlToPresigner() throws MalformedURLException {
-    PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
-    when(presigned.url())
-        .thenReturn(new URL("https://test-bucket.s3.amazonaws.com/key.jpg?sig=abc"));
-    when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
-
+    stubPresigner(PRESIGN_URL);
     MediaStoragePort.PresignGetRequest request =
         new MediaStoragePort.PresignGetRequest(OBJECT_KEY, Duration.ofMinutes(5));
 
@@ -111,5 +99,23 @@ class S3StorageAdapterTest {
         ArgumentCaptor.forClass(GetObjectPresignRequest.class);
     verify(s3Presigner).presignGetObject(captor.capture());
     assertThat(captor.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(5));
+  }
+
+  // ── helpers ──────────────────────────────────────────────────────────────────
+
+  private static MediaStoragePort.UploadRequest anUploadRequest() {
+    return new MediaStoragePort.UploadRequest(
+        OBJECT_KEY, new ByteArrayInputStream("data".getBytes()), 4L, "image/jpeg");
+  }
+
+  private void stubPutObject() {
+    when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+        .thenReturn(PutObjectResponse.builder().build());
+  }
+
+  private void stubPresigner(String url) throws MalformedURLException {
+    PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
+    when(presigned.url()).thenReturn(new URL(url));
+    when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
   }
 }
