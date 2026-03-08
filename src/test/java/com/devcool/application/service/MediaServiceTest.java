@@ -26,7 +26,7 @@ import org.springframework.mock.web.MockMultipartFile;
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
 
-  private static final int USER_ID = 1;
+  private static final int USER_ID = 12;
   private static final int CHANNEL_ID = 42;
 
   @Mock private MediaStoragePort storagePort;
