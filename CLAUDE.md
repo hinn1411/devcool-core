@@ -145,6 +145,18 @@ HTTP Request (MultipartFile + channelId)
 
 Local env vars (JWT secrets etc.) are in `local.env`.
 
+### PR Review Guidelines
+
+When reviewing a pull request, check for:
+
+- **Hexagonal boundaries**: domain classes must not import Spring/JPA annotations; adapters must not contain business logic
+- **Port contracts**: new use cases must define an inbound port interface in `domain/*/port/in/`; new external dependencies must define an outbound port interface in `domain/*/port/out/`
+- **Application service rules**: services implement inbound ports and depend only on outbound port interfaces — never directly on JPA repositories or AWS SDK
+- **DTO mapping**: HTTP request/response types stay in `adapters/in/web/dto/`; MapStruct mappers convert them to/from domain objects
+- **Domain exceptions**: thrown from the application service layer, not from controllers or adapters
+- **Test coverage**: new service logic should have unit tests using Mockito (`@ExtendWith(MockitoExtension.class)`); new adapter logic should mock the underlying SDK/JPA calls
+- **Code formatting**: must pass `./mvnw spotless:check` (Google Java Format)
+
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
 1. Spotless format check
