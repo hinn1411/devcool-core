@@ -139,6 +139,28 @@ class MediaServiceTest {
     verifyNoInteractions(storagePort);
   }
 
+  @Test
+  void upload_withPngFile_returnsKeyMatchingExpectedFormat() {
+    stubUpload();
+    UploadMediaCommand command = makeCommand("image.png", "image/png");
+
+    String key = mediaService.upload(command);
+
+    assertThat(key)
+        .matches("channel/%d/\\d{4}/\\d{2}/\\d{2}/[a-f0-9\\-]+\\.png".formatted(CHANNEL_ID));
+  }
+
+  @Test
+  void upload_withWebpFile_returnsKeyMatchingExpectedFormat() {
+    stubUpload();
+    UploadMediaCommand command = makeCommand("image.webp", "image/webp");
+
+    String key = mediaService.upload(command);
+
+    assertThat(key)
+        .matches("channel/%d/\\d{4}/\\d{2}/\\d{2}/[a-f0-9\\-]+\\.webp".formatted(CHANNEL_ID));
+  }
+
   // ── helpers ──────────────────────────────────────────────────────────────────
 
   private static MockMultipartFile makeFile(String filename, String contentType) {
