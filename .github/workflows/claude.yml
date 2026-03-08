@@ -43,6 +43,7 @@ jobs:
             code style consistency, and adherence to the hexagonal architecture used
             in this project. Post your feedback as a PR review comment.
 
+
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
 
