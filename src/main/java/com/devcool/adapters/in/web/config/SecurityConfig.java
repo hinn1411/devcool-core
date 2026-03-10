@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
   private final JwtAuthFilter jwtAuthFilter;
   private final String[] publicPaths = {
-    "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html, /docs"
+      "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs"
   };
 
   @Bean
