@@ -31,7 +31,7 @@ jobs:
       - name: Auto-review PR
         uses: anthropics/claude-code-action@v1.0.70
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Please review this pull request. Check for correctness, potential bugs,
             code style consistency, and adherence to the hexagonal architecture used
@@ -60,4 +60,4 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1.0.70
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
