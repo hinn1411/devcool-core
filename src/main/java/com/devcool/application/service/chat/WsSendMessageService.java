@@ -2,7 +2,7 @@ package com.devcool.application.service.chat;
 
 import com.devcool.domain.chat.port.in.SaveMessageUseCase;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
-import com.devcool.domain.chat.port.in.command.SaveMessageCommand;
+import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
@@ -26,7 +26,7 @@ public class WsSendMessageService implements SendMessageUseCase {
   public void sendMessage(SendMessageCommand command) {
     // Validate channel status later
 
-    SaveMessageCommand saveCommand = toSaveMessageCommand(command);
+    CreateMessageCommand saveCommand = toSaveMessageCommand(command);
     saveMessageUseCase.save(saveCommand);
 
     Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
@@ -47,8 +47,8 @@ public class WsSendMessageService implements SendMessageUseCase {
     }
   }
 
-  private SaveMessageCommand toSaveMessageCommand(SendMessageCommand sendCommand) {
-    return new SaveMessageCommand(
+  private CreateMessageCommand toSaveMessageCommand(SendMessageCommand sendCommand) {
+    return new CreateMessageCommand(
         sendCommand.content(),
         sendCommand.contentType(),
         sendCommand.channelId(),
