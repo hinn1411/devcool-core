@@ -38,7 +38,7 @@ class MediaServiceTest {
   @Test
   void upload_withValidJpegFile_returnsKeyMatchingExpectedFormat() {
     stubUpload();
-    UploadMediaCommand command = makeCommand("photo.jpg", "image/jpeg");
+    UploadMediaCommand command = makeCommand("photo1.jpg", "image/jpeg");
 
     String key = mediaService.upload(command);
 
