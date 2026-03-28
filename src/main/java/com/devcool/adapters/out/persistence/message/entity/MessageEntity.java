@@ -15,6 +15,7 @@ public class MessageEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
+  @Column(name = "ID", nullable = false, unique = true)
   private Integer id;
 
   @Column(name = "SENDER_USER_ID", nullable = false)
