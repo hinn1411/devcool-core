@@ -11,6 +11,8 @@ public class HttpErrorMapper {
       case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
       case EMAIL_ALREADY_USED -> HttpStatus.CONFLICT;
       case PASSWORD_WEAK -> HttpStatus.UNPROCESSABLE_ENTITY;
+      case CHANNEL_NOT_FOUND -> HttpStatus.NOT_FOUND;
+      case MEMBER_NOT_FOUND -> HttpStatus.FORBIDDEN;
       default -> HttpStatus.INTERNAL_SERVER_ERROR;
     };
   }

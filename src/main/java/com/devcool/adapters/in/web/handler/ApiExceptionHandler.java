@@ -14,6 +14,7 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -46,6 +47,34 @@ public class ApiExceptionHandler {
                 ErrorCode.VALIDATION_ERROR.code(),
                 "Input validation failed",
                 Map.of("fields", fieldErrors)));
+  }
+
+  @ExceptionHandler(HandlerMethodValidationException.class)
+  public ResponseEntity<ApiErrorResponse> handleMethodValidation(
+      HandlerMethodValidationException ex) {
+    List<Map<String, String>> paramErrors =
+        ex.getParameterValidationResults().stream()
+            .flatMap(
+                result ->
+                    result.getResolvableErrors().stream()
+                        .map(
+                            err ->
+                                Map.of(
+                                    "field",
+                                    Optional.ofNullable(
+                                            result.getMethodParameter().getParameterName())
+                                        .orElse(""),
+                                    "message",
+                                    Optional.ofNullable(err.getDefaultMessage()).orElse(""))))
+            .toList();
+
+    return ResponseEntity.unprocessableEntity()
+        .body(
+            ApiResponseFactory.error(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ErrorCode.VALIDATION_ERROR.code(),
+                "Input validation failed",
+                Map.of("fields", paramErrors)));
   }
 
   @ExceptionHandler(Exception.class)
