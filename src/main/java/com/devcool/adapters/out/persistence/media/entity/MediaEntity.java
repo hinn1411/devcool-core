@@ -2,9 +2,7 @@ package com.devcool.adapters.out.persistence.media.entity;
 
 import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import jakarta.persistence.*;
-
 import java.time.Instant;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,7 +23,7 @@ public class MediaEntity {
   @Column(name = "CREATED_TIME", nullable = false)
   private Instant createdTime;
 
-  @OneToOne(cascade = CascadeType.MERGE, orphanRemoval = true)
+  @OneToOne
   @JoinColumn(name = "MESSAGE_ID", referencedColumnName = "ID")
   private MessageEntity message;
 }

@@ -1,6 +1,8 @@
 package com.devcool.adapters.out.persistence.message.entity;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.media.entity.MediaEntity;
+import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.chat.model.enums.ContentType;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -18,8 +20,9 @@ public class MessageEntity {
   @Column(name = "ID", nullable = false, unique = true)
   private Integer id;
 
-  @Column(name = "SENDER_USER_ID", nullable = false)
-  private Integer senderUserId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "USER_ID", referencedColumnName = "ID", nullable = false)
+  private UserEntity user;
 
   @Column(name = "CONTENT", length = 1000, nullable = true)
   private String content;
@@ -40,4 +43,7 @@ public class MessageEntity {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
   private ChannelEntity channel;
+
+  @OneToOne(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+  private MediaEntity media;
 }

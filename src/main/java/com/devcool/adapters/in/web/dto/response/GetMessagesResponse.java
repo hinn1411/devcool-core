@@ -8,16 +8,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-@Schema(name = "GetChannelResponse", description = "Get channels response")
+@Schema(name = "GetMessagesResponse", description = "Get messages response")
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class GetChannelResponse {
-  @Schema(description = "returned channels", example = "[]")
-  private List<ChannelListItemResponse> channels;
-
-  private Integer nextCursorId;
+public class GetMessagesResponse {
+  private List<MessageItemResponse> items;
+  private Integer cursorId;
   private boolean hasMore;
 }
