@@ -1,53 +1,60 @@
 package com.devcool.application.service.chat.strategy;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
-import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.model.Message;
+import com.devcool.domain.chat.policy.MessageCreationStrategy;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.port.out.MemberPort;
-import com.devcool.domain.user.exception.UserNotFoundException;
-import com.devcool.domain.user.model.User;
 import java.time.Instant;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class AbstractMessageCreationStrategy {
+public abstract class AbstractMessageCreationStrategy implements MessageCreationStrategy {
   protected final ChannelPort channelPort;
   protected final MemberPort memberPort;
   protected final MessagePort messagePort;
-  protected final LoadUserPort userPort;
 
-  protected User getUser(Integer userId) {
-    return userPort.loadById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+  /**
+   * Validates the channel and the sender's membership before delegating the message construction to
+   * {@link #buildMessage(CreateMessageCommand)}. The channel existence is checked first so a
+   * non-existent channel reports {@link ChannelNotFoundException} rather than being masked by the
+   * membership lookup.
+   */
+  @Override
+  public final Integer createMessage(CreateMessageCommand command) {
+    requireChannelExists(command.channelId());
+    requireMemberInChannel(command.channelId(), command.userId());
+
+    return messagePort.save(buildMessage(command));
   }
 
-  protected Channel getChannel(Integer channelId) {
-    return channelPort
-        .findById(channelId)
-        .orElseThrow(() -> new ChannelNotFoundException(channelId));
-  }
-
-  protected boolean isMemberInChannel(Integer channelId, Integer userId) {
-    return memberPort
-        .findMemberOfChannelByUserId(channelId, userId)
-        .map(Objects::nonNull)
-        .isPresent();
-  }
-
+  /**
+   * Builds the message carrying only the sender and channel ids. The sender is not loaded: the
+   * membership check above already proves the user exists, and the persistence adapter resolves
+   * both foreign keys without a query.
+   */
   protected Message buildMessage(CreateMessageCommand command) {
-    Channel channel = getChannel(command.channelId());
-    User user = getUser(command.userId());
-
     return Message.builder()
-        .user(user)
+        .senderId(command.userId())
         .content(command.content())
         .contentType(command.contentType())
         .createdTime(Instant.now())
-        .channel(channel)
+        .channelId(command.channelId())
         .build();
+  }
+
+  private void requireChannelExists(Integer channelId) {
+    if (!channelPort.existById(channelId)) {
+      throw new ChannelNotFoundException(channelId);
+    }
+  }
+
+  private void requireMemberInChannel(Integer channelId, Integer userId) {
+    if (memberPort.findMemberOfChannelByUserId(channelId, userId).isEmpty()) {
+      throw new MemberNotFoundException(userId);
+    }
   }
 }

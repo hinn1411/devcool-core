@@ -49,8 +49,9 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   public Integer save(CreateMessageCommand command) {
     MessageCreationStrategy strategy = creationStrategies.get(command.contentType());
     if (Objects.isNull(strategy)) {
-      log.warn("No message creation strategy registered for type null");
-      throw new InvalidMessageConfigException("Unsupported channel type: " + command.contentType());
+      log.warn(
+          "No message creation strategy registered for contentType: {}", command.contentType());
+      throw new InvalidMessageConfigException("Unsupported content type: " + command.contentType());
     }
 
     return strategy.createMessage(command);

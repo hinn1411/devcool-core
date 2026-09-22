@@ -11,8 +11,13 @@ import org.mapstruct.Mapping;
     componentModel = "spring",
     uses = {MediaMapper.class})
 public interface MessageMapper {
-  Message toDomain(MessageEntity entity);
 
+  /**
+   * The {@code user} and {@code channel} associations are resolved by the adapter with entity
+   * references, so the mapper must leave them alone.
+   */
+  @Mapping(target = "user", ignore = true)
+  @Mapping(target = "channel", ignore = true)
   MessageEntity toEntity(Message message);
 
   @Mapping(target = "userId", source = "user.id")
