@@ -13,6 +13,7 @@ public class HttpErrorMapper {
       case PASSWORD_WEAK -> HttpStatus.UNPROCESSABLE_ENTITY;
       case CHANNEL_NOT_FOUND -> HttpStatus.NOT_FOUND;
       case MEMBER_NOT_FOUND -> HttpStatus.FORBIDDEN;
+      case TOO_LARGE_MEDIA -> HttpStatus.PAYLOAD_TOO_LARGE;
       default -> HttpStatus.INTERNAL_SERVER_ERROR;
     };
   }

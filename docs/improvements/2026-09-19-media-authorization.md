@@ -26,7 +26,7 @@ The endpoint takes any `key` and signs it with no authorization check. Any logge
 
 2. **Look the key up in the DB (stricter).** Resolve key → `MediaEntity` → message → channel, then check membership.
    - This proves the key belongs to a real, non-deleted message. A key that was uploaded but never attached to a message gets 404.
-   - It needs a new outbound port method, such as `MediaPort.findChannelIdByPath(String path)`, and ideally an index on `MEDIA.PATH`.
+   - It needs a media outbound port, such as `MediaPort.findChannelIdByPath(String path)`, and ideally an index on `MEDIA.PATH`. The old `MediaPort`/`MediaAdapter`/`MediaRepository` were deleted as dead code, so this fix has to bring back the port, the adapter and a Spring Data repository with this query.
 
 **Also consider:** a batch variant, `POST /api/v1/medias/presigned-urls` with `{ keys: [...] }`, so a chat screen doesn't make one request per image. Apply the same authorization to every key in the batch.
 

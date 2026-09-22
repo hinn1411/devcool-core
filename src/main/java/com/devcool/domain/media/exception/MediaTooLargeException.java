@@ -5,7 +5,10 @@ import com.devcool.domain.common.ErrorCode;
 import java.util.Map;
 
 public class MediaTooLargeException extends DomainException {
-  public MediaTooLargeException(long mediaSize) {
-    super(ErrorCode.TOO_LARGE_MEDIA, "Media is too large", Map.of("mediaSize", mediaSize));
+  public MediaTooLargeException(long mediaSize, long maxSize) {
+    super(
+        ErrorCode.TOO_LARGE_MEDIA,
+        "Media is too large",
+        Map.of("mediaSize", mediaSize, "maxSize", maxSize));
   }
 }
