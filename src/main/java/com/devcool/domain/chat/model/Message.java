@@ -1,9 +1,7 @@
 package com.devcool.domain.chat.model;
 
-import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.media.model.Media;
-import com.devcool.domain.user.model.User;
 import java.time.Instant;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,12 +12,12 @@ import lombok.Setter;
 @Builder
 public class Message {
   private Integer id;
-  private User user;
+  private Integer senderId;
   private String content;
   private ContentType contentType;
   private Instant createdTime;
   private Instant deletedTime;
   private Instant editedTime;
-  private Channel channel;
+  private Integer channelId;
   private Media media;
 }
