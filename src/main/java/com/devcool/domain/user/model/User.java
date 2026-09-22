@@ -37,7 +37,7 @@ public class User {
 
   // getters/setters omitted for brevity
 
-  public boolean isTokenVersionValid(Integer currentVersion) {
-    return tokenVersion >= currentVersion;
+  public boolean isTokenVersionValid(Integer claimVersion) {
+    return claimVersion != null && Objects.equals(tokenVersion, claimVersion);
   }
 }
