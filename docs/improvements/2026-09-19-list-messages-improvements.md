@@ -31,22 +31,16 @@ The items below are still open.
 
 ## High
 
-### 1. `ecs` schema needs the `SENDER_USER_ID` → `USER_ID` change
-**File:** `adapters/out/persistence/message/entity/MessageEntity.java`
+### 1. `ecs` cannot start against a fresh RDS database
+**File:** `src/main/resources/application-ecs.properties`
 
-`ecs` runs `ddl-auto=validate` with Flyway disabled, so the app will fail on startup against the existing RDS schema. Apply before deploying:
+The RDS database was dropped to save cost, so the `SENDER_USER_ID` → `USER_ID` migration is no longer needed. Nothing is left to migrate.
 
-```sql
-BEGIN;
-ALTER TABLE message ADD COLUMN user_id INTEGER;
-UPDATE message SET user_id = sender_user_id;
-ALTER TABLE message ALTER COLUMN user_id SET NOT NULL;
-ALTER TABLE message ADD CONSTRAINT fk_message_user FOREIGN KEY (user_id) REFERENCES <user_table>(id);
-ALTER TABLE message DROP COLUMN sender_user_id;
-COMMIT;
-```
+When a new RDS instance is created, though, nothing creates the schema: `ecs` runs `ddl-auto=validate` with `spring.flyway.enabled=false`, and there is no `src/main/resources/db/migration` folder. Hibernate validation fails on the missing tables and the app will not start.
 
-Longer term: enable Flyway and keep migrations in `src/main/resources/db/migration` so schema changes are versioned.
+**Fix (recommended):** add a Flyway baseline `db/migration/V1__init.sql` with the current schema (generate it from the `local` profile's Hibernate DDL), then set `spring.flyway.enabled=true` in `application-ecs.properties`. `flyway-core` is already in `pom.xml`. Future schema changes (such as the #3 index) then ship as versioned migrations.
+
+**Quick alternative:** set `SPRING_JPA_HIBERNATE_DDL_AUTO=update` for the first ECS deploy only, then remove it so `validate` applies again. Later schema changes will hit the same problem.
 
 ---
 
