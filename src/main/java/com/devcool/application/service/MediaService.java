@@ -2,7 +2,9 @@ package com.devcool.application.service;
 
 import com.devcool.domain.media.exception.InvalidMediaContentException;
 import com.devcool.domain.media.exception.InvalidObjectKeyException;
+import com.devcool.domain.media.exception.MediaTooLargeException;
 import com.devcool.domain.media.exception.UnsupportedMediaTypeException;
+import com.devcool.domain.media.model.MediaKind;
 import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
 import com.devcool.domain.media.port.in.UploadMediaUseCase;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
@@ -13,7 +15,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -25,8 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
 
-  private static final Set<String> allowedContentTypes =
-      Set.of("image/jpeg", "image/png", "image/webp", "video/mp4");
   private static final Duration DEFAULT_PRESIGN_TTL = Duration.ofMinutes(10);
   private final MediaStoragePort storagePort;
   private static final Logger log = LoggerFactory.getLogger(MediaService.class);
@@ -40,10 +39,19 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
       throw new InvalidMediaContentException();
     }
 
-    if (isContentTypeInvalid(file.getContentType())) {
-      log.warn("Content type: {}  is invalid!", command.contentType());
-      throw new UnsupportedMediaTypeException(command.contentType());
+    MediaKind kind =
+        MediaKind.fromContentType(file.getContentType())
+            .orElseThrow(
+                () -> {
+                  log.warn("Content type: {}  is invalid!", command.contentType());
+                  return new UnsupportedMediaTypeException(String.valueOf(command.contentType()));
+                });
+
+    if (!kind.isSizeAllowed(command.size())) {
+      log.warn("{} size {} exceeds limit {}", kind, command.size(), kind.maxBytes());
+      throw new MediaTooLargeException(command.size(), kind.maxBytes());
     }
+
     String mediaKey = buildMediaKey(command.channelId(), file.getOriginalFilename());
     try (InputStream in = file.getInputStream()) {
       MediaStoragePort.UploadRequest uploadRequest =
@@ -53,10 +61,6 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
     } catch (IOException e) {
       throw new RuntimeException("Failed to read upload stream", e);
     }
-  }
-
-  private boolean isContentTypeInvalid(String contentType) {
-    return Objects.isNull(contentType) || !allowedContentTypes.contains(contentType);
   }
 
   @Override

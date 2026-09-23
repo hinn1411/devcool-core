@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -75,6 +76,19 @@ public class ApiExceptionHandler {
                 ErrorCode.VALIDATION_ERROR.code(),
                 "Input validation failed",
                 Map.of("fields", paramErrors)));
+  }
+
+  /** Rejected by the servlet multipart limits before reaching a controller. */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+    HttpStatus status = HttpErrorMapper.toHttpStatus(ErrorCode.TOO_LARGE_MEDIA);
+    return ResponseEntity.status(status)
+        .body(
+            ApiResponseFactory.error(
+                status,
+                ErrorCode.TOO_LARGE_MEDIA.code(),
+                "Upload exceeds the allowed size",
+                Map.of("maxSize", ex.getMaxUploadSize())));
   }
 
   @ExceptionHandler(Exception.class)
