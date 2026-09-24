@@ -70,10 +70,13 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [07 — Unit Testing Guide](07-unit-testing-guide.md) | What does a good unit test look like, and how do you build one with JUnit 5, Mockito, AssertJ and `@WebMvcTest`? |
 | [08 — Unit Testing Exercises](08-unit-testing-exercises.md) | Twelve hands-on exercises against real classes here, several of which hide live bugs. |
 | [09 — Classic vs Mockist](09-test-schools.md) | What do the two testing schools' strengths and weaknesses look like when the code actually changes? |
+| [10 — Realtime Architecture Design](10-realtime-architecture-design.md) | How is the `/ws` layer put together, where does it stop scaling, and which of eleven options do you move to next? |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 
 07 and 08 are the practical follow-up to 06: read 07, then work through 08 and ask for a review of each exercise.
+
+10 is the design companion to 04: read 04 for the realtime bugs, then 10 for how the layer fits together and what to move to when one task is no longer enough.
 
 ---
 
