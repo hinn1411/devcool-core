@@ -27,7 +27,7 @@ public class AuthProviderEntity {
   @Column(name = "CREATED_TIME", nullable = false)
   private Timestamp createdTime;
 
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
   private UserEntity user;
 }
