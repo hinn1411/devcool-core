@@ -19,6 +19,7 @@ public class AuthProviderEntity {
   private Integer id;
 
   @Column(name = "PROVIDER", nullable = false)
+  @Enumerated(EnumType.STRING)
   private LoginType provider;
 
   @Column(name = "PROVIDER_ID", nullable = false)

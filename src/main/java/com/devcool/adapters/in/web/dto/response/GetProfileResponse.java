@@ -51,6 +51,11 @@ public class GetProfileResponse {
       example = "2025-10-12T15:30:00Z")
   private Instant lastLoginTime;
 
-  @Schema(description = "Indicates whether the user's email has been verified", example = "true")
-  private boolean emailVerified;
+  @Schema(
+      description =
+          "Email verification state: true = verified, false = attempted but failed,"
+              + " null = never attempted",
+      example = "true",
+      nullable = true)
+  private Boolean emailVerified;
 }
