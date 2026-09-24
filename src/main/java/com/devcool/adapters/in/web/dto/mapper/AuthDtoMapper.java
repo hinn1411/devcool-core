@@ -40,7 +40,7 @@ public class AuthDtoMapper {
         .role(user.getRole())
         .status(user.getStatus())
         .lastLoginTime(user.getLastLoginTime())
-        .emailVerified(user.isEmailVerified())
+        .emailVerified(user.getEmailVerified())
         .build();
   }
 
