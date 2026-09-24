@@ -26,13 +26,13 @@ public class FriendRequestEntity {
   @Column(name = "PROCESSED_TIME", nullable = false)
   private Timestamp processedTime;
 
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
   // Create SENDER_ID column in FRIEND_REQUEST table
   // which reference to ID column of USER table
   @JoinColumn(name = "SENDER_ID", referencedColumnName = "ID")
   private UserEntity sender;
 
-  @ManyToOne(fetch = FetchType.EAGER, optional = false)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
   // Create RECEIVER_ID column in FRIEND_REQUEST table
   // which reference to ID column of USER table
   @JoinColumn(name = "RECEIVER_ID", referencedColumnName = "ID")
