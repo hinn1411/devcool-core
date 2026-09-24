@@ -11,7 +11,6 @@ import com.devcool.domain.member.port.out.MemberPort;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -31,8 +30,8 @@ public class MemberAdapter implements MemberPort {
   }
 
   @Override
-  public Optional<Member> findMemberOfChannelByUserId(Integer channelId, Integer userId) {
-    return repo.findByChannel_IdAndUser_Id(channelId, userId).map(mapper::toDomain);
+  public boolean existMemberOfChannelByUserId(Integer channelId, Integer userId) {
+    return repo.existsByChannel_IdAndUser_Id(channelId, userId);
   }
 
   @Override

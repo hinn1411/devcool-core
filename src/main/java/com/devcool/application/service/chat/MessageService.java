@@ -63,7 +63,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     if (!channelPort.existById(command.channelId())) {
       throw new ChannelNotFoundException(command.channelId());
     }
-    if (memberPort.findMemberOfChannelByUserId(command.channelId(), command.userId()).isEmpty()) {
+    if (!memberPort.existMemberOfChannelByUserId(command.channelId(), command.userId())) {
       throw new MemberNotFoundException(command.userId());
     }
 
