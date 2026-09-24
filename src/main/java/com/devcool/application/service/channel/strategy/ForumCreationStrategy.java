@@ -62,7 +62,7 @@ public class ForumCreationStrategy extends AbstractChannelCreationStrategy
       throw new InvalidChannelConfigException("In forum, leader must be present");
     }
 
-    if (Objects.isNull(expiredTime)) {
+    if (Objects.nonNull(expiredTime)) {
       log.info("Forum must not have expired time");
       throw new InvalidChannelConfigException("Forum must not have expired time");
     }
