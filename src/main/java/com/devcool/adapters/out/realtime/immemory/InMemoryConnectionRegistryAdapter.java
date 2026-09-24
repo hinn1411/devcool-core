@@ -18,7 +18,13 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
 
   @Override
   public void removeConnection(String connectionId) {
+    if (connectionId == null) {
+      return;
+    }
     connectionToUser.remove(connectionId);
+    for (Set<String> connections : channelToConnections.values()) {
+      connections.remove(connectionId);
+    }
   }
 
   @Override
@@ -35,14 +41,14 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
 
   @Override
   public void unsubscribe(String connectionId, Integer channelId) {
-    Set<String> connectionSet = channelToConnections.get(channelId);
-    if (!connectionSet.isEmpty()) {
-      connectionSet.remove(connectionId);
+    Set<String> connections = channelToConnections.get(channelId);
+    if (connections != null) {
+      connections.remove(connectionId);
     }
   }
 
   @Override
   public Set<String> getConnectionsByChannel(Integer channelId) {
-    return channelToConnections.get(channelId);
+    return Set.copyOf(channelToConnections.getOrDefault(channelId, Set.of()));
   }
 }
