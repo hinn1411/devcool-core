@@ -44,6 +44,10 @@ public class MessageEntity {
   @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
   private ChannelEntity channel;
 
-  @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToOne(
+      mappedBy = "message",
+      fetch = FetchType.LAZY,
+      cascade = CascadeType.ALL,
+      orphanRemoval = true)
   private MediaEntity media;
 }
