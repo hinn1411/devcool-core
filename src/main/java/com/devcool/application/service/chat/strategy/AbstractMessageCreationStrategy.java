@@ -53,7 +53,7 @@ public abstract class AbstractMessageCreationStrategy implements MessageCreation
   }
 
   private void requireMemberInChannel(Integer channelId, Integer userId) {
-    if (memberPort.findMemberOfChannelByUserId(channelId, userId).isEmpty()) {
+    if (!memberPort.existMemberOfChannelByUserId(channelId, userId)) {
       throw new MemberNotFoundException(userId);
     }
   }
