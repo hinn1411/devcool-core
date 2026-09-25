@@ -41,6 +41,9 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
     if (distinctMemberIds.size() < command.memberIds().size()) {
       throw new UserDuplicateException(command.memberIds());
     }
+    if (distinctMemberIds.contains(command.creatorId())) {
+      throw new UserDuplicateException(List.of(command.creatorId()));
+    }
     List<User> users = loadUsers(command.memberIds());
     if (users.size() < distinctMemberIds.size()) {
       Set<Integer> foundIds = users.stream().map(User::getId).collect(Collectors.toSet());
