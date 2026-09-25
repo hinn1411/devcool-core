@@ -1,6 +1,7 @@
 package com.devcool.adapters.out.persistence.user.repository;
 
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
       """,
       nativeQuery = true)
   int updateTokenVersion(@Param("userId") Integer userId);
+
+  @Modifying
+  @Query("UPDATE UserEntity u SET u.lastLoginTime = :loginTime WHERE u.id = :id")
+  int updateLastLoginTime(@Param("id") Integer id, @Param("loginTime") Instant loginTime);
 
   List<UserEntity> findByIdIn(Collection<Integer> ids);
 

@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +30,7 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
   private final UserPort userPort;
 
   @Override
+  @Transactional
   public TokenPair login(LoginCommand command) {
     User user =
         loadUser
@@ -52,6 +54,8 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
 
   private void updateLoginTime(User user) {
     user.updateLoginTime();
-    userPort.save(user);
+    if (!userPort.updateLoginTime(user.getId(), user.getLastLoginTime())) {
+      log.warn("Login time not recorded, user {} no longer exists", user.getId());
+    }
   }
 }

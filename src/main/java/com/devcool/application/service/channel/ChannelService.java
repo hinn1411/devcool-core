@@ -23,6 +23,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase, GetChannelQuery {
@@ -67,6 +68,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   }
 
   @Override
+  @Transactional
   public boolean addMember(Integer channelId, AddMembersCommand command) {
     Set<Integer> distinctMemberIds = new HashSet<>(command.userIds());
     if (distinctMemberIds.size() < command.userIds().size()) {
