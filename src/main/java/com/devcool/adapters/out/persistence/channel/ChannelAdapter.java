@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
@@ -77,7 +76,6 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
-  @Transactional
   public boolean increaseTotalMembers(Integer channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
   }

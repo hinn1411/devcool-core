@@ -1,6 +1,7 @@
 package com.devcool.domain.user.port.out;
 
 import com.devcool.domain.user.model.User;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,9 @@ public interface UserPort {
   Integer save(User user); // create or update, return id
 
   boolean updatePassword(Integer id, String newHash);
+
+  // writes only LAST_LOGIN_TIME; returns false if no such user
+  boolean updateLoginTime(Integer id, Instant loginTime);
 
   boolean remove(Integer id);
 

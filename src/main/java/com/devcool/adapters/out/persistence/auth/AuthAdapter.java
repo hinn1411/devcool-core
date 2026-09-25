@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @AllArgsConstructor
@@ -45,32 +44,27 @@ public class AuthAdapter implements LoadUserPort, RefreshTokenStorePort, AccessT
   }
 
   @Override
-  @Transactional
   public void store(RefreshToken refreshToken) {
     RefreshTokenEntity entity = refreshTokenMapper.toEntity(refreshToken);
     refreshTokenRepo.save(entity);
   }
 
   @Override
-  @Transactional
   public boolean consumeIfValid(String jtiHash) {
     return refreshTokenRepo.consumeIfValid(jtiHash) > 0;
   }
 
   @Override
-  @Transactional
   public void deleteOldRefreshTokens(Integer userId) {
     refreshTokenRepo.deleteAllByUserId(String.valueOf(userId));
   }
 
   @Override
-  @Transactional
   public boolean revoke(String jtiHash) {
     return refreshTokenRepo.revoke(jtiHash) > 0;
   }
 
   @Override
-  @Transactional
   public boolean updateVersion(Integer userId) {
     return userRepo.updateTokenVersion(userId) > 0;
   }

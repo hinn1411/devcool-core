@@ -28,6 +28,8 @@ The validation block above it (lines 76-93: user existence, channel existence, d
 
 **Fix:** add `@Transactional` to `addMember` so the checks and both writes form one unit. That alone does not close the concurrent-insert race — reads do not block each other under `READ COMMITTED` — so also add a unique constraint on `(CHANNEL_ID, USER_ID)` in `MEMBER` and let the duplicate surface as a constraint violation.
 
+> **Update (2026-09-25): the transaction gap is fixed, the rest of this section is not.** `ChannelService.addMember` is now `@Transactional` (line 71) and `ChannelAdapter.increaseTotalMembers` no longer carries the annotation, so the counter increment and the member insert commit or roll back together. `MemberEntity` also now declares the unique constraint `uk_member_channel_user`. Still open: a concurrent duplicate insert now fails at commit with a constraint violation, and there is no dedicated `DataIntegrityViolationException` handler, so it falls through to the catch-all `Exception` handler in `ApiExceptionHandler` (see `docs/learning/01-jpa-and-transactions.md` §7); and the count mismatch under "Minor" below. Line numbers elsewhere in this section predate the change and are 2 lower than the code (`addMember` now starts at line 72).
+
 **Minor, same method:** line 95 passes `command.userIds().size()` while line 96 inserts `existingUserIds`. These are equal today only because of the guards at lines 72 and 77. Use `existingUserIds.size()` for both so the count cannot drift if those guards ever change.
 
 ### 2. `MemberAdapter.addMembers` uses `getReference` with no transaction
@@ -44,6 +46,8 @@ ChannelEntity channelRef = em.getReference(ChannelEntity.class, channelId);   //
 This works today only because `spring.jpa.open-in-view` is unset and therefore defaults to `true`, so an HTTP request has a session open for its whole lifetime. That safety net does not cover WebSocket frames, `@Async`, or scheduled tasks. Any future caller on one of those paths gets a `LazyInitializationException`.
 
 **Fix:** fixing §1 fixes this too — `@Transactional` on `ChannelService.addMember` gives the proxies a real transaction. Do **not** fix it by annotating `MemberAdapter`; that reintroduces exactly the mistake removed from `MessageAdapter` on this branch. Longer term, setting `spring.jpa.open-in-view=false` will expose every other place quietly relying on it.
+
+> **Update (2026-09-25): resolved by the §1 fix, as the Fix above predicted.** `MemberAdapter.addMembers` now runs inside the transaction opened by `ChannelService.addMember`, so its `getReference` proxies have a real persistence context. `MemberAdapter` was deliberately left unannotated. The open-session-in-view caveat still applies to any future caller that reaches it outside that service method.
 
 ---
 

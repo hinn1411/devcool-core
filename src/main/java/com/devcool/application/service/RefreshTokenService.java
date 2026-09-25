@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   private final AccessTokenPort accessTokenPort;
 
   @Override
+  @Transactional
   public TokenPair refresh(String rawRefreshToken) {
     TokenSubject sub = issuer.verifyRefresh(rawRefreshToken);
     String jtiHash = HashUtils.sha256(sub.jti());
@@ -56,6 +58,7 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   }
 
   @Override
+  @Transactional
   public void revokeRefreshToken(String refreshToken) {
     if (Objects.isNull(refreshToken)) {
       throw new RefreshTokenInvalidException("Empty refresh token");
@@ -69,6 +72,7 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   }
 
   @Override
+  @Transactional
   public void updateAccessTokenVersion(Integer userId) {
     if (Objects.isNull(userId)) {
       throw new UserNotFoundException(userId);
