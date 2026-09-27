@@ -9,6 +9,7 @@ import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
+import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.model.User;
 import java.time.Instant;
 import java.util.List;
@@ -33,8 +34,9 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
   public Integer createChannel(CreateChannelCommand command) {
     validate(command);
 
-    List<Member> members = getMembers(command.memberIds());
+    List<User> users = loadUsers(command.memberIds());
     User creator = loadUser(command.creatorId());
+    List<Member> members = toMembers(users, creator);
     Channel channel = buildChannel(command, creator, null, members);
     return channelPort.save(channel);
   }
@@ -69,6 +71,11 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
     if (Objects.nonNull(expiredTime)) {
       log.info("Private chat must not have expired time");
       throw new InvalidChannelConfigException("Private chat must not have expired time");
+    }
+
+    if (command.memberIds().contains(command.creatorId())) {
+      log.info("Private chat participant must not be the creator");
+      throw new UserDuplicateException(List.of(command.creatorId()));
     }
   }
 }
