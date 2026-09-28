@@ -69,10 +69,9 @@ public class ChannelAdapter implements ChannelPort {
 
   @Override
   public boolean update(Channel channel) {
-    ChannelEntity entity = mapper.toEntity(channel);
-    entity.getMembers().forEach(m -> m.setChannel(entity));
-    repo.save(entity);
-    return true;
+    return repo.updateChannelInfo(
+            channel.getId(), channel.getName(), channel.getChannelType(), channel.getExpiredTime())
+        > 0;
   }
 
   @Override
