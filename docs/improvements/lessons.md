@@ -57,7 +57,7 @@ Each lesson: **What happened** (real example from this codebase) → **Why it ma
 - **Rule:** when you throw a domain exception in a new flow, check its `ErrorCode` is mapped in `HttpErrorMapper`.
 
 ### 9. Anything that hands out access must authorize
-- **What happened:** `GET /medias/presigned-url` signs **any** key; `POST /medias/upload` accepts any `channelId`. (See `2026-09-19-media-authorization.md`.)
+- **What happened:** `GET /medias/presigned-url` signs **any** key; `POST /medias/upload` accepts any `channelId`.
 - **Why it matters:** a presigned URL *is* access. Knowing an S3 key (e.g. after leaving a channel) should not be enough.
 - **Rule:** treat "generate a URL/token/key" endpoints like data endpoints — same membership check.
 

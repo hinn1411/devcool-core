@@ -1,7 +1,7 @@
 package com.devcool.application.service;
 
 import com.devcool.adapters.out.jwt.util.JwtUtils;
-import com.devcool.domain.auth.exception.PasswordIncorrectException;
+import com.devcool.domain.auth.exception.InvalidCredentialsException;
 import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
@@ -10,9 +10,9 @@ import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.PasswordHasherPort;
 import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
-import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,14 +32,16 @@ public class AuthenticateUserService implements AuthenticateUserUseCase {
   @Override
   @Transactional
   public TokenPair login(LoginCommand command) {
-    User user =
-        loadUser
-            .loadByUsername(command.username())
-            .orElseThrow(() -> new UserNotFoundException(command.username()));
+    Optional<User> maybeUser = loadUser.loadByUsername(command.username());
+    if (maybeUser.isEmpty()) {
+      log.warn("Login failed: no account for username '{}'", command.username());
+      throw new InvalidCredentialsException();
+    }
+    User user = maybeUser.get();
 
     if (!hasher.matches(command.password(), user.getPassword())) {
-      log.warn("Password does not match!");
-      throw new PasswordIncorrectException(command.password());
+      log.warn("Login failed: incorrect password for username '{}'", command.username());
+      throw new InvalidCredentialsException();
     }
 
     updateLoginTime(user);

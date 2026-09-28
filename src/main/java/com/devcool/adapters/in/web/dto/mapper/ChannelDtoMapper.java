@@ -3,68 +3,49 @@ package com.devcool.adapters.in.web.dto.mapper;
 import com.devcool.adapters.in.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.UpdateChannelRequest;
-import com.devcool.adapters.in.web.dto.response.*;
+import com.devcool.adapters.in.web.dto.response.AddMembersResponse;
+import com.devcool.adapters.in.web.dto.response.ChannelListItemResponse;
+import com.devcool.adapters.in.web.dto.response.CreateChannelResponse;
+import com.devcool.adapters.in.web.dto.response.GetChannelResponse;
+import com.devcool.adapters.in.web.dto.response.UpdateChannelResponse;
+import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class ChannelDtoMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface ChannelDtoMapper {
 
-  public CreateChannelCommand toCreateChannelCommand(
-      CreateChannelRequest request, Integer creatorId) {
-    return new CreateChannelCommand(
-        request.name(),
-        request.boundaryType(),
-        request.expiredTime(),
-        request.channelType(),
-        creatorId,
-        request.leaderId(),
-        request.memberIds());
-  }
+  @Mapping(target = "creatorId", source = "creatorId")
+  CreateChannelCommand toCreateChannelCommand(CreateChannelRequest request, Integer creatorId);
 
-  public CreateChannelResponse toCreateChannelResponse(Integer channelId) {
-    return CreateChannelResponse.builder().channelId(channelId).build();
-  }
+  @Mapping(target = "channelId", source = "channelId")
+  CreateChannelResponse toCreateChannelResponse(Integer channelId);
 
-  public UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request) {
-    return new UpdateChannelCommand(
-        request.name(), request.boundaryType(), request.expiredTime(), request.channelType());
-  }
+  UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request);
 
-  public UpdateChannelResponse toUpdateChannelResponse(boolean isChannelUpdated) {
-    return UpdateChannelResponse.builder().channelUpdated(isChannelUpdated).build();
-  }
+  // Boxed because MapStruct rejects primitive source parameters. Mapped by expression, not
+  // source: MapStruct would otherwise emit a second, redundant null check that SpotBugs flags
+  // (RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE).
+  @Mapping(target = "channelUpdated", expression = "java(isChannelUpdated)")
+  UpdateChannelResponse toUpdateChannelResponse(Boolean isChannelUpdated);
 
-  public AddMembersCommand toAddMembersCommand(AddMembersRequest request) {
-    return new AddMembersCommand(request.userIds());
-  }
+  AddMembersCommand toAddMembersCommand(AddMembersRequest request);
 
-  public AddMembersResponse toAddMembersResponse(boolean isMemberAdded) {
-    return AddMembersResponse.builder().memberAdded(isMemberAdded).build();
-  }
+  // Boxed + expression for the same reason as toUpdateChannelResponse.
+  @Mapping(target = "memberAdded", expression = "java(isMemberAdded)")
+  AddMembersResponse toAddMembersResponse(Boolean isMemberAdded);
 
-  public GetChannelCommand toGetChannelCommand(Integer memberId, Integer cursorId, Integer limit) {
-    return new GetChannelCommand(memberId, cursorId, limit);
-  }
+  GetChannelCommand toGetChannelCommand(Integer memberId, Integer cursorId, Integer limit);
 
-  public GetChannelResponse toGetChannelResponse(ChannelListPage page) {
-    return GetChannelResponse.builder()
-        .channels(
-            page.items().stream()
-                .map(
-                    item ->
-                        new ChannelListItemResponse(
-                            item.id(),
-                            item.name(),
-                            item.channelType().name(),
-                            item.boundaryType().name()))
-                .toList())
-        .nextCursorId(page.cursorId())
-        .hasMore(page.hasMore())
-        .build();
-  }
+  @Mapping(target = "channels", source = "items")
+  @Mapping(target = "nextCursorId", source = "cursorId")
+  GetChannelResponse toGetChannelResponse(ChannelListPage page);
+
+  ChannelListItemResponse toChannelListItemResponse(ChannelListItem item);
 }

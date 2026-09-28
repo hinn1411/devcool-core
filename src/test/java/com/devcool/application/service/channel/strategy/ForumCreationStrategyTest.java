@@ -18,6 +18,7 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.model.enums.MemberType;
+import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import java.time.Instant;
@@ -126,7 +127,8 @@ class ForumCreationStrategyTest {
   //   CREATOR, as in Lounge).
   // - The leader's role is deliberately NOT asserted. Leader permissions are not designed yet, so
   //   any role would lock in an arbitrary choice.
-  // - Overlap between memberIds and creator/leader is unspecified, so it is not tested.
+  // - Listing the same person twice (repeated ids, or the creator/leader also in memberIds) is
+  //   rejected with UserDuplicateException, as in Lounge; see commandsListingTheSamePersonTwice.
   static Stream<Arguments> creatorAndLeaderCases() {
     return Stream.of(
         Arguments.of(
@@ -157,6 +159,25 @@ class ForumCreationStrategyTest {
             tuple(4, MemberType.MEMBER),
             tuple(CREATOR_ID, MemberType.CREATOR));
     assertThat(saved.getTotalOfMembers()).isEqualTo(expectedTotal);
+  }
+
+  static Stream<Arguments> commandsListingTheSamePersonTwice() {
+    return Stream.of(
+        Arguments.of("duplicate member ids", List.of(3, 4, 3), List.of(3, 4, 3)),
+        Arguments.of("creator is also a member", List.of(CREATOR_ID, 3, 4), List.of(CREATOR_ID)),
+        Arguments.of("leader is also a member", List.of(LEADER_ID, 3, 4), List.of(LEADER_ID)));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("commandsListingTheSamePersonTwice")
+  void createChannel_personListedTwice_throwsUserDuplicateAndTouchesNoPort(
+      String description, List<Integer> memberIds, List<Integer> expectedReportedIds) {
+    CreateChannelCommand command = forum(ChannelType.FORUM, LEADER_ID, memberIds, null);
+
+    assertThatExceptionOfType(UserDuplicateException.class)
+        .isThrownBy(() -> strategy.createChannel(command))
+        .satisfies(ex -> assertThat(ex.getDetails()).containsEntry("userIds", expectedReportedIds));
+    verifyNoInteractions(userPort, channelPort);
   }
 
   private static User user(int id) {

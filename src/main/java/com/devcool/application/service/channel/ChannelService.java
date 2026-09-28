@@ -60,11 +60,19 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   }
 
   @Override
+  @Transactional
   public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
-    Channel existedChannel =
-        channelPort.findById(channelId).orElseThrow(() -> new ChannelNotFoundException(channelId));
-    Channel channel = updateChannel(existedChannel, command);
-    return channelPort.update(channel);
+    Channel channel =
+        Channel.builder()
+            .id(channelId)
+            .name(command.name())
+            .channelType(command.channelType())
+            .expiredTime(command.expiredTime())
+            .build();
+    if (!channelPort.update(channel)) {
+      throw new ChannelNotFoundException(channelId);
+    }
+    return true;
   }
 
   @Override
@@ -94,16 +102,8 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
       throw new MemberAlreadyInChannelException(existedMemberIds);
     }
 
-    channelPort.increaseTotalMembers(channelId, command.userIds().size());
+    channelPort.increaseTotalMembers(channelId, existingUserIds.size());
     return memberPort.addMembers(channelId, existingUserIds);
-  }
-
-  private Channel updateChannel(Channel channel, UpdateChannelCommand command) {
-    channel.setName(command.name());
-    channel.setChannelType(command.channelType());
-    channel.setExpiredTime(command.expiredTime());
-    channel.setChannelType(command.channelType());
-    return channel;
   }
 
   @Override

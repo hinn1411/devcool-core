@@ -2,6 +2,8 @@ package com.devcool.adapters.out.persistence.channel.repository;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
+import com.devcool.domain.channel.model.enums.ChannelType;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +20,19 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       WHERE id = :channelId
       """)
   int increaseTotalMembers(@Param("channelId") Integer channelId, @Param("delta") int delta);
+
+  @Modifying
+  @Query(
+      """
+      UPDATE ChannelEntity
+      SET name = :name, channelType = :channelType, expiredTime = :expiredTime
+      WHERE id = :id
+      """)
+  int updateChannelInfo(
+      @Param("id") Integer id,
+      @Param("name") String name,
+      @Param("channelType") ChannelType channelType,
+      @Param("expiredTime") Instant expiredTime);
 
   @Query(
       """

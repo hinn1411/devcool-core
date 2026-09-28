@@ -23,8 +23,6 @@
 
 > Two behaviour notes on the `senderId` change: both FKs resolve via `em.getReference(...)` (matching `MemberAdapter.addMembers`) rather than `userRepository.getReferenceById(...)` as originally proposed; and a deleted user with a live JWT now gets `MemberNotFoundException` (403) instead of `UserNotFoundException` (404).
 
-> ⚠️ **Release blocker:** the presigned-url endpoint is now the only gate to media and has no membership check. See `docs/improvements/2026-09-19-media-authorization.md` #1.
-
 The items below are still open.
 
 ---
@@ -52,9 +50,6 @@ The query filters on `channel_id` and orders by `id DESC`. Add a composite index
 ---
 
 ## Low
-
-### 4. Inbound `*DtoMapper`s are hand-written
-All inbound web mappers (`AuthDtoMapper`, `ChannelDtoMapper`, `MediaDtoMapper`, `MessageDtoMapper`) are `@Component` classes while persistence mappers use MapStruct. Consider migrating them together later for consistency — not piecemeal.
 
 ### 6. Missing tests
 Add Mockito unit tests (`@ExtendWith(MockitoExtension.class)`):
