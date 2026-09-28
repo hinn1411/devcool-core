@@ -11,7 +11,6 @@ import com.devcool.domain.user.model.User;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
@@ -59,7 +58,7 @@ public abstract class AbstractChannelCreationStrategy {
         .boundaryType(command.boundaryType())
         .expiredTime(command.expiredTime())
         .channelType(command.channelType())
-        .totalOfMembers(1 + (Objects.isNull(leader) ? 0 : 1) + command.memberIds().size())
+        .totalOfMembers(members.size())
         .creator(creator)
         .leader(leader)
         .members(members)
