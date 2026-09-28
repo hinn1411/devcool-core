@@ -32,3 +32,26 @@ build/
 ### VS Code ###
 .vscode/
 local.env
+
+### Secrets / env ###
+.env
+.env.local
+.env.*.local
+
+### Frontend ###
+node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+### Claude Code (personal) ###
+.claude/settings.local.json
+.claude/agent-memory-local/
+CLAUDE.local.md
