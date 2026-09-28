@@ -5,31 +5,16 @@ import com.devcool.adapters.in.web.dto.response.MessageItemResponse;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class MessageDtoMapper {
-  public GetMessageCommand toGetCommand(
-      Integer userId, Integer channelId, Integer cursorId, Integer limit) {
-    return new GetMessageCommand(userId, channelId, cursorId, limit);
-  }
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface MessageDtoMapper {
 
-  public GetMessagesResponse toGetResponse(MessageList messageList) {
-    return GetMessagesResponse.builder()
-        .items(messageList.items().stream().map(this::toItemResponse).toList())
-        .cursorId(messageList.cursorId())
-        .hasMore(messageList.hasMore())
-        .build();
-  }
+  GetMessageCommand toGetCommand(
+      Integer userId, Integer channelId, Integer cursorId, Integer limit);
 
-  private MessageItemResponse toItemResponse(MessageItem item) {
-    return new MessageItemResponse(
-        item.getId(),
-        item.getContent(),
-        item.getContentType().name(),
-        item.getCreatedTime(),
-        item.getUserId(),
-        item.getSenderName(),
-        item.getSenderAvatar());
-  }
+  GetMessagesResponse toGetResponse(MessageList messageList);
+
+  MessageItemResponse toItemResponse(MessageItem item);
 }

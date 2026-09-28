@@ -2,9 +2,12 @@ package com.devcool.adapters.in.web.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
-@Schema(name = "GetProfileResponse", description = "Get profile result payload")
+@Schema(name = "CreateChannelResponse", description = "Create channel result payload")
 @Getter
 @Setter
 @Builder

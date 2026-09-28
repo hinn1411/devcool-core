@@ -8,44 +8,22 @@ import com.devcool.adapters.in.web.dto.response.RegisterUserResponse;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class AuthDtoMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface AuthDtoMapper {
 
-  public RegisterUserResponse toRegisterResponse(Integer userId) {
-    return RegisterUserResponse.builder().userId(userId).build();
-  }
+  @Mapping(target = "userId", source = "userId")
+  RegisterUserResponse toRegisterResponse(Integer userId);
 
-  public LoginResponse toLoginResponse(TokenPair tokenPair) {
-    return LoginResponse.builder()
-        .accessToken(tokenPair.accessToken())
-        .refreshToken(tokenPair.refreshToken())
-        .build();
-  }
+  LoginResponse toLoginResponse(TokenPair tokenPair);
 
-  public RefreshTokenResponse toRefreshTokenResponse(TokenPair tokenPair) {
-    return RefreshTokenResponse.builder()
-        .accessToken(tokenPair.accessToken())
-        .refreshToken(tokenPair.refreshToken())
-        .build();
-  }
+  RefreshTokenResponse toRefreshTokenResponse(TokenPair tokenPair);
 
-  public GetProfileResponse toProfileResponse(User user) {
-    return GetProfileResponse.builder()
-        .username(user.getUsername())
-        .email(user.getEmail())
-        .name(user.getName())
-        .avatar(user.getAvatar())
-        .role(user.getRole())
-        .status(user.getStatus())
-        .lastLoginTime(user.getLastLoginTime())
-        .emailVerified(user.getEmailVerified())
-        .build();
-  }
+  GetProfileResponse toProfileResponse(User user);
 
-  public RegisterUserCommand toRegisterCommand(RegisterUserRequest request) {
-    return new RegisterUserCommand(
-        request.username(), request.password(), request.email(), request.name());
-  }
+  @Mapping(target = "rawPassword", source = "password")
+  RegisterUserCommand toRegisterCommand(RegisterUserRequest request);
 }

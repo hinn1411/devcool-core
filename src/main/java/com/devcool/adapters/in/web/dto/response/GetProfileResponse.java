@@ -1,11 +1,13 @@
 package com.devcool.adapters.in.web.dto.response;
 
-import com.devcool.domain.user.model.enums.Role;
-import com.devcool.domain.user.model.enums.UserStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Schema(name = "GetProfileResponse", description = "Get profile result payload")
 @Getter
@@ -35,14 +37,14 @@ public class GetProfileResponse {
   @Schema(
       description = "User's role within the system",
       example = "USER",
-      implementation = Role.class)
-  private Role role;
+      allowableValues = {"USER", "ADMIN"})
+  private String role;
 
   @Schema(
       description = "Current account status",
       example = "ACTIVE",
-      implementation = UserStatus.class)
-  private UserStatus status;
+      allowableValues = {"ACTIVE", "DELETED", "BLOCKED"})
+  private String status;
 
   @Schema(
       description = "The last time the user logged in (UTC time)",
