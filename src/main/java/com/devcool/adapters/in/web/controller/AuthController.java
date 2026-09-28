@@ -194,9 +194,7 @@ public class AuthController {
   public ResponseEntity<ApiSuccessResponse<LogoutResponse>> logout(
       @CookieValue("rt") String refreshToken, Authentication auth) {
 
-    tokenRevoker.revokeRefreshToken(refreshToken);
-    Integer userId = Integer.valueOf(auth.getName());
-    tokenRevoker.updateAccessTokenVersion(userId);
+    tokenRevoker.logout(refreshToken, Integer.valueOf(auth.getName()));
 
     ResponseCookie expiredCookie =
         ResponseCookie.from("rt", "")

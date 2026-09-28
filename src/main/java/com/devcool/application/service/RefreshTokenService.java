@@ -59,23 +59,15 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
 
   @Override
   @Transactional
-  public void revokeRefreshToken(String refreshToken) {
+  public void logout(String refreshToken, Integer userId) {
     if (Objects.isNull(refreshToken)) {
       throw new RefreshTokenInvalidException("Empty refresh token");
     }
+    Objects.requireNonNull(userId, "userId must not be null");
 
-    String jti = JwtUtils.jtiFrom(refreshToken);
-    String hashJti = HashUtils.sha256(jti);
+    String hashJti = HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
     if (!refreshStore.revoke(hashJti)) {
       log.warn("Cannot revoke token!");
-    }
-  }
-
-  @Override
-  @Transactional
-  public void updateAccessTokenVersion(Integer userId) {
-    if (Objects.isNull(userId)) {
-      throw new UserNotFoundException(userId);
     }
     if (!accessTokenPort.updateVersion(userId)) {
       log.warn("Cannot update access token version");
