@@ -6,6 +6,6 @@ import java.util.Map;
 
 public class InvalidObjectKeyException extends DomainException {
   public InvalidObjectKeyException() {
-    super(ErrorCode.UNSUPPORTED_MEDIA_TYPE, "Object key is invalid", Map.of());
+    super(ErrorCode.INVALID_OBJECT_KEY, "Object key is invalid", Map.of());
   }
 }
