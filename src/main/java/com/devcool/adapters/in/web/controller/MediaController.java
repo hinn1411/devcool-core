@@ -39,8 +39,9 @@ public class MediaController {
 
   @GetMapping("/presigned-url")
   public ResponseEntity<ApiSuccessResponse<Map<String, String>>> getPresignedUrl(
-      @RequestParam String key) {
-    GetMediaUrlUseCase.PresignedUrlResult result = getMediaUrlUseCase.getPresignedUrl(key);
+      @RequestParam String key, Authentication auth) {
+    Integer userId = Integer.valueOf(auth.getName());
+    GetMediaUrlUseCase.PresignedUrlResult result = getMediaUrlUseCase.getPresignedUrl(userId, key);
     return ResponseEntity.ok(
         ApiResponseFactory.success(
             HttpStatus.OK,
