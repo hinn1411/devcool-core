@@ -12,6 +12,7 @@ Every phase file is a **sub-plan** with a task checklist. Each task is small eno
 | [`architecture/adr/`](architecture/adr/) | One Architecture Decision Record per significant choice, with the options that were rejected and why |
 | [`phases/`](phases/) | Sub-plans P0–P9, in execution order |
 | [`claude-code/`](claude-code/) | How this repo uses Claude Code, the concepts behind each mechanism, and interview Q&A |
+| [`delivery-playbook.md`](delivery-playbook.md) | How to run the 12 weeks: ownership modes (you vs Claude), the task loop, scope cuts, game days, the $20/month AWS plan, interview readiness, journal templates |
 
 Related, older material (read it, don't duplicate it):
 - [`../learning/10-realtime-architecture-design.md`](../learning/10-realtime-architecture-design.md): realtime options A–K. ADR-0006 and Phase 4 build on its §7 Stage 2.
