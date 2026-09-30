@@ -58,7 +58,7 @@ The concepts and interview material are in [`../claude-code/claude-code-guide.md
   - Pick a status line (`/statusline`).
   - Try the `learning-output-style` plugin for study sessions.
   - Token saving (`/doctor` 2026-09-30, ~4k est. tokens/session, all unused): turn off the 9 synced claude.ai skills with `skillOverrides` (~1.5k) and disable the claude.ai connectors in `/mcp` (Claude Docs ~750; Gmail/Calendar/Drive). After P0-T11, consider disabling `pr-review-toolkit` locally (~1.2k; overlaps the repo agents) and `typescript-lsp` until P5. Repo change: trim the derivable parts of `CLAUDE.md` (package tree, tech table, media upload flow, standard Maven commands; ~530).
-- [ ] **P0-T13** Extend `.github/workflows/claude.yml`: have the auto-review prompt reference `CLAUDE.md` PR guidelines and `.claude/rules/*`, with path-specific focus (hexagonal for `src/`, security for `infra/` and auth code)
+- [x] **P0-T13** Extend `.github/workflows/claude.yml`: have the auto-review prompt reference `CLAUDE.md` PR guidelines and `.claude/rules/*`, with path-specific focus (hexagonal for `src/`, security for `infra/` and auth code)
 
 ## Files touched
 `CLAUDE.md`, `.claude/**`, `.mcp.json`, `frontend/CLAUDE.md`, `infra/CLAUDE.md`, `.gitignore`, `docs/plans/**`, `docs/architecture-request-flow.md`
