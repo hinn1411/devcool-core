@@ -34,7 +34,7 @@ Useful commands:
 | Facts true for every task (commands, layout, workflow) | `CLAUDE.md` (root) | Every session, always | No | `CLAUDE.md` (kept < 200 lines) |
 | Conventions for one directory | Nested `CLAUDE.md` | When Claude reads files there | No | `frontend/CLAUDE.md`, `infra/CLAUDE.md` |
 | Conventions for a file pattern anywhere | `.claude/rules/*.md` with `paths:` | When Claude reads a matching file | No | `hexagonal`, `testing`, `flyway`, `websocket-protocol`, `genai-safety` |
-| A repeatable procedure or reference | **Skill** (`.claude/skills/<name>/SKILL.md`) | When invoked (`/name`) or when Claude judges it relevant from its description | No, but it can run shell commands for live context | `implement-task`, `new-use-case`, `flyway-migration`, `verify`, `write-adr`, `interview-prep`, `ws-protocol` |
+| A repeatable procedure or reference | **Skill** (`.claude/skills/<name>/SKILL.md`) | When invoked (`/name`) or when Claude judges it relevant from its description | No, but it can run shell commands for live context | `frame-task`, `implement-task`, `new-use-case`, `flyway-migration`, `verify`, `write-adr`, `interview-prep`, `ws-protocol` |
 | Isolated work whose details shouldn't pollute the main context | **Subagent** (`.claude/agents/<name>.md`) | When delegated; runs in its own context and returns a summary | No | `hexagonal-reviewer`, `security-reviewer`, `test-writer`, `aws-architect` |
 | Something that must *always* or *never* happen | **Hook** (`settings.json` → `hooks`) | On lifecycle events | **Yes** | format on edit, block merged-migration edits, block destructive commands, session context, compile on stop |
 | What Claude may do without asking | **Permissions** (`allow` / `ask` / `deny`) | Every tool call | **Yes** | `.claude/settings.json` |
@@ -146,12 +146,14 @@ Frontmatter used here:
 | Field | Effect | Example here |
 |---|---|---|
 | `description` | Claude reads every skill's description to decide when to auto-invoke. Lead with trigger words | all |
-| `disable-model-invocation: true` | Only the user can run it (side effects, or expensive) | `implement-task`, `verify`, `write-adr`, `interview-prep` |
+| `disable-model-invocation: true` | Only the user can run it (side effects, or expensive) | `frame-task`, `implement-task`, `verify`, `write-adr`, `interview-prep` |
 | `user-invocable: false` | Only Claude loads it (background reference) | `ws-protocol` |
-| `arguments: [a, b]` | Named args `$a`, `$b`; `$ARGUMENTS` for the whole string | `implement-task` (`$task`), `new-use-case` (`$area`, `$name`) |
+| `arguments: [a, b]` | Named args `$a`, `$b`; `$ARGUMENTS` for the whole string | `frame-task` / `implement-task` (`$task`), `new-use-case` (`$area`, `$name`) |
 | `paths:` | Auto-activate for matching files | `flyway-migration`, `ws-protocol` |
 | `context: fork` + `agent:` | Run in an isolated subagent; only the result comes back | `interview-prep` |
 | `` !`cmd` `` | Runs before Claude sees the skill; its output is inlined. A non-zero exit aborts the skill | `verify` (changed files), `flyway-migration` (existing versions) |
+
+**Supporting files.** A skill directory can hold more than `SKILL.md`: templates, examples, scripts. Link them from `SKILL.md` and Claude reads them only when the step needs them, so the skill itself stays short. `frame-task/brief-template.md` is the example here.
 
 Skill content stays in context after invocation, and is re-attached after compaction within a token budget. Keep skills focused.
 
@@ -196,16 +198,46 @@ Built-in agents worth knowing:
 ```mermaid
 flowchart LR
   A[New session<br/>SessionStart hook shows phase] --> B[Pick task id]
-  B --> C{Big or cross-cutting?}
+  B --> FR["/frame-task Pn-Tmm<br/>predict → compare → agree<br/>brief saved"]
+  FR --> C{Big or cross-cutting?}
   C -->|yes| D[Plan mode<br/>Shift+Tab]
-  C -->|no| E["/implement-task Pn-Tmm"]
+  C -->|no| E["/implement-task Pn-Tmm<br/>reads the brief"]
   D --> E
   E --> F[Hooks: format on edit,<br/>migration guard, compile on stop]
   F --> G["/verify"]
   G --> H[hexagonal-reviewer<br/>+ security-reviewer if auth/ws/ai/infra]
-  H --> I["commit (commit-commands)<br/>push → PR"]
+  H --> M[Merge gate<br/>brief's Self-check]
+  M --> I["commit (commit-commands)<br/>push → PR"]
   I --> J[Claude GitHub Action review + CI]
 ```
+
+### Frame before you build: `/frame-task`
+
+A roadmap task is one line, like `P3-T03 MessageService.save: seq assignment + idempotent send`. That line says *what* to build. It doesn't say why, what "done" means, or which ideas you need to understand to judge Claude's code. A good engineer answers those questions before writing code. `/frame-task` makes that step routine, and the result is concrete enough for `/implement-task` to build against.
+
+**Use it**
+- `/frame-task P3-T03` frames that task. `/frame-task` with no id picks the next unticked task in the in-progress phase.
+- Claude restates the task in plain words and asks for your **prediction**: why it's needed, what must be true when done, which tests prove it, and an estimate. Answer in a few bullets, or type `skip`.
+- Read the brief, answer the (at most 4) open decisions, and you're done. It takes about 15 minutes.
+
+**What you get** (saved to `docs/journal/briefs/<id>.md`, template in `.claude/skills/frame-task/brief-template.md`)
+
+| Section | Answers |
+|---|---|
+| Why | What's wrong or missing today (with `path:line`), and what fails without this task |
+| Value to the goal | Task → phase goal → milestone (M1–M5) → roadmap target, plus the tasks it unblocks and the interview story it builds |
+| Core concepts | 2–5 ideas, each with a **Without** example (a DevCool scenario that fails) and a **With** example (the same scenario, fixed) |
+| Requirements | Scope in/out, Given/When/Then acceptance criteria, invariants, authz, test list, likely files, dependencies |
+| Decisions | Open questions and your answers, or the ADR/doc that settled them |
+| Prediction vs brief | Where your prediction differed, tagged *knowledge gap* (with what to read), *plan issue* (you were right; the brief changed) or *open* |
+| Self-check | The three merge-gate questions ([playbook §3](../delivery-playbook.md#3-the-task-loop)) for this task |
+
+**Why predict first?** Writing your own answer before you see Claude's turns the brief from something you read into something you check. Every *knowledge gap* is a topic to study; every *plan issue* is a bug caught before any code exists. Both go into the journal as evidence.
+
+**How it connects:**
+- `/implement-task` reads the brief when it exists and treats its requirements and decisions as agreed. If the implementation departs from the brief, it records why in the brief's Decisions table.
+- If framing finds a conflict with an ADR, the skill stops and suggests `/write-adr` instead of choosing a side.
+- It doesn't write code, create branches or tick the task.
 
 Habits that pay off:
 - **Explore → plan → code → verify.** Don't let Claude code before it has read the relevant code and ADR.
@@ -227,7 +259,7 @@ bash -n .claude/hooks/*.sh && echo "hook syntax OK"
 Inside `claude`:
 - `/hooks` lists 6 hook entries.
 - `/agents` shows 4 project agents.
-- Typing `/` lists the user-invocable skills.
+- Typing `/` lists the user-invocable skills, including `frame-task`.
 - `/mcp` shows `aws-knowledge`.
 - `/doctor` reports no config errors.
 - Open a migration file, then `/context`: the `flyway` rule appears under memory files.
@@ -320,3 +352,11 @@ The mitigations here: "explore first" in skills, a "never weaken tests" rule, AD
 
 **Q20. Where's the line between the agent's work and yours?**
 I own the problem framing, the architecture decisions (ADRs), the review of the diff and the risky operations. The agent owns the mechanical translation of a clear task into code and tests, and first-pass reviews. The setup is designed so that line is enforced, not just intended.
+
+**Q21. How do you stop an agent from building the wrong thing well?**
+Agents are good at turning a clear spec into code and bad at noticing that the spec is vague. So a framing step comes before any code:
+1. `/frame-task` has me predict the why, the acceptance criteria and the tests.
+2. The agent then compares my prediction with the plan, the ADRs and the current code.
+3. Every open decision gets settled and written into a brief.
+
+`/implement-task` builds against that brief, and the brief's self-check questions become the merge gate. Mistakes in the plan surface in a 15-minute conversation instead of in a PR review.

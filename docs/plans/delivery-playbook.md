@@ -93,10 +93,10 @@ flowchart LR
   F[1 Frame<br/>15 min] --> P[2 Plan<br/>10-30 min] --> B[3 Build<br/>mode A/B/C] --> V[4 Prove<br/>red → green,<br/>break it, /verify] --> R[5 Review<br/>agents + merge gate] --> C[6 Close<br/>PR, tick, journal,<br/>explain-back]
 ```
 
-1. **Frame (15 min).**
+1. **Frame (15 min).** Run `/frame-task Pn-Tmm`: it asks for your prediction, then compares, explains the concepts with with/without examples, asks the open decisions and saves the brief in [`docs/journal/briefs/`](../journal/README.md). The skill reads the sources for you; the prediction is still yours:
    - Read the task line, its phase's Design notes and Test plan, and the linked ADR.
    - The first time you meet a topic, also read the "Read first" of its [reference file](../references/README.md) (cap: 60 min).
-   - In the journal, write your **prediction**: the invariants, a design sketch and the test list. For mode C, write only the acceptance criteria.
+   - Give your **prediction** when the skill asks: the invariants, a design sketch and the test list. For mode C, the acceptance criteria are enough.
 2. **Plan (10–30 min).**
    - Use plan mode when the task touches more than 5 files, a migration, the protocol or infra.
    - Compare Claude's plan with your prediction. Every difference is either a gap in your knowledge or a mistake in Claude's plan. Write down which one it was.
@@ -126,7 +126,7 @@ Copy these and adapt the task id.
 
 | When | Prompt |
 |---|---|
-| Frame | `Read P3-T03 in the phase file and ADR-0012. Don't write code. List the invariants this task must hold, how each could be violated under concurrency or retries, and the test that proves each. Then compare with my notes: <paste>` |
+| Frame | `/frame-task P3-T03` covers this. For a free-form variant: `Read P3-T03 in the phase file and ADR-0012. Don't write code. List the invariants this task must hold, how each could be violated under concurrency or retries, and the test that proves each. Then compare with my notes: <paste>` |
 | Mode A start | `/output-style` → Learning, then: `Implement P3-T03, but leave the seq assignment and the retry path to me as TODO(human). Build everything around them.` |
 | Review, not rewrite | `Review my changes in <files> for race conditions, missing authorization and missing tests. Point at lines and explain the failure. Don't rewrite the code.` |
 | Break it | `Suggest three one-line changes that would break the invariant in <class>, and for each, the test that should catch it. Don't apply them.` |

@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Workflow
 
-- Feature work comes from a task id in `docs/plans/phases/phase-*.md` (e.g. `P3-T04`). Use `/implement-task <id>`.
+- Feature work comes from a task id in `docs/plans/phases/phase-*.md` (e.g. `P3-T04`). Frame it with `/frame-task <id>` (why, value, concepts, agreed requirements → `docs/journal/briefs/<id>.md`), then build it with `/implement-task <id>`.
 - Respect the decisions in `docs/plans/architecture/adr/`. If a change contradicts an ADR, stop and say so instead of silently diverging.
 - Tick the task checkbox in the phase file in the same change that implements it.
 - Before finishing, run `/verify` (or the commands below that match the changed paths).

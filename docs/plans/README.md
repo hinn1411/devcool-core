@@ -127,10 +127,11 @@ Status values: `todo`, `in-progress`, `done`.
 ## How to work a task
 
 1. Pick the next unticked task id (e.g. `P3-T04`) from the in-progress phase.
-2. Run `/implement-task P3-T04`. The skill reads the phase file and linked ADRs, plans, implements the hexagonal slice, and writes tests.
-3. Run `/verify`, then ask the `hexagonal-reviewer` agent to review the diff.
-4. Open the PR. The Claude GitHub Action reviews it; CI runs.
-5. Tick the task in the phase file in the same PR. When every task is ticked, set the phase to `done` above.
+2. Run `/frame-task P3-T04`. You predict why the task exists and what "done" means; Claude compares that with the plan, explains the core concepts (with/without examples), asks the open decisions and saves an agreed brief in `docs/journal/briefs/P3-T04.md`.
+3. Run `/implement-task P3-T04`. The skill reads the brief, the phase file and linked ADRs, plans, implements the hexagonal slice, and writes tests.
+4. Run `/verify`, then ask the `hexagonal-reviewer` agent to review the diff.
+5. Open the PR. The Claude GitHub Action reviews it; CI runs.
+6. Tick the task in the phase file in the same PR. When every task is ticked, set the phase to `done` above.
 
 ## Sub-plan template
 
