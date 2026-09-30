@@ -12,6 +12,7 @@ import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import com.devcool.domain.user.port.out.UserPort;
+import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
   @Override
   @Transactional(readOnly = true)
   public Optional<User> byEmail(String email) {
-    return Optional.empty();
+    return userPort.findByEmail(normalizeEmail(email));
   }
 
   @Override
@@ -58,19 +59,25 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
       throw new UsernameAlreadyUsedException(command.username());
     }
 
-    if (userPort.existsByEmail(command.email())) {
-      throw new EmailAlreadyUsedException(command.email());
+    String email = normalizeEmail(command.email());
+    if (userPort.existsByEmail(email)) {
+      throw new EmailAlreadyUsedException(email);
     }
 
-    User newUser = buildUser(command);
+    User newUser = buildUser(command, email);
     return userPort.save(newUser);
   }
 
-  private User buildUser(RegisterUserCommand command) {
+  // Emails are case-insensitive: "Alice@x.com" and "alice@x.com" are the same account.
+  private static String normalizeEmail(String email) {
+    return email.toLowerCase(Locale.ROOT);
+  }
+
+  private User buildUser(RegisterUserCommand command, String email) {
     return User.builder()
         .username(command.username())
         .password(hasher.hash(command.rawPassword()))
-        .email(command.email())
+        .email(email)
         .name(command.name())
         .role(Role.USER)
         .status(UserStatus.ACTIVE)
