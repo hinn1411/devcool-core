@@ -1,0 +1,237 @@
+package com.devcool.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.devcool.domain.auth.port.out.PasswordHasherPort;
+import com.devcool.domain.user.exception.EmailAlreadyUsedException;
+import com.devcool.domain.user.exception.UserNotFoundException;
+import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
+import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.model.enums.Role;
+import com.devcool.domain.user.model.enums.UserStatus;
+import com.devcool.domain.user.port.in.command.RegisterUserCommand;
+import com.devcool.domain.user.port.out.UserPort;
+import java.util.Optional;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+  private static final int USER_ID = 7;
+  private static final int SAVED_ID = 42;
+  private static final String USERNAME = "alice";
+  private static final String EMAIL = "alice@devcool.com";
+  private static final String NAME = "Alice";
+  private static final String RAW_PASSWORD = "secret";
+  private static final String HASHED_PASSWORD = "HASHED(secret)";
+  private static final String STORED_HASH = "HASHED(old-secret)";
+  private static final String OLD_RAW_PASSWORD = "old-secret";
+  private static final String NEW_RAW_PASSWORD = "new-secret";
+  private static final String NEW_HASHED_PASSWORD = "HASHED(new-secret)";
+
+  @Mock private UserPort userPort;
+  @Mock private PasswordHasherPort hasher;
+
+  @InjectMocks private UserService userService;
+
+  @Nested
+  class Register {
+
+    @Test
+    void usernameTaken_throwsUsernameAlreadyUsed_andNothingIsHashedOrSaved() {
+      when(userPort.existsByUsername(USERNAME)).thenReturn(true);
+
+      assertThatThrownBy(() -> userService.register(registerCommand()))
+          .isInstanceOfSatisfying(
+              UsernameAlreadyUsedException.class,
+              ex ->
+                  assertThat(ex.getDetails())
+                      .containsEntry("username", USERNAME)
+                      .doesNotContainValue(RAW_PASSWORD));
+      assertNothingHashedOrSaved();
+    }
+
+    @Test
+    void emailTaken_throwsEmailAlreadyUsed_andNothingIsHashedOrSaved() {
+      when(userPort.existsByUsername(USERNAME)).thenReturn(false);
+      when(userPort.existsByEmail(EMAIL)).thenReturn(true);
+
+      assertThatThrownBy(() -> userService.register(registerCommand()))
+          .isInstanceOfSatisfying(
+              EmailAlreadyUsedException.class,
+              ex ->
+                  assertThat(ex.getDetails())
+                      .containsEntry("email", EMAIL)
+                      .doesNotContainValue(RAW_PASSWORD));
+      assertNothingHashedOrSaved();
+    }
+
+    @Test
+    void usernameAndEmailTaken_throwsUsernameAlreadyUsed_withoutCheckingEmail() {
+      when(userPort.existsByUsername(USERNAME)).thenReturn(true);
+      // existsByEmail is not stubbed: the service must not reach it.
+
+      assertThatThrownBy(() -> userService.register(registerCommand()))
+          .isInstanceOf(UsernameAlreadyUsedException.class);
+      verify(userPort, never()).existsByEmail(any());
+      assertNothingHashedOrSaved();
+    }
+
+    @Test
+    void newUser_savesHashedActiveUser_andReturnsSavedId() {
+      when(userPort.existsByUsername(USERNAME)).thenReturn(false);
+      when(userPort.existsByEmail(EMAIL)).thenReturn(false);
+      when(hasher.hash(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
+      when(userPort.save(any(User.class))).thenReturn(SAVED_ID);
+
+      Integer id = userService.register(registerCommand());
+
+      assertThat(id).isEqualTo(SAVED_ID);
+      // id, emailVerified, avatar and lastLoginTime must stay null.
+      User expected = activeUser().password(HASHED_PASSWORD).build();
+      assertThat(capturedSavedUser()).usingRecursiveComparison().isEqualTo(expected);
+    }
+
+    // Emails are case-insensitive: lowercased before the duplicate check and before saving.
+    @Test
+    void mixedCaseEmail_isLowercasedForDuplicateCheckAndSave() {
+      when(userPort.existsByUsername(USERNAME)).thenReturn(false);
+      when(hasher.hash(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
+      when(userPort.save(any(User.class))).thenReturn(SAVED_ID);
+
+      userService.register(
+          new RegisterUserCommand(USERNAME, RAW_PASSWORD, "Alice@DevCool.com", NAME));
+
+      assertThat(capturedSavedUser().getEmail()).isEqualTo(EMAIL);
+      verify(userPort).existsByEmail(EMAIL);
+    }
+
+    private void assertNothingHashedOrSaved() {
+      verifyNoInteractions(hasher);
+      verify(userPort, never()).save(any());
+    }
+
+    private User capturedSavedUser() {
+      ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+      verify(userPort).save(captor.capture());
+      return captor.getValue();
+    }
+  }
+
+  @Nested
+  class Change {
+
+    @Test
+    void unknownUser_throwsUserNotFound_andNothingIsHashedOrUpdated() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD))
+          .isInstanceOfSatisfying(
+              UserNotFoundException.class,
+              ex -> assertThat(ex.getDetails()).containsEntry("userId", USER_ID));
+      verifyNoInteractions(hasher);
+      verify(userPort, never()).updatePassword(any(), any());
+    }
+
+    @Test
+    void wrongCurrentPassword_returnsFalse_andNewPasswordIsNeitherHashedNorStored() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
+      when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(false);
+
+      boolean changed = userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD);
+
+      assertThat(changed).isFalse();
+      verify(hasher, never()).hash(any());
+      verify(userPort, never()).updatePassword(any(), any());
+    }
+
+    // Both values, so a hard-coded `return true` can't pass.
+    @ParameterizedTest(name = "port returns {0} -> change returns {0}")
+    @ValueSource(booleans = {true, false})
+    void correctCurrentPassword_storesHashOfNewPassword_andReturnsPortResult(boolean portResult) {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
+      when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(true);
+      when(hasher.hash(NEW_RAW_PASSWORD)).thenReturn(NEW_HASHED_PASSWORD);
+      when(userPort.updatePassword(USER_ID, NEW_HASHED_PASSWORD)).thenReturn(portResult);
+
+      boolean changed = userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD);
+
+      assertThat(changed).isEqualTo(portResult);
+      verify(userPort).updatePassword(USER_ID, NEW_HASHED_PASSWORD);
+    }
+  }
+
+  @Nested
+  class ById {
+
+    @Test
+    void existingUser_returnsIt() {
+      User user = storedUser();
+      when(userPort.findById(USER_ID)).thenReturn(Optional.of(user));
+
+      assertThat(userService.byId(USER_ID)).isSameAs(user);
+    }
+
+    @Test
+    void unknownUser_throwsUserNotFound() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> userService.byId(USER_ID))
+          .isInstanceOfSatisfying(
+              UserNotFoundException.class,
+              ex -> assertThat(ex.getDetails()).containsEntry("userId", USER_ID));
+    }
+  }
+
+  @Nested
+  class ByEmail {
+
+    @Test
+    void unknownEmail_returnsEmpty() {
+      when(userPort.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+      assertThat(userService.byEmail(EMAIL)).isEmpty();
+    }
+
+    @Test
+    void existingEmail_returnsUser() {
+      User user = storedUser();
+      when(userPort.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+
+      assertThat(userService.byEmail(EMAIL)).containsSame(user);
+    }
+  }
+
+  private static RegisterUserCommand registerCommand() {
+    return new RegisterUserCommand(USERNAME, RAW_PASSWORD, EMAIL, NAME);
+  }
+
+  private static User storedUser() {
+    return activeUser().id(USER_ID).password(STORED_HASH).build();
+  }
+
+  // A freshly registered user; callers add id and password.
+  private static User.UserBuilder activeUser() {
+    return User.builder()
+        .username(USERNAME)
+        .email(EMAIL)
+        .name(NAME)
+        .role(Role.USER)
+        .status(UserStatus.ACTIVE)
+        .tokenVersion(1);
+  }
+}

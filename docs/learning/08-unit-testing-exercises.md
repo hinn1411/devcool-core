@@ -224,10 +224,13 @@ How it's called: `JwtAuthFilter.java:107-109` extracts the version from the toke
 **Spec: `register`**
 - Username already taken → `UsernameAlreadyUsedException`. Nothing is hashed or saved.
 - Email already taken → `EmailAlreadyUsedException`. Nothing is hashed or saved.
+- Username **and** email both taken → `UsernameAlreadyUsedException`. The username is checked first, and the email is never checked.
+- The exception's `getDetails()` holds the taken username or email, and never the raw password.
 - Otherwise it saves a user with:
   - the **hashed** password (never the raw one)
   - `role = USER`, `status = ACTIVE`, `tokenVersion = 1`
   - username, email and name copied from the command
+  - `id` and `lastLoginTime` left `null` (the DB assigns the id, and the user hasn't logged in yet)
 - It returns the id from `userPort.save`
 
 **Spec: `change(id, current, new)`**
@@ -244,6 +247,11 @@ How it's called: `JwtAuthFilter.java:107-109` extracts the version from the toke
 - The captured `User` is asserted with `SoftAssertions` or `usingRecursiveComparison().ignoringFields(...)`
 - `hasher.hash` is stubbed with a distinctive value (e.g. `"HASHED(secret)"`), and the test proves *that* value was stored and the raw password never was
 - The wrong-password case verifies `never()` on **both** `hasher.hash` and `userPort.updatePassword`
+- Both register reject paths assert `verifyNoInteractions(hasher)` and `verify(userPort, never()).save(any())`
+- The both-taken case asserts `verify(userPort, never()).existsByEmail(any())`, which proves the check order
+- The recursive comparison ignores no field that the spec defines (`id` and `lastLoginTime` included)
+
+**Stretch:** two requests register the same email at the same moment. Both pass `existsByEmail`, and the second `save` hits the DB constraint `uk_email` (`UserEntity`). What status does that client get, 409 or 500? Which layer should translate the constraint error, and into which exception? A unit test can't reproduce the race, so what kind of test could? Also: should `Alice@x.com` and `alice@x.com` count as the same email?
 
 <details><summary>Hints</summary>
 
