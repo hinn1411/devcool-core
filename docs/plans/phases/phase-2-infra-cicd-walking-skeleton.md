@@ -17,7 +17,7 @@ Deploying early surfaces the hard problems (health checks, migrations, secrets, 
 ## Prerequisites
 - An AWS account with a budget alarm.
 - A domain in Route 53 (or use the CloudFront default domain at first).
-- `terraform`, `tflint` and the AWS CLI installed.
+- `terraform` ≥ 1.11, `tflint` and the AWS CLI installed.
 - Bedrock model access requested in the target region (it takes time; start now for P8).
 
 ## Scope
@@ -50,7 +50,7 @@ infra/
     prod.tfvars
 ```
 
-- **State:** one S3 key per stack per env (`devcool/<env>/<stack>.tfstate`), `use_lockfile = true`.
+- **State:** one S3 key per stack per env (`devcool/<env>/<stack>.tfstate`), `use_lockfile = true`. Every stack sets `required_version = ">= 1.11"` (S3 native locking is GA from 1.11).
 - **Cross-stack values:** `terraform_remote_state` or SSM parameters written by producer stacks. SSM is preferred, since it decouples consumers from state access.
 - The **image tag** is set by the deploy workflow, not Terraform. The service ignores `task_definition` changes.
 
