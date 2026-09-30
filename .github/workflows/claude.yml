@@ -2,7 +2,8 @@ name: Claude Code
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    # Opt-in: a review runs only when the `claude-review` label is added (saves subscription usage)
+    types: [labeled]
     # Plan/journal-only PRs don't need a code review; @claude still works on them
     paths-ignore: ['docs/**']
   issue_comment:
@@ -15,9 +16,11 @@ on:
     types: [submitted]
 
 jobs:
-  # Auto-review when a PR is opened
+  # Review a PR when it gets the `claude-review` label
   claude-auto-review:
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    if: |
+      github.event_name == 'pull_request' && github.event.label.name == 'claude-review' &&
+      !github.event.pull_request.draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -36,13 +39,15 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Headless run: anything not listed here is denied, so posting needs explicit tools
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*)"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
             You are pre-reviewing this pull request before a human does. The PR branch is
             checked out in the working directory. Review only; don't edit files or push.
+            Read files with the Read, Grep and Glob tools. Bash is only allowed for `gh pr diff`
+            and `gh pr view`; any other command is denied.
 
             1. List the changed files with `gh pr diff --name-only`, then read the diff.
             2. Review checklist, by changed path. Read these files; don't review from memory:
@@ -52,14 +57,13 @@ jobs:
                - Security-sensitive paths (`infra/**`, `**/auth/**`, `**/jwt/**`, `**/security/**`,
                  `**/crypto/**`, `**/websocket/**`, `.github/workflows/**`): also use the checks in
                  `.claude/agents/security-reviewer.md`.
-            3. Also look for correctness bugs and missing tests for new behaviour.
+            3. Also look for correctness bugs and missing tests for new behaviour (comment a
+               missing test on the declaration line of the untested class or method).
             4. Post each concrete issue as an inline comment on the line with
                `mcp__github_inline_comment__create_inline_comment` (`confirmed: true`). Name the
                rule it breaks (e.g. "CLAUDE.md: Authorization" or "hexagonal.md") and suggest a fix.
-            5. Post exactly one summary with `gh pr comment`: the checklists you applied, the
-               findings by severity, and a verdict (looks good / needs changes).
-            Only post GitHub comments; don't put the review in your final message. Skip style
-            nits that Spotless or Checkstyle already enforce.
+            Post inline comments only; no summary comment. Skip style nits that Spotless or
+            Checkstyle already enforce.
 
   # Respond to @claude mentions in comments, issues, and reviews
   claude-on-demand:
