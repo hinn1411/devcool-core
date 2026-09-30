@@ -44,10 +44,10 @@ The concepts and interview material are in [`../claude-code/claude-code-guide.md
 - [x] **P0-T07** Add subagents: `hexagonal-reviewer`, `security-reviewer`, `test-writer`, `aws-architect`
 - [x] **P0-T08** Add `.mcp.json` (AWS Knowledge MCP); `frontend/CLAUDE.md`, `infra/CLAUDE.md`; `.gitignore` entries
 - [x] **P0-T09** Write `claude-code/claude-code-guide.md`
-- [ ] **P0-T10** Install local binaries used by the config:
+- [x] **P0-T10** Install local binaries used by the config:
   - `jdtls` (the Java LSP for the `jdtls-lsp` plugin)
-  - `npm i -g typescript-language-server typescript` (for `typescript-lsp`)
-  - `terraform` ≥ 1.10, `tflint`
+  - `npm i -g typescript-language-server typescript@6` (for `typescript-lsp`; TypeScript 7 has no `tsserver`, which the language server needs)
+  - `terraform` ≥ 1.11 (S3 native locking, ADR-0003, is GA from 1.11), `tflint`
   - `uv` (optional, for AWS MCP servers run via `uvx`)
 - [ ] **P0-T11** First session checks:
   - `/plugin` installs the enabled plugins; approve the project `.mcp.json` server.

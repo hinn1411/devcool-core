@@ -206,7 +206,7 @@ flowchart LR
   E --> F[Hooks: format on edit,<br/>migration guard, compile on stop]
   F --> G["/verify"]
   G --> H[hexagonal-reviewer<br/>+ security-reviewer if auth/ws/ai/infra]
-  H --> M[Merge gate<br/>brief's Self-check]
+  H --> M[Merge gate<br/>playbook §3 questions]
   M --> I["commit (commit-commands)<br/>push → PR"]
   I --> J[Claude GitHub Action review + CI]
 ```
@@ -220,22 +220,20 @@ A roadmap task is one line, like `P3-T03 MessageService.save: seq assignment + i
 - Claude restates the task in plain words and asks for your **prediction**: why it's needed, what must be true when done, which tests prove it, and an estimate. Answer in a few bullets, or type `skip`.
 - Read the brief, answer the (at most 4) open decisions, and you're done. It takes about 15 minutes.
 
-**What you get** (saved to `docs/journal/briefs/<id>.md`, template in `.claude/skills/frame-task/brief-template.md`)
+**What you get:** one screen of at most 40 lines, saved to `docs/journal/briefs/<id>.md`. The template is `.claude/skills/frame-task/brief-template.md`.
 
 | Section | Answers |
 |---|---|
-| Why | What's wrong or missing today (with `path:line`), and what fails without this task |
-| Value to the goal | Task → phase goal → milestone (M1–M5) → roadmap target, plus the tasks it unblocks and the interview story it builds |
-| Core concepts | 2–5 ideas, each with a **Without** example (a DevCool scenario that fails) and a **With** example (the same scenario, fixed) |
-| Requirements | Scope in/out, Given/When/Then acceptance criteria, invariants, authz, test list, likely files, dependencies |
+| Why / Value | What's wrong today (with `path:line`) and what fails without the task; task → phase goal → milestone, plus the tasks it unblocks |
+| Concepts | 2–4 ideas, one line each: **without** (a DevCool scenario that fails) and **with** (the same scenario, fixed) |
+| Done when | Given/When/Then acceptance criteria, out of scope, tests, files, and invariants/authz when they apply |
 | Decisions | Open questions and your answers, or the ADR/doc that settled them |
-| Prediction vs brief | Where your prediction differed, tagged *knowledge gap* (with what to read), *plan issue* (you were right; the brief changed) or *open* |
-| Self-check | The three merge-gate questions ([playbook §3](../delivery-playbook.md#3-the-task-loop)) for this task |
+| Prediction gaps | Only where your prediction differed, tagged *knowledge gap* (with what to read), *plan issue* (you were right; the brief changed) or *open* |
 
 **Why predict first?** Writing your own answer before you see Claude's turns the brief from something you read into something you check. Every *knowledge gap* is a topic to study; every *plan issue* is a bug caught before any code exists. Both go into the journal as evidence.
 
 **How it connects:**
-- `/implement-task` reads the brief when it exists and treats its requirements and decisions as agreed. If the implementation departs from the brief, it records why in the brief's Decisions table.
+- `/implement-task` reads the brief when it exists and treats its Done when and Decisions as agreed. If the implementation departs from the brief, it records why in the brief's Decisions table.
 - If framing finds a conflict with an ADR, the skill stops and suggests `/write-adr` instead of choosing a side.
 - It doesn't write code, create branches or tick the task.
 
@@ -359,4 +357,4 @@ Agents are good at turning a clear spec into code and bad at noticing that the s
 2. The agent then compares my prediction with the plan, the ADRs and the current code.
 3. Every open decision gets settled and written into a brief.
 
-`/implement-task` builds against that brief, and the brief's self-check questions become the merge gate. Mistakes in the plan surface in a 15-minute conversation instead of in a PR review.
+`/implement-task` builds against that brief, and the three merge-gate questions (playbook §3) close it out. Mistakes in the plan surface in a 15-minute conversation instead of in a PR review.

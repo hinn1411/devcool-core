@@ -40,17 +40,16 @@ Show:
 Tell them partial answers are fine, and that `skip` goes straight to the brief. Then **end your turn and wait**.
 
 ## 3. Compare and explain
-Present the brief following [brief-template.md](brief-template.md). Rules:
+Present the brief itself, following [brief-template.md](brief-template.md). Don't write a longer version in the chat. Rules:
+- **Short:** the whole brief must be **40 lines or fewer**. One line per bullet, no prose paragraphs. State each fact once and link to its source (ADR, phase file, `path:line`) instead of copying it. Leave out template lines that don't apply.
 - **Why** and **Value** must be concrete for DevCool: cite files, ADRs, milestones and downstream task ids. No generic text like "improves maintainability".
-- **Core concepts** (2–5): each needs a *Without* and a *With* example. Use the same concrete DevCool scenario in both, e.g. "user retries a send on a flaky network". Show what goes wrong, then what the concept changes. Short code or SQL snippets are welcome when they make the difference obvious.
-- **Prediction vs brief:** compare the user's answers with the brief. Tag each difference:
+- **Concepts** (2–4, one line each): a *Without* and a *With* for the same concrete DevCool scenario, e.g. "user retries a send on a flaky network". Show what goes wrong, then what the concept changes. Add a code or SQL snippet only if it's 3 lines or fewer.
+- **Prediction gaps:** list only where the user's answers differ from the brief, one line each, tagged:
   - **knowledge gap**: the user missed it. Point to what to read (a reference file section or ADR).
   - **plan issue**: the user's point is better than the plan. Update the brief and say so.
   - **open**: it needs a decision (step 4).
 
   If they skipped, leave this section out.
-
-Keep it scannable: headings, bullets, tables. Aim for a brief that can be read in 5 minutes.
 
 ## 4. Clear the requirements
 - Resolve anything the ADRs, design docs or current code already answer, and cite the source. Don't ask about it.
@@ -59,7 +58,7 @@ Keep it scannable: headings, bullets, tables. Aim for a brief that can be read i
 - If there are no open decisions, say so and move on.
 
 ## 5. Save and hand off
-1. Write `docs/journal/briefs/$task.md` from the template, with the decisions applied, `Status: agreed` and today's date. Create the folder if it's missing.
+1. Write `docs/journal/briefs/$task.md` from the template, with the decisions applied, status `agreed` and today's date. Create the folder if it's missing.
 2. In the chat, print a 5-line summary:
    - **Why**
    - **Value**

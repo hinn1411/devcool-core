@@ -54,6 +54,7 @@ frontend/
 ## Tasks
 - [ ] **P5-T01** Scaffold `frontend/`:
   - Vite + React + TS (strict), ESLint, Prettier, Tailwind, shadcn/ui, Vitest + RTL + MSW.
+  - Pin `typescript` to `~6`: TS 7 has no `tsserver`, so the `typescript-lsp` plugin fails (P0-T10). Recheck if the plugin supports TS 7 by then.
   - Vite proxy.
   - `npm run` scripts: `dev`, `build`, `lint`, `typecheck`, `test`, `gen:api`.
 - [ ] **P5-T02** `gen:api` from `/v3/api-docs` → `src/api/schema.d.ts`. CI check that the generated file is up to date
