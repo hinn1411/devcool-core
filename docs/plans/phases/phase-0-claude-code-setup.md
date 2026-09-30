@@ -53,11 +53,10 @@ The concepts and interview material are in [`../claude-code/claude-code-guide.md
   - Install the enabled plugins (`jdtls-lsp`, `typescript-lsp`, `commit-commands`, `pr-review-toolkit`) and `gh` (used by `/commit-push-pr`, `/review-pr`); approve the project `.mcp.json` server.
   - `/hooks`, `/agents`, `/mcp` and `/context` list what you expect.
   - `/doctor` is clean.
-- [ ] **P0-T12** Personal settings clean-up (optional):
-  - `~/.claude/settings.json` has an `autoMode.environment` describing *tylink*. Move it to that repo's `.claude/settings.local.json`, or add a DevCool description here.
+- [x] **P0-T12** Personal settings clean-up (optional):
+  - `~/.claude/settings.json` `autoMode.environment` describes both tylink and DevCool. It stays in user scope: the auto-mode classifier ignores `autoMode` in project and local settings.
   - Pick a status line (`/statusline`).
-  - Try the `learning-output-style` plugin for study sessions.
-  - Token saving (`/doctor` 2026-09-30, ~4k est. tokens/session, all unused): turn off the 9 synced claude.ai skills with `skillOverrides` (~1.5k) and disable the claude.ai connectors in `/mcp` (Claude Docs ~750; Gmail/Calendar/Drive). After P0-T11, consider disabling `pr-review-toolkit` locally (~1.2k; overlaps the repo agents) and `typescript-lsp` until P5. Repo change: trim the derivable parts of `CLAUDE.md` (package tree, tech table, media upload flow, standard Maven commands; ~530).
+  - Token saving (`/doctor` 2026-09-30): disable `pr-review-toolkit` (~1.2k est. tokens/session; overlaps the repo agents) and `typescript-lsp` (re-enable in P5-T01) in `.claude/settings.json`. The synced claude.ai skills, connectors and `CLAUDE.md` stay as they are.
 - [x] **P0-T13** Extend `.github/workflows/claude.yml`: have the auto-review prompt reference `CLAUDE.md` PR guidelines and `.claude/rules/*`, with path-specific focus (hexagonal for `src/`, security for `infra/` and auth code)
 
 ## Files touched

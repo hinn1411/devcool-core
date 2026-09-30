@@ -50,9 +50,9 @@
   },
   "enabledPlugins": {
     "jdtls-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": false,
     "commit-commands@claude-plugins-official": true,
-    "pr-review-toolkit@claude-plugins-official": true
+    "pr-review-toolkit@claude-plugins-official": false
   },
   "worktree": {
     "symlinkDirectories": ["frontend/node_modules"]
