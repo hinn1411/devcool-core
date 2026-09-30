@@ -6,6 +6,7 @@ A working log of how DevCool is built: what was predicted, what happened, what b
 
 ```
 docs/journal/
+  briefs/      one file per framed task (written by /frame-task), e.g. P3-T03.md: why, value, concepts, agreed requirements
   weeks/       one file per ISO week, e.g. 2026-W40.md: task entries, parking lot, Friday review
   incidents/   one file per game day, blind drill or real bug, e.g. 2026-10-09-seq-race.md
   stories/     STAR stories distilled from the above, e.g. seq-race-and-idempotent-send.md

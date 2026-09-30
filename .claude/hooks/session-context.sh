@@ -28,5 +28,5 @@ for p in "${active[@]}"; do
   echo "- Current phase: $p (${f#"$root"/}), $open open task(s). Next up:"
   grep -E '^\s*- \[ \] \*\*'"$p"'-T' "$f" | head -n 3 | sed -E 's/^\s*- \[ \] /  - /' | cut -c1-160
 done
-echo "- Work a task with /implement-task <id>; ADRs in docs/plans/architecture/adr/."
+echo "- Frame a task with /frame-task <id>, then build it with /implement-task <id>; ADRs in docs/plans/architecture/adr/."
 exit 0
