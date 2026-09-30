@@ -111,7 +111,7 @@ The `SessionStart` hook parses this table: keep the format `| Pn | status |`.
 
 | Phase | Status | File |
 |---|---|---|
-| P0 | in-progress | [phase-0-claude-code-setup.md](phases/phase-0-claude-code-setup.md) |
+| P0 | done | [phase-0-claude-code-setup.md](phases/phase-0-claude-code-setup.md) |
 | P1 | todo | [phase-1-foundation-hardening.md](phases/phase-1-foundation-hardening.md) |
 | P2 | todo | [phase-2-infra-cicd-walking-skeleton.md](phases/phase-2-infra-cicd-walking-skeleton.md) |
 | P3 | todo | [phase-3-core-chat.md](phases/phase-3-core-chat.md) |
