@@ -1,5 +1,6 @@
 package com.devcool.adapters.in.web.dto.mapper;
 
+import com.devcool.adapters.in.web.dto.request.ChangePasswordRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
 import com.devcool.adapters.in.web.dto.response.GetProfileResponse;
 import com.devcool.adapters.in.web.dto.response.LoginResponse;
@@ -7,6 +8,7 @@ import com.devcool.adapters.in.web.dto.response.RefreshTokenResponse;
 import com.devcool.adapters.in.web.dto.response.RegisterUserResponse;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -26,4 +28,7 @@ public interface AuthDtoMapper {
 
   @Mapping(target = "rawPassword", source = "password")
   RegisterUserCommand toRegisterCommand(RegisterUserRequest request);
+
+  @Mapping(target = "userId", source = "userId")
+  ChangePasswordCommand toChangePasswordCommand(ChangePasswordRequest request, Integer userId);
 }

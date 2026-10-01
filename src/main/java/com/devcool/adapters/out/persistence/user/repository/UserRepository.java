@@ -35,6 +35,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
   @Query("UPDATE UserEntity u SET u.lastLoginTime = :loginTime WHERE u.id = :id")
   int updateLastLoginTime(@Param("id") Integer id, @Param("loginTime") Instant loginTime);
 
+  @Modifying
+  @Query("UPDATE UserEntity u SET u.password = :passwordHash WHERE u.id = :id")
+  int updatePassword(@Param("id") Integer id, @Param("passwordHash") String passwordHash);
+
   List<UserEntity> findByIdIn(Collection<Integer> ids);
 
   @Query(value = "SELECT id FROM app_user WHERE id in :userIds", nativeQuery = true)

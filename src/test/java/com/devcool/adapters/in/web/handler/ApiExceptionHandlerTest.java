@@ -62,11 +62,11 @@ class ApiExceptionHandlerTest {
   }
 
   @Test
-  void handleDomainException_passwordIncorrect_returns401WithEmptyDetails() {
+  void handleDomainException_passwordIncorrect_returns422WithEmptyDetails() {
     ResponseEntity<ApiErrorResponse> response =
         handler.handleDomainException(new PasswordIncorrectException());
 
-    assertThat(response.getStatusCode().value()).isEqualTo(401);
+    assertThat(response.getStatusCode().value()).isEqualTo(422);
     assertThat(response.getBody()).isNotNull();
     assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.PASSWORD_INCORRECT.code());
     assertThat(response.getBody().getDetails()).isEmpty();

@@ -1,6 +1,11 @@
 package com.devcool.application.service;
 
+import com.devcool.domain.auth.exception.PasswordDuplicateException;
+import com.devcool.domain.auth.exception.PasswordIncorrectException;
+import com.devcool.domain.auth.exception.PasswordNotMatchException;
+import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.PasswordHasherPort;
+import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
 import com.devcool.domain.user.exception.EmailAlreadyUsedException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
@@ -10,6 +15,7 @@ import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.domain.user.port.in.ChangePasswordUseCase;
 import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
+import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import com.devcool.domain.user.port.out.UserPort;
 import java.util.Locale;
@@ -27,17 +33,47 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
   private final UserPort userPort;
   private final PasswordHasherPort hasher;
+  private final AccessTokenPort accessTokenPort;
+  private final RefreshTokenStorePort refreshStore;
 
+  /**
+   * Changes the password and logs the user out everywhere: every access token is invalidated by the
+   * version bump and every refresh token is deleted, all in one transaction.
+   */
   @Override
   @Transactional
-  public boolean change(Integer id, String currentRawPassword, String newRawPassword) {
-    User user = userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-    if (!hasher.matches(currentRawPassword, user.getPassword())) {
-      log.info("Password does not match!");
-      return false;
+  public void change(ChangePasswordCommand command) {
+    String currentPassword = command.currentPassword();
+    String newPassword = command.newPassword();
+    String confirmedPassword = command.confirmedPassword();
+
+    if (!newPassword.equals(confirmedPassword)) {
+      log.warn("New password and its confirmation do not match");
+      throw new PasswordNotMatchException();
     }
-    String newHashPassword = hasher.hash(newRawPassword);
-    return userPort.updatePassword(id, newHashPassword);
+
+    User user =
+        userPort
+            .findById(command.userId())
+            .orElseThrow(() -> new UserNotFoundException(command.userId()));
+
+    if (!hasher.matches(currentPassword, user.getPassword())) {
+      log.warn("Current password does not match hashed password");
+      throw new PasswordIncorrectException();
+    }
+
+    if (confirmedPassword.equals(currentPassword)) {
+      log.warn("Current password and new password are the same");
+      throw new PasswordDuplicateException();
+    }
+
+    String hashedNewPassword = hasher.hash(confirmedPassword);
+    // Fail closed: a write that changed no row must not look like success.
+    if (!userPort.updatePassword(user.getId(), hashedNewPassword)) {
+      throw new UserNotFoundException(command.userId());
+    }
+    accessTokenPort.updateVersion(user.getId());
+    refreshStore.deleteOldRefreshTokens(user.getId());
   }
 
   @Override

@@ -137,10 +137,30 @@ public class AuthController {
                 HttpStatus.OK, ErrorCode.OK.code(), "Login successfully", response));
   }
 
+  @Operation(
+      summary = "Change my password",
+      description = "Changes the password and logs the user out on every device",
+      security = {@SecurityRequirement(name = "bearerAuth")},
+      responses = {
+        @ApiResponse(responseCode = "204", description = "Password changed"),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(
+            responseCode = "422",
+            description = "Wrong current password, mismatched confirmation or unchanged password",
+            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+      })
   @PostMapping("/password")
-  public ResponseEntity<ApiSuccessResponse<Boolean>> changePassword(
-      @Valid @RequestBody ChangePasswordRequest request) {
-    return null;
+  public ResponseEntity<Void> changePassword(
+      @Valid @RequestBody ChangePasswordRequest request, Authentication auth) {
+    Integer userId = Integer.valueOf(auth.getName());
+    changePassword.change(mapper.toChangePasswordCommand(request, userId));
+
+    return ResponseEntity.noContent()
+        .header(HttpHeaders.SET_COOKIE, expiredRefreshCookie().toString())
+        .build();
   }
 
   @Operation(
@@ -196,17 +216,18 @@ public class AuthController {
 
     tokenRevoker.logout(refreshToken, Integer.valueOf(auth.getName()));
 
-    ResponseCookie expiredCookie =
-        ResponseCookie.from("rt", "")
-            .httpOnly(true)
-            .secure(true)
-            .sameSite("Strict")
-            .path("/api/v1/auth/refresh")
-            .maxAge(0)
-            .build();
-
     return ResponseEntity.noContent()
-        .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+        .header(HttpHeaders.SET_COOKIE, expiredRefreshCookie().toString())
+        .build();
+  }
+
+  private static ResponseCookie expiredRefreshCookie() {
+    return ResponseCookie.from("rt", "")
+        .httpOnly(true)
+        .secure(true)
+        .sameSite("Strict")
+        .path("/api/v1/auth/refresh")
+        .maxAge(0)
         .build();
   }
 }
