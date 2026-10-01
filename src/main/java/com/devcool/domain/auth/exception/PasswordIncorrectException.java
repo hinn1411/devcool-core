@@ -5,7 +5,7 @@ import com.devcool.domain.common.ErrorCode;
 import java.util.Map;
 
 public class PasswordIncorrectException extends DomainException {
-  public PasswordIncorrectException(String password) {
-    super(ErrorCode.PASSWORD_INCORRECT, "Password is incorrect", Map.of("password", password));
+  public PasswordIncorrectException() {
+    super(ErrorCode.PASSWORD_INCORRECT, "Password is incorrect", Map.of());
   }
 }

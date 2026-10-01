@@ -58,7 +58,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 - [ ] **P1-T02** Local DB → `pgvector/pgvector:pg16` in `docker/local/compose.yaml`. Move the credentials to an `.env` file referenced by compose (not committed). Update `application-local.properties`
 - [ ] **P1-T03** `V2__message_channel_seq_index.sql`: index `(channel_id, id DESC)` (from improvements item #3)
 - [x] **P1-T04** #1: `UserController` returns a `UserProfileResponse` DTO via MapStruct. Add an IT asserting that no `password`/`tokenVersion` appears in the JSON
-- [ ] **P1-T05** #2: remove the password from exception details. Add a test that the error body doesn't echo request fields
+- [x] **P1-T05** #2: remove the password from exception details. Add a test that the error body doesn't echo request fields
 - [ ] **P1-T06** #4, #5: pass the caller's id into `updateChannel`/`addMember`. Check the role in `ChannelService`; 403 otherwise. Add unit tests for member, creator, leader and non-member
 - [ ] **P1-T07** #6: implement change-password end to end (verify the old password, hash the new one, bump `tokenVersion`, return 204), or remove the endpoint until P3. Decide and document
 - [ ] **P1-T08** #7: cookie `Path=/api/v1/auth`, `HttpOnly; Secure; SameSite=Strict`. Fix the `verifyRefresh` null → throw `InvalidRefreshTokenException` → 401
