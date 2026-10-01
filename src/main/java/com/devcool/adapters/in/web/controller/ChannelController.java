@@ -54,8 +54,11 @@ public class ChannelController {
 
   @PatchMapping("/{channelId}")
   ResponseEntity<ApiSuccessResponse<UpdateChannelResponse>> updateChannel(
-      @Valid @RequestBody UpdateChannelRequest request, @PathVariable Integer channelId) {
-    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request);
+      @Valid @RequestBody UpdateChannelRequest request,
+      @PathVariable Integer channelId,
+      Authentication auth) {
+    Integer callerId = Integer.valueOf(auth.getName());
+    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request, callerId);
     boolean isChannelUpdated = channelUpdater.updateChannel(channelId, command);
     UpdateChannelResponse response = mapper.toUpdateChannelResponse(isChannelUpdated);
     return ResponseEntity.ok(
@@ -65,8 +68,11 @@ public class ChannelController {
 
   @PostMapping("/{channelId}/members")
   ResponseEntity<ApiSuccessResponse<AddMembersResponse>> addMembers(
-      @Valid @RequestBody AddMembersRequest request, @PathVariable Integer channelId) {
-    AddMembersCommand command = mapper.toAddMembersCommand(request);
+      @Valid @RequestBody AddMembersRequest request,
+      @PathVariable Integer channelId,
+      Authentication auth) {
+    Integer callerId = Integer.valueOf(auth.getName());
+    AddMembersCommand command = mapper.toAddMembersCommand(request, callerId);
     boolean isMemberAdded = channelUpdater.addMember(channelId, command);
     AddMembersResponse response = mapper.toAddMembersResponse(isMemberAdded);
     return ResponseEntity.ok(

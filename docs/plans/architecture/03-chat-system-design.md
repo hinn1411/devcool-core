@@ -225,7 +225,11 @@ Heartbeat: the client sends `PING` every 25 s and the server answers `PONG` and 
 ## 12. Security specifics
 
 - **Authenticated is not authorized.** Every channel read/write path checks membership in the service (lesson from `docs/improvements/lessons.md`). The WebSocket `SUBSCRIBE` and `RESUME` handlers check it too.
-- Roles: only `CREATOR`/`LEADER` can rename a channel or add/remove members. Any member can leave.
+- Roles: channel management follows the role table in `ChannelPermissionPolicy` (P1-T06). Any member can leave.
+  - Forum: only `CREATOR`/`LEADER` can update the channel or add members.
+  - Lounge: any member can update the channel or add members, up to 11 people.
+  - Private chat: either participant can update the channel; nobody can add members.
+  - Removing members is defined in P3-T11.
 - Per-user rate limits: `SEND` 10/s burst 20, `TYPING` 1/2 s, `ASK` 20/hour.
 - Message content is length-limited (4 KB text) and rendered as sanitized markdown on the client, with no raw HTML.
 
