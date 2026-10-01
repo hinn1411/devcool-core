@@ -53,7 +53,7 @@ public class UserAdapter implements UserPort {
 
   @Override
   public boolean updatePassword(Integer id, String newHash) {
-    return false;
+    return repo.updatePassword(id, newHash) > 0;
   }
 
   @Override

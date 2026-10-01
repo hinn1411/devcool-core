@@ -16,6 +16,14 @@ class PasswordExceptionsTest {
   }
 
   @Test
+  void passwordDuplicate_carriesItsErrorCodeAndNoDetails() {
+    PasswordDuplicateException ex = new PasswordDuplicateException();
+
+    assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.PASSWORD_DUPLICATE);
+    assertThat(ex.getDetails()).isEmpty();
+  }
+
+  @Test
   void passwordNotMatch_carriesItsErrorCodeAndNoDetails() {
     PasswordNotMatchException ex = new PasswordNotMatchException();
 

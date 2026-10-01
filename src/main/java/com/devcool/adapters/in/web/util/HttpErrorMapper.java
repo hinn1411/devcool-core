@@ -11,6 +11,7 @@ public class HttpErrorMapper {
       case USER_NOT_FOUND, CHANNEL_NOT_FOUND -> HttpStatus.NOT_FOUND;
       case EMAIL_ALREADY_USED, USERNAME_ALREADY_USED, DUPLICATE_MEMBER -> HttpStatus.CONFLICT;
       case PASSWORD_WEAK,
+              PASSWORD_INCORRECT,
               PASSWORD_NOT_MATCH,
               PASSWORD_DUPLICATE,
               USER_DUPLICATE,
@@ -21,8 +22,7 @@ public class HttpErrorMapper {
               INVALID_MESSAGE_CONFIG,
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;
-      case PASSWORD_INCORRECT, REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS ->
-          HttpStatus.UNAUTHORIZED;
+      case REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS -> HttpStatus.UNAUTHORIZED;
       case MEMBER_NOT_FOUND, FORBIDDEN -> HttpStatus.FORBIDDEN;
       case UNSUPPORTED_MEDIA_TYPE -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
       case TOO_LARGE_MEDIA -> HttpStatus.PAYLOAD_TOO_LARGE;

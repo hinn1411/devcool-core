@@ -3,26 +3,31 @@ package com.devcool.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.devcool.domain.auth.exception.PasswordDuplicateException;
+import com.devcool.domain.auth.exception.PasswordIncorrectException;
+import com.devcool.domain.auth.exception.PasswordNotMatchException;
+import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.PasswordHasherPort;
+import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
 import com.devcool.domain.user.exception.EmailAlreadyUsedException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
+import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import com.devcool.domain.user.port.out.UserPort;
 import java.util.Optional;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -45,6 +50,8 @@ class UserServiceTest {
 
   @Mock private UserPort userPort;
   @Mock private PasswordHasherPort hasher;
+  @Mock private AccessTokenPort accessTokenPort;
+  @Mock private RefreshTokenStorePort refreshStore;
 
   @InjectMocks private UserService userService;
 
@@ -135,43 +142,93 @@ class UserServiceTest {
   @Nested
   class Change {
 
-    @Test
-    void unknownUser_throwsUserNotFound_andNothingIsHashedOrUpdated() {
-      when(userPort.findById(USER_ID)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(() -> userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD))
-          .isInstanceOfSatisfying(
-              UserNotFoundException.class,
-              ex -> assertThat(ex.getDetails()).containsEntry("userId", USER_ID));
-      verifyNoInteractions(hasher);
-      verify(userPort, never()).updatePassword(any(), any());
+    private ChangePasswordCommand command() {
+      return new ChangePasswordCommand(
+          USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD, NEW_RAW_PASSWORD);
     }
 
-    @Test
-    void wrongCurrentPassword_returnsFalse_andNewPasswordIsNeitherHashedNorStored() {
-      when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
-      when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(false);
-
-      boolean changed = userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD);
-
-      assertThat(changed).isFalse();
+    private void assertNothingStoredOrRevoked() {
       verify(hasher, never()).hash(any());
       verify(userPort, never()).updatePassword(any(), any());
+      verifyNoInteractions(accessTokenPort, refreshStore);
     }
 
-    // Both values, so a hard-coded `return true` can't pass.
-    @ParameterizedTest(name = "port returns {0} -> change returns {0}")
-    @ValueSource(booleans = {true, false})
-    void correctCurrentPassword_storesHashOfNewPassword_andReturnsPortResult(boolean portResult) {
+    @Test
+    void correctCurrentPassword_storesTheNewHashAndLogsTheUserOutEverywhere() {
       when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
       when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(true);
       when(hasher.hash(NEW_RAW_PASSWORD)).thenReturn(NEW_HASHED_PASSWORD);
-      when(userPort.updatePassword(USER_ID, NEW_HASHED_PASSWORD)).thenReturn(portResult);
+      when(userPort.updatePassword(USER_ID, NEW_HASHED_PASSWORD)).thenReturn(true);
 
-      boolean changed = userService.change(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD);
+      userService.change(command());
 
-      assertThat(changed).isEqualTo(portResult);
       verify(userPort).updatePassword(USER_ID, NEW_HASHED_PASSWORD);
+      verify(accessTokenPort).updateVersion(USER_ID);
+      verify(refreshStore).deleteOldRefreshTokens(USER_ID);
+    }
+
+    @Test
+    void confirmationDiffersFromNewPassword_throwsPasswordNotMatch_beforeTouchingAnyPort() {
+      ChangePasswordCommand mismatched =
+          new ChangePasswordCommand(USER_ID, OLD_RAW_PASSWORD, NEW_RAW_PASSWORD, "something-else");
+
+      assertThatThrownBy(() -> userService.change(mismatched))
+          .isInstanceOf(PasswordNotMatchException.class);
+
+      verifyNoInteractions(userPort, hasher, accessTokenPort, refreshStore);
+    }
+
+    @Test
+    void unknownUser_throwsUserNotFound_andNothingIsStoredOrRevoked() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> userService.change(command()))
+          .isInstanceOfSatisfying(
+              UserNotFoundException.class,
+              ex -> assertThat(ex.getDetails()).containsEntry("userId", USER_ID));
+
+      verifyNoInteractions(hasher);
+      assertNothingStoredOrRevoked();
+    }
+
+    @Test
+    void wrongCurrentPassword_throwsPasswordIncorrect_andNothingIsStoredOrRevoked() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
+      when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(false);
+
+      assertThatThrownBy(() -> userService.change(command()))
+          .isInstanceOfSatisfying(
+              PasswordIncorrectException.class, ex -> assertThat(ex.getDetails()).isEmpty());
+
+      assertNothingStoredOrRevoked();
+    }
+
+    // Lenient: the rule may be checked on the raw strings or against the stored hash.
+    @Test
+    void newPasswordSameAsCurrent_throwsPasswordDuplicate_andNothingIsStoredOrRevoked() {
+      lenient().when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
+      lenient().when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(true);
+      ChangePasswordCommand unchanged =
+          new ChangePasswordCommand(USER_ID, OLD_RAW_PASSWORD, OLD_RAW_PASSWORD, OLD_RAW_PASSWORD);
+
+      assertThatThrownBy(() -> userService.change(unchanged))
+          .isInstanceOf(PasswordDuplicateException.class);
+
+      assertNothingStoredOrRevoked();
+    }
+
+    // Fail closed: a write that changed no row must not look like success.
+    @Test
+    void passwordUpdateAffectsNoRow_throwsUserNotFound_andNothingIsRevoked() {
+      when(userPort.findById(USER_ID)).thenReturn(Optional.of(storedUser()));
+      when(hasher.matches(OLD_RAW_PASSWORD, STORED_HASH)).thenReturn(true);
+      when(hasher.hash(NEW_RAW_PASSWORD)).thenReturn(NEW_HASHED_PASSWORD);
+      when(userPort.updatePassword(USER_ID, NEW_HASHED_PASSWORD)).thenReturn(false);
+
+      assertThatThrownBy(() -> userService.change(command()))
+          .isInstanceOf(UserNotFoundException.class);
+
+      verifyNoInteractions(accessTokenPort, refreshStore);
     }
   }
 

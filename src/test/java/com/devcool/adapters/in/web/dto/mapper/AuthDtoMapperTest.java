@@ -2,6 +2,7 @@ package com.devcool.adapters.in.web.dto.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.devcool.adapters.in.web.dto.request.ChangePasswordRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
 import com.devcool.adapters.in.web.dto.response.GetProfileResponse;
 import com.devcool.adapters.in.web.dto.response.LoginResponse;
@@ -11,6 +12,7 @@ import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
+import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
 import com.devcool.domain.user.port.in.command.RegisterUserCommand;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,19 @@ class AuthDtoMapperTest {
     assertThat(command.rawPassword()).isEqualTo("s3cret-pass");
     assertThat(command.email()).isEqualTo("hien@example.com");
     assertThat(command.name()).isEqualTo("Hien Giang");
+  }
+
+  @Test
+  void toChangePasswordCommand_carriesTheCallerIdAndEveryPassword() {
+    ChangePasswordRequest request =
+        new ChangePasswordRequest("old-secret", "new-secret", "confirm-secret");
+
+    ChangePasswordCommand command = mapper.toChangePasswordCommand(request, 7);
+
+    assertThat(command.userId()).isEqualTo(7);
+    assertThat(command.currentPassword()).isEqualTo("old-secret");
+    assertThat(command.newPassword()).isEqualTo("new-secret");
+    assertThat(command.confirmedPassword()).isEqualTo("confirm-secret");
   }
 
   @Test
