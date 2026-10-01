@@ -50,7 +50,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 ## Design notes
 - **Flyway baseline:** generate DDL from the current entities once (`spring.jpa.properties.jakarta.persistence.schema-generation.scripts.*` or `pg_dump --schema-only` from a local DB created by `ddl-auto=create`), review it by hand, and commit it as `V1__baseline.sql`. Then set `ddl-auto=validate` and `spring.flyway.enabled=true` in **every** profile, including `local`.
 - Do **not** change id types in V1; the BIGINT migration is P3-T01, as its own migration.
-- **Authorization for #4 and #5:** only `CREATOR`/`LEADER` members may update a channel or add members. The check lives in `ChannelService` (the application layer), which throws a domain `ForbiddenException` mapped to 403. The controller passes the caller's id.
+- **Authorization for #4 and #5:** the caller must be a member, and the role table in `ChannelPermissionPolicy` decides the rest (see [03 §12](../architecture/03-chat-system-design.md#12-security-specifics)): Forum is `CREATOR`/`LEADER` only, Lounge is any member, and a private chat can't gain members. The check lives in `ChannelService` (the application layer): a non-member gets `MemberNotFoundException` and a wrong role gets a domain `ForbiddenException`, both mapped to 403. The controller passes the caller's id.
 - **Health:** `management.endpoint.health.probes.enabled=true`, and expose only `health` and `info` publicly. The ALB uses `/actuator/health/readiness`.
 
 ## Tasks
@@ -59,7 +59,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 - [ ] **P1-T03** `V2__message_channel_seq_index.sql`: index `(channel_id, id DESC)` (from improvements item #3)
 - [x] **P1-T04** #1: `UserController` returns a `UserProfileResponse` DTO via MapStruct. Add an IT asserting that no `password`/`tokenVersion` appears in the JSON
 - [x] **P1-T05** #2: remove the password from exception details. Add a test that the error body doesn't echo request fields
-- [ ] **P1-T06** #4, #5: pass the caller's id into `updateChannel`/`addMember`. Check the role in `ChannelService`; 403 otherwise. Add unit tests for member, creator, leader and non-member
+- [x] **P1-T06** #4, #5: pass the caller's id into `updateChannel`/`addMember`. Check the role in `ChannelService`; 403 otherwise. Add unit tests for member, creator, leader and non-member
 - [ ] **P1-T07** #6: implement change-password end to end (verify the old password, hash the new one, bump `tokenVersion`, return 204), or remove the endpoint until P3. Decide and document
 - [ ] **P1-T08** #7: cookie `Path=/api/v1/auth`, `HttpOnly; Secure; SameSite=Strict`. Fix the `verifyRefresh` null → throw `InvalidRefreshTokenException` → 401
 - [ ] **P1-T09** Remove `/api/v1/channels` from `permitAll`. Add a 401 test without a token
@@ -76,6 +76,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 - [ ] **P1-T15** Structured JSON logging (`logging.structured.format.console=ecs` in `ecs`; human-readable locally). Log `userId`/`connectionId` via MDC in the WS handler
 - [ ] **P1-T16** Enable virtual threads (`spring.threads.virtual.enabled=true`). Check that no `synchronized` block wraps blocking I/O in the WS send path
 - [ ] **P1-T17** Update `docs/learning/README.md` "Fix these first" with the status of each item and link the PRs
+- [ ] **P1-T18** Channel update validation per type (split from P1-T06): a `PRIVATE_CHAT` can't change type or get an expiry; a `FORUM` can't get an expiry; the type may only toggle between `LOUNGE` and `FORUM`; a `LOUNGE` expiry must be more than 7 days ahead. 422 via `InvalidChannelConfigException`, with a unit test per rule
 
 ## Files touched
 - `src/main/resources/db/migration/*`

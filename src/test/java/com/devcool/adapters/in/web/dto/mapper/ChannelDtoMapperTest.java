@@ -73,8 +73,9 @@ class ChannelDtoMapperTest {
     UpdateChannelRequest request =
         new UpdateChannelRequest("renamed-room", BoundaryType.PUBLIC, EXPIRED, ChannelType.LOUNGE);
 
-    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request);
+    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request, 9);
 
+    assertThat(command.callerId()).isEqualTo(9);
     assertThat(command.name()).isEqualTo("renamed-room");
     assertThat(command.boundaryType()).isEqualTo(BoundaryType.PUBLIC);
     assertThat(command.expiredTime()).isEqualTo(EXPIRED);
@@ -90,9 +91,10 @@ class ChannelDtoMapperTest {
   }
 
   @Test
-  void toAddMembersCommand_carriesUserIds() {
-    AddMembersCommand command = mapper.toAddMembersCommand(new AddMembersRequest(List.of(7, 8)));
+  void toAddMembersCommand_carriesCallerAndUserIds() {
+    AddMembersCommand command = mapper.toAddMembersCommand(new AddMembersRequest(List.of(7, 8)), 9);
 
+    assertThat(command.callerId()).isEqualTo(9);
     assertThat(command.userIds()).containsExactly(7, 8);
   }
 

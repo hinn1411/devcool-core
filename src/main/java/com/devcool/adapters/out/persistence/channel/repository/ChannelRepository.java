@@ -1,10 +1,12 @@
 package com.devcool.adapters.out.persistence.channel.repository;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -49,4 +51,15 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       """)
   List<ChannelListRow> findChannelPageByMemberId(
       @Param("memberId") Integer memberId, @Param("cursorId") Integer cursorId, Pageable pageable);
+
+  @Query(
+      """
+      SELECT new com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow(
+      c.channelType,
+      c.totalOfMembers
+      )
+      FROM ChannelEntity c
+      WHERE c.id = :id
+      """)
+  Optional<ChannelAccessRow> findAccessRowById(@Param("id") Integer id);
 }

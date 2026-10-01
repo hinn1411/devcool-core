@@ -5,6 +5,7 @@ import com.devcool.adapters.out.persistence.channel.mapper.ChannelMapper;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.adapters.out.persistence.channel.repository.ChannelRepository;
 import com.devcool.domain.channel.model.Channel;
+import com.devcool.domain.channel.model.ChannelAccessInfo;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.out.ChannelPort;
@@ -57,6 +58,12 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean existById(Integer id) {
     return repo.existsById(id);
+  }
+
+  @Override
+  public Optional<ChannelAccessInfo> findAccessInfo(Integer id) {
+    return repo.findAccessRowById(id)
+        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers()));
   }
 
   @Override

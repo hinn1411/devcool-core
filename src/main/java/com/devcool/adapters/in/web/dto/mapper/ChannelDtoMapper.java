@@ -27,7 +27,8 @@ public interface ChannelDtoMapper {
   @Mapping(target = "channelId", source = "channelId")
   CreateChannelResponse toCreateChannelResponse(Integer channelId);
 
-  UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request);
+  @Mapping(target = "callerId", source = "callerId")
+  UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request, Integer callerId);
 
   // Boxed because MapStruct rejects primitive source parameters. Mapped by expression, not
   // source: MapStruct would otherwise emit a second, redundant null check that SpotBugs flags
@@ -35,7 +36,8 @@ public interface ChannelDtoMapper {
   @Mapping(target = "channelUpdated", expression = "java(isChannelUpdated)")
   UpdateChannelResponse toUpdateChannelResponse(Boolean isChannelUpdated);
 
-  AddMembersCommand toAddMembersCommand(AddMembersRequest request);
+  @Mapping(target = "callerId", source = "callerId")
+  AddMembersCommand toAddMembersCommand(AddMembersRequest request, Integer callerId);
 
   // Boxed + expression for the same reason as toUpdateChannelResponse.
   @Mapping(target = "memberAdded", expression = "java(isMemberAdded)")
