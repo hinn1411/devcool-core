@@ -1,5 +1,7 @@
 package com.devcool.adapters.in.web.controller;
 
+import com.devcool.adapters.in.web.dto.mapper.UserDtoMapper;
+import com.devcool.adapters.in.web.dto.response.UserProfileResponse;
 import com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.in.web.util.ApiResponseFactory;
 import com.devcool.domain.common.ErrorCode;
@@ -16,17 +18,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/users")
 public class UserController {
   private final GetUserQuery getUser;
+  private final UserDtoMapper mapper;
 
-  public UserController(GetUserQuery getUser) {
+  public UserController(GetUserQuery getUser, UserDtoMapper mapper) {
     this.getUser = getUser;
+    this.mapper = mapper;
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<ApiSuccessResponse<User>> getProfile(@PathVariable Integer id) {
+  public ResponseEntity<ApiSuccessResponse<UserProfileResponse>> getProfile(
+      @PathVariable Integer id) {
 
     User user = getUser.byId(id);
+    UserProfileResponse dto = mapper.toProfileResponse(user);
     return ResponseEntity.ok(
         ApiResponseFactory.success(
-            HttpStatus.OK, ErrorCode.OK.code(), "Get profile successfully", user));
+            HttpStatus.OK, ErrorCode.OK.code(), "Get profile successfully", dto));
   }
 }
