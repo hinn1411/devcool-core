@@ -22,6 +22,7 @@ class DtoMapperBeansTest {
       assertThat(context.getBeansOfType(ChannelDtoMapper.class)).hasSize(1);
       assertThat(context.getBeansOfType(MediaDtoMapper.class)).hasSize(1);
       assertThat(context.getBeansOfType(MessageDtoMapper.class)).hasSize(1);
+      assertThat(context.getBeansOfType(UserDtoMapper.class)).hasSize(1);
     }
   }
 }
