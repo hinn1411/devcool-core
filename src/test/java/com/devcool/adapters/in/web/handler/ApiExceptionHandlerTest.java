@@ -3,6 +3,8 @@ package com.devcool.adapters.in.web.handler;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.devcool.adapters.in.web.dto.wrapper.ApiErrorResponse;
+import com.devcool.domain.auth.exception.PasswordIncorrectException;
+import com.devcool.domain.auth.exception.PasswordNotMatchException;
 import com.devcool.domain.common.ErrorCode;
 import java.sql.SQLException;
 import org.hibernate.exception.ConstraintViolationException;
@@ -57,6 +59,28 @@ class ApiExceptionHandlerTest {
     assertThat(response.getStatusCode().value()).isEqualTo(500);
     assertThat(response.getBody()).isNotNull();
     assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.code());
+  }
+
+  @Test
+  void handleDomainException_passwordIncorrect_returns401WithEmptyDetails() {
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleDomainException(new PasswordIncorrectException());
+
+    assertThat(response.getStatusCode().value()).isEqualTo(401);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.PASSWORD_INCORRECT.code());
+    assertThat(response.getBody().getDetails()).isEmpty();
+  }
+
+  @Test
+  void handleDomainException_passwordNotMatch_returns422WithEmptyDetails() {
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleDomainException(new PasswordNotMatchException());
+
+    assertThat(response.getStatusCode().value()).isEqualTo(422);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().getCode()).isEqualTo(ErrorCode.PASSWORD_NOT_MATCH.code());
+    assertThat(response.getBody().getDetails()).isEmpty();
   }
 
   @Test
