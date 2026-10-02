@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -20,6 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
   private final JwtAuthFilter jwtAuthFilter;
+  private final AuthenticationEntryPoint authenticationEntryPoint;
+  // API docs.
   private final String[] publicPaths = {
     "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs"
   };
@@ -31,20 +34,20 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers(publicPaths)
                     .permitAll()
+                    // An allowlist: every entry needs a reason to be reachable without a token.
                     .requestMatchers(
-                        "/api/v1/auth/register",
-                        "/api/v1/auth/login",
-                        "/api/v1/auth/refresh_token",
-                        "/api/v1/auth/logout",
-                        "/public/**",
-                        "/error",
-                        "/ws",
-                        "/api/v1/channels")
+                        "/api/v1/auth/register", // the caller has no account yet
+                        "/api/v1/auth/login", // this is how a token is obtained
+                        "/api/v1/auth/refresh_token", // the rt cookie authenticates the caller
+                        "/public/**", // reserved for public assets; nothing is served here yet
+                        "/error", // Spring's error dispatch, also for anonymous callers
+                        "/ws") // WsAuthHandShakeInterceptor is the gate (ADR-0011)
                     .permitAll()
                     .requestMatchers("/api/v1/auth/profile")
                     .hasAuthority("USER")
                     .anyRequest()
                     .authenticated())
+        .exceptionHandling(handling -> handling.authenticationEntryPoint(authenticationEntryPoint))
         .sessionManagement(
             session -> session.sessionCreationPolicy((SessionCreationPolicy.STATELESS)))
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

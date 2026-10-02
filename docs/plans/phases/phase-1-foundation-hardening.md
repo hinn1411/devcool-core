@@ -62,7 +62,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 - [x] **P1-T06** #4, #5: pass the caller's id into `updateChannel`/`addMember`. Check the role in `ChannelService`; 403 otherwise. Add unit tests for member, creator, leader and non-member
 - [x] **P1-T07** #6: implement change-password end to end (verify the old password, hash the new one, bump `tokenVersion`, return 204), or remove the endpoint until P3. Decide and document
 - [x] **P1-T08** #7: cookie `Path=/api/v1/auth`, `HttpOnly; Secure; SameSite=Strict`. Fix the `verifyRefresh` null → throw `InvalidRefreshTokenException` → 401
-- [ ] **P1-T09** Remove `/api/v1/channels` from `permitAll`. Add a 401 test without a token
+- [x] **P1-T09** Remove `/api/v1/channels` from `permitAll`. Add a 401 test without a token
 - [ ] **P1-T10** Add `spring-boot-starter-actuator`. Enable the liveness and readiness probes, plus graceful shutdown (`server.shutdown=graceful`, `spring.lifecycle.timeout-per-shutdown-phase=30s`)
 - [ ] **P1-T11** Testcontainers: `AbstractIntegrationTest` with `@ServiceConnection` Postgres (`pgvector/pgvector:pg16`) and a reusable container. Convert `DevCoolApplicationTests` into a real context + Flyway smoke IT
 - [ ] **P1-T12** First ITs: `MessageRepository` cursor query, `ChannelController` authz (403/401), refresh-cookie flow with `MockMvc`
