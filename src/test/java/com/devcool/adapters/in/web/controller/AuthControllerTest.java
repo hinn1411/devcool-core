@@ -18,6 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.devcool.adapters.in.web.dto.mapper.AuthDtoMapperImpl;
 import com.devcool.domain.auth.exception.InvalidCredentialsException;
 import com.devcool.domain.auth.exception.PasswordIncorrectException;
+import com.devcool.domain.auth.exception.RefreshTokenInvalidException;
+import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.port.in.LogoutUseCase;
 import com.devcool.domain.auth.port.in.RefreshTokenUseCase;
@@ -27,7 +29,9 @@ import com.devcool.domain.user.port.in.ChangePasswordUseCase;
 import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
+import jakarta.servlet.http.Cookie;
 import java.security.Principal;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +68,18 @@ class AuthControllerTest {
       """
           .formatted(SUBMITTED_PASSWORD, NEW_PASSWORD, NEW_PASSWORD);
 
+  private static final String ACCESS_TOKEN = "issued-access-token";
+  private static final String REFRESH_TOKEN = "issued-refresh-token";
+  private static final String PRESENTED_REFRESH_TOKEN = "presented-refresh-token";
+
+  // ADR-0011 decision 4. "Path=/api/v1/auth;" with the semicolon rules out any longer path.
+  private static final Matcher<String> SCOPED_TO_AUTH =
+      allOf(
+          containsString("Path=/api/v1/auth;"),
+          containsString("HttpOnly"),
+          containsString("Secure"),
+          containsString("SameSite=Strict"));
+
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private AuthenticateUserUseCase authenticate;
@@ -76,6 +92,102 @@ class AuthControllerTest {
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
   @MockitoBean private LoadUserPort loadUserPort;
+
+  // Audit item #7: the refresh token travels only in the cookie, scoped to the auth endpoints.
+  @Test
+  void login_success_setsTheScopedCookieAndKeepsTheRefreshTokenOutOfTheBody() throws Exception {
+    when(authenticate.login(any())).thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(LOGIN_BODY))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.accessToken").value(ACCESS_TOKEN))
+        .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+        .andExpect(content().string(not(containsString(REFRESH_TOKEN))))
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.SET_COOKIE,
+                    allOf(containsString("rt=" + REFRESH_TOKEN + ";"), SCOPED_TO_AUTH)));
+  }
+
+  @Test
+  void refreshToken_success_rotatesTheScopedCookieAndKeepsTheRefreshTokenOutOfTheBody()
+      throws Exception {
+    when(tokenRefresher.refresh(PRESENTED_REFRESH_TOKEN))
+        .thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh_token").cookie(new Cookie("rt", PRESENTED_REFRESH_TOKEN)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.accessToken").value(ACCESS_TOKEN))
+        .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+        .andExpect(content().string(not(containsString(REFRESH_TOKEN))))
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.SET_COOKIE,
+                    allOf(containsString("rt=" + REFRESH_TOKEN + ";"), SCOPED_TO_AUTH)));
+  }
+
+  @Test
+  void refreshToken_rejectedToken_returns401WithoutACookieOrTheToken() throws Exception {
+    when(tokenRefresher.refresh(PRESENTED_REFRESH_TOKEN))
+        .thenThrow(new RefreshTokenInvalidException("Refresh token invalid"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh_token").cookie(new Cookie("rt", PRESENTED_REFRESH_TOKEN)))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH_225"))
+        .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
+        .andExpect(content().string(not(containsString(PRESENTED_REFRESH_TOKEN))));
+  }
+
+  // A missing cookie reaches the use case as null, so the service answers 401 instead of the
+  // framework answering 500.
+  @Test
+  void refreshToken_noCookie_returns401() throws Exception {
+    when(tokenRefresher.refresh(null))
+        .thenThrow(new RefreshTokenInvalidException("Refresh token invalid"));
+
+    mockMvc
+        .perform(post("/api/v1/auth/refresh_token"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH_225"));
+  }
+
+  @Test
+  void logout_success_returns204AndExpiresTheScopedCookie() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/auth/logout")
+                .principal(CALLER)
+                .cookie(new Cookie("rt", PRESENTED_REFRESH_TOKEN)))
+        .andExpect(status().isNoContent())
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.SET_COOKIE,
+                    allOf(containsString("rt=;"), containsString("Max-Age=0"), SCOPED_TO_AUTH)));
+
+    verify(tokenRevoker).logout(PRESENTED_REFRESH_TOKEN, 7);
+  }
+
+  @Test
+  void logout_noCookie_returns401() throws Exception {
+    doThrow(new RefreshTokenInvalidException("Refresh token invalid"))
+        .when(tokenRevoker)
+        .logout(null, 7);
+
+    mockMvc
+        .perform(post("/api/v1/auth/logout").principal(CALLER))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("AUTH_225"))
+        .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+  }
 
   // What AuthenticateUserService throws for an unknown user or a wrong password.
   @Test
@@ -104,7 +216,7 @@ class AuthControllerTest {
             header()
                 .string(
                     HttpHeaders.SET_COOKIE,
-                    allOf(containsString("rt=;"), containsString("Max-Age=0"))));
+                    allOf(containsString("rt=;"), containsString("Max-Age=0"), SCOPED_TO_AUTH)));
 
     ArgumentCaptor<ChangePasswordCommand> command =
         ArgumentCaptor.forClass(ChangePasswordCommand.class);

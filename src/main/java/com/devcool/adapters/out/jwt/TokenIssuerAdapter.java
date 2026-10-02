@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -80,18 +79,19 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
   }
 
   @Override
-  public TokenSubject verifyRefresh(String refreshToken) {
+  public Optional<TokenSubject> verifyRefresh(String refreshToken) {
     var jwt = verify(refreshToken, refreshKey, TokenType.REFRESH.name());
     if (Objects.isNull(jwt)) {
-      return null;
+      return Optional.empty();
     }
 
     try {
       String subject = jwt.getJWTClaimsSet().getSubject();
       String jti = jwt.getJWTClaimsSet().getJWTID();
-      return new TokenSubject(subject, jti);
+      return Optional.of(new TokenSubject(subject, jti));
     } catch (ParseException e) {
-      throw new BadCredentialsException("Cannot verify refresh token", e);
+      log.warn("Cannot read refresh token claims");
+      return Optional.empty();
     }
   }
 

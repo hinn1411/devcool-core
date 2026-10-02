@@ -18,7 +18,6 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,11 +33,11 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   @Override
   @Transactional
   public TokenPair refresh(String rawRefreshToken) {
-    TokenSubject sub = tokenIssuerPort.verifyRefresh(rawRefreshToken);
+    TokenSubject sub = requireValid(rawRefreshToken);
     String jtiHash = HashUtils.sha256(sub.jti());
 
     if (!refreshTokenPort.consumeIfValid(jtiHash)) {
-      throw new CredentialsExpiredException("Refresh token invalid, expired or already in used");
+      throw new RefreshTokenInvalidException("Refresh token expired or already used");
     }
 
     User user =
@@ -60,17 +59,26 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   @Override
   @Transactional
   public void logout(String refreshToken, Integer userId) {
-    if (Objects.isNull(refreshToken)) {
-      throw new RefreshTokenInvalidException("Empty refresh token");
-    }
     Objects.requireNonNull(userId, "userId must not be null");
+    TokenSubject sub = requireValid(refreshToken);
 
-    String hashJti = HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
+    String hashJti = HashUtils.sha256(sub.jti());
     if (!refreshTokenPort.revoke(hashJti)) {
       log.warn("Cannot revoke token!");
     }
     if (!accessTokenPort.updateVersion(userId)) {
       log.warn("Cannot update access token version");
     }
+  }
+
+  private TokenSubject requireValid(String rawRefreshToken) {
+    if (Objects.isNull(rawRefreshToken)) {
+      throw new RefreshTokenInvalidException("Refresh token is null");
+    }
+    TokenSubject tokenSubject =
+        tokenIssuerPort
+            .verifyRefresh(rawRefreshToken)
+            .orElseThrow(() -> new RefreshTokenInvalidException("Refresh token invalid"));
+    return tokenSubject;
   }
 }
