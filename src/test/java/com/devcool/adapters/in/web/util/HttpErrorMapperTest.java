@@ -22,6 +22,7 @@ class HttpErrorMapperTest {
     "USERNAME_ALREADY_USED, CONFLICT",
     "PASSWORD_INCORRECT, UNPROCESSABLE_ENTITY", // the caller is authenticated; a field is wrong
     "INVALID_CREDENTIALS, UNAUTHORIZED",
+    "UNAUTHENTICATED, UNAUTHORIZED", // no valid access token on a protected endpoint
     "INVALID_OBJECT_KEY, BAD_REQUEST",
     "PASSWORD_NOT_MATCH, UNPROCESSABLE_ENTITY",
     "REFRESH_TOKEN_INVALID, UNAUTHORIZED",
