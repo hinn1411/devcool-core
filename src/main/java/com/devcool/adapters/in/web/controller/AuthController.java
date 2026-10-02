@@ -31,8 +31,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +47,9 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+  private static final String REFRESH_COOKIE = "rt";
+  private static final String REFRESH_COOKIE_PATH = "/api/v1/auth";
+  private static final Duration REFRESH_COOKIE_TTL = Duration.ofDays(7);
   private final RegisterUserUseCase registerUser;
   private final AuthenticateUserUseCase authenticate;
   private final ChangePasswordUseCase changePassword;
@@ -121,14 +122,7 @@ public class AuthController {
 
     LoginCommand command = new LoginCommand(request.username(), request.password());
     TokenPair tokens = authenticate.login(command);
-    ResponseCookie cookie =
-        ResponseCookie.from("rt", tokens.refreshToken())
-            .httpOnly(true)
-            .secure(true)
-            .sameSite("Strict")
-            .path("/api/v1/auth/refresh")
-            .maxAge(Duration.between(Instant.now(), Instant.now().plus(7, ChronoUnit.DAYS)))
-            .build();
+    ResponseCookie cookie = refreshCookie(tokens.refreshToken(), REFRESH_COOKIE_TTL);
     LoginResponse response = mapper.toLoginResponse(tokens);
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -192,16 +186,9 @@ public class AuthController {
 
   @PostMapping("/refresh_token")
   public ResponseEntity<ApiSuccessResponse<RefreshTokenResponse>> refreshToken(
-      @CookieValue("rt") String refreshToken) {
+      @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken) {
     TokenPair tokenPair = tokenRefresher.refresh(refreshToken);
-    ResponseCookie newCookie =
-        ResponseCookie.from("rt", tokenPair.refreshToken())
-            .httpOnly(true)
-            .secure(true)
-            .sameSite("Strict")
-            .path("/api/v1/auth/refresh")
-            .maxAge(Duration.between(Instant.now(), Instant.now().plus(7, ChronoUnit.DAYS)))
-            .build();
+    ResponseCookie newCookie = refreshCookie(tokenPair.refreshToken(), REFRESH_COOKIE_TTL);
     RefreshTokenResponse response = mapper.toRefreshTokenResponse(tokenPair);
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, newCookie.toString())
@@ -212,7 +199,8 @@ public class AuthController {
 
   @PostMapping("/logout")
   public ResponseEntity<ApiSuccessResponse<LogoutResponse>> logout(
-      @CookieValue("rt") String refreshToken, Authentication auth) {
+      @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
+      Authentication auth) {
 
     tokenRevoker.logout(refreshToken, Integer.valueOf(auth.getName()));
 
@@ -222,12 +210,18 @@ public class AuthController {
   }
 
   private static ResponseCookie expiredRefreshCookie() {
-    return ResponseCookie.from("rt", "")
+    return refreshCookie("", Duration.ZERO);
+  }
+
+  // The path covers /refresh_token and /logout, the only endpoints that read the cookie
+  // (ADR-0011).
+  private static ResponseCookie refreshCookie(String value, Duration maxAge) {
+    return ResponseCookie.from(REFRESH_COOKIE, value)
         .httpOnly(true)
         .secure(true)
         .sameSite("Strict")
-        .path("/api/v1/auth/refresh")
-        .maxAge(0)
+        .path(REFRESH_COOKIE_PATH)
+        .maxAge(maxAge)
         .build();
   }
 }
