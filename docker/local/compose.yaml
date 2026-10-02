@@ -1,41 +1,56 @@
 services:
   postgres:
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: devcool
-      POSTGRES_PASSWORD: 123456789
-      POSTGRES_USER: hiengiang
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in docker/local/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in docker/local/.env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in docker/local/.env}
     volumes:
       - postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hiengiang} -d ${POSTGRES_DB:-devcool}"]
+      # $$ leaves the variable for the container's shell, so it reads the container's own values.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
+    labels: { org.springframework.boot.service-connection: postgres }
 
   pgadmin:
     image: dpage/pgadmin4:latest
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?set PGADMIN_DEFAULT_EMAIL in docker/local/.env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?set PGADMIN_DEFAULT_PASSWORD in docker/local/.env}
       PGADMIN_LISTEN_PORT: 5050
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_SERVER_JSON_FILE: /tmp/servers.json
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in docker/local/.env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in docker/local/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in docker/local/.env}
     volumes:
       - pgadmin:/var/lib/pgadmin
-      - ./docker_pgadmin_servers.json:/pgadmin4/servers.json
     ports:
       - "5050:5050"
     depends_on:
       postgres:
         condition: service_healthy
+    # The server list and the password file are written at start from the container's
+    # environment, so the database credentials live only in .env.
     entrypoint:
       - "/bin/sh"
       - "-c"
-      - "/bin/echo 'postgres:5432:*:hiengiang:123456789' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+      - |
+        echo "postgres:5432:*:$$POSTGRES_USER:$$POSTGRES_PASSWORD" > /tmp/pgpassfile
+        chmod 600 /tmp/pgpassfile
+        cat > /tmp/servers.json <<JSON
+        {"Servers": {"1": {"Name": "Docker Compose", "Group": "Servers", "Port": 5432,
+          "Username": "$$POSTGRES_USER", "Host": "postgres", "SSLMode": "prefer",
+          "MaintenanceDB": "$$POSTGRES_DB", "PassFile": "/tmp/pgpassfile"}}}
+        JSON
+        exec /entrypoint.sh
 
 volumes:
   postgres:
