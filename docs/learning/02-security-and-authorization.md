@@ -66,7 +66,7 @@ public PasswordIncorrectException(String password) {
 thrown at `application/service/AuthenticateUserService.java:38-41`:
 
 ```java
-if (!hasher.matches(command.password(), user.getPassword())) {
+if (!passwordHasherPort.matches(command.password(), user.getPassword())) {
   log.warn("Password does not match!");
   throw new PasswordIncorrectException(command.password());
 }
@@ -262,7 +262,7 @@ private static JWTClaimsSet getClaims(String token) {
 ```java
 String jti = JwtUtils.jtiFrom(refreshToken);
 String hashJti = HashUtils.sha256(jti);
-if (!refreshStore.revoke(hashJti)) {
+if (!refreshTokenPort.revoke(hashJti)) {
   log.warn("Cannot revoke token!");
 }
 ```

@@ -245,9 +245,9 @@ How it's called: `JwtAuthFilter.java:107-109` extracts the version from the toke
 
 **Done when**
 - The captured `User` is asserted with `SoftAssertions` or `usingRecursiveComparison().ignoringFields(...)`
-- `hasher.hash` is stubbed with a distinctive value (e.g. `"HASHED(secret)"`), and the test proves *that* value was stored and the raw password never was
-- The wrong-password case verifies `never()` on **both** `hasher.hash` and `userPort.updatePassword`
-- Both register reject paths assert `verifyNoInteractions(hasher)` and `verify(userPort, never()).save(any())`
+- `passwordHasherPort.hash` is stubbed with a distinctive value (e.g. `"HASHED(secret)"`), and the test proves *that* value was stored and the raw password never was
+- The wrong-password case verifies `never()` on **both** `passwordHasherPort.hash` and `userPort.updatePassword`
+- Both register reject paths assert `verifyNoInteractions(passwordHasherPort)` and `verify(userPort, never()).save(any())`
 - The both-taken case asserts `verify(userPort, never()).existsByEmail(any())`, which proves the check order
 - The recursive comparison ignores no field that the spec defines (`id` and `lastLoginTime` included)
 

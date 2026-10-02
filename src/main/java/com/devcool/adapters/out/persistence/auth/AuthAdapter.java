@@ -8,7 +8,7 @@ import com.devcool.adapters.out.persistence.user.repository.UserRepository;
 import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.LoadUserPort;
-import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
+import com.devcool.domain.auth.port.out.RefreshTokenPort;
 import com.devcool.domain.user.model.User;
 import java.util.List;
 import java.util.Objects;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @AllArgsConstructor
-public class AuthAdapter implements LoadUserPort, RefreshTokenStorePort, AccessTokenPort {
+public class AuthAdapter implements LoadUserPort, RefreshTokenPort, AccessTokenPort {
   private final UserRepository userRepo;
   private final UserMapper userMapper;
   private final RefreshTokenRepository refreshTokenRepo;

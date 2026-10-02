@@ -254,7 +254,7 @@ SoftAssertions.assertSoftly(s -> {
 @ExtendWith(MockitoExtension.class)     // enables annotations + strict stubs
 class UserServiceTest {
   @Mock UserPort userPort;
-  @Mock PasswordHasherPort hasher;
+  @Mock PasswordHasherPort passwordHasherPort;
   @InjectMocks UserService userService;  // constructor injection with the mocks above
   @Captor ArgumentCaptor<User> userCaptor;
 }
@@ -278,7 +278,7 @@ That's also a good habit in general. **Explicit construction documents the depen
 when(userPort.findById(7)).thenReturn(Optional.of(user));
 when(userPort.existsByUsername("bob")).thenReturn(true);
 when(channelPort.save(any())).thenReturn(100);
-when(hasher.hash("raw")).thenReturn("HASHED");
+when(passwordHasherPort.hash("raw")).thenReturn("HASHED");
 when(port.load(1)).thenThrow(new IllegalStateException("boom"));
 
 // void methods: the when(...) form can't wrap a void call

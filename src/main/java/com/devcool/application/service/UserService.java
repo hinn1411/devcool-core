@@ -5,7 +5,7 @@ import com.devcool.domain.auth.exception.PasswordIncorrectException;
 import com.devcool.domain.auth.exception.PasswordNotMatchException;
 import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.PasswordHasherPort;
-import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
+import com.devcool.domain.auth.port.out.RefreshTokenPort;
 import com.devcool.domain.user.exception.EmailAlreadyUsedException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.exception.UsernameAlreadyUsedException;
@@ -32,9 +32,9 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
 
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
   private final UserPort userPort;
-  private final PasswordHasherPort hasher;
+  private final PasswordHasherPort passwordHasherPort;
   private final AccessTokenPort accessTokenPort;
-  private final RefreshTokenStorePort refreshStore;
+  private final RefreshTokenPort refreshTokenPort;
 
   /**
    * Changes the password and logs the user out everywhere: every access token is invalidated by the
@@ -52,28 +52,28 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
       throw new PasswordNotMatchException();
     }
 
+    if (newPassword.equals(currentPassword)) {
+      log.warn("Current password and new password are the same");
+      throw new PasswordDuplicateException();
+    }
+
     User user =
         userPort
             .findById(command.userId())
             .orElseThrow(() -> new UserNotFoundException(command.userId()));
 
-    if (!hasher.matches(currentPassword, user.getPassword())) {
+    if (!passwordHasherPort.matches(currentPassword, user.getPassword())) {
       log.warn("Current password does not match hashed password");
       throw new PasswordIncorrectException();
     }
 
-    if (confirmedPassword.equals(currentPassword)) {
-      log.warn("Current password and new password are the same");
-      throw new PasswordDuplicateException();
-    }
-
-    String hashedNewPassword = hasher.hash(confirmedPassword);
+    String hashedNewPassword = passwordHasherPort.hash(newPassword);
     // Fail closed: a write that changed no row must not look like success.
     if (!userPort.updatePassword(user.getId(), hashedNewPassword)) {
       throw new UserNotFoundException(command.userId());
     }
     accessTokenPort.updateVersion(user.getId());
-    refreshStore.deleteOldRefreshTokens(user.getId());
+    refreshTokenPort.deleteOldRefreshTokens(user.getId());
   }
 
   @Override
@@ -112,7 +112,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
   private User buildUser(RegisterUserCommand command, String email) {
     return User.builder()
         .username(command.username())
-        .password(hasher.hash(command.rawPassword()))
+        .password(passwordHasherPort.hash(command.rawPassword()))
         .email(email)
         .name(command.name())
         .role(Role.USER)
