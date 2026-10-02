@@ -144,7 +144,7 @@ Spring interprets a `null` return as "the handler already wrote the response" an
 **In your code** — `application/service/RefreshTokenService.java:38-40`:
 
 ```java
-if (!refreshStore.consumeIfValid(jtiHash)) {
+if (!refreshTokenPort.consumeIfValid(jtiHash)) {
   throw new CredentialsExpiredException("Refresh token invalid, expired or already in used");
 }
 ```

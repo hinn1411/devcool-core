@@ -38,8 +38,8 @@ class UserControllerTest {
   @MockitoBean private GetUserQuery getUser;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
-  @MockitoBean private TokenIssuerPort tokenIssuer;
-  @MockitoBean private LoadUserPort loadUser;
+  @MockitoBean private TokenIssuerPort tokenIssuerPort;
+  @MockitoBean private LoadUserPort loadUserPort;
 
   @Test
   void getProfile_exposesOnlyPublicFields() throws Exception {

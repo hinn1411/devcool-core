@@ -2,7 +2,7 @@ package com.devcool.domain.auth.port.out;
 
 import com.devcool.domain.auth.model.RefreshToken;
 
-public interface RefreshTokenStorePort {
+public interface RefreshTokenPort {
   void store(RefreshToken refreshToken);
 
   boolean consumeIfValid(String jtiHash);

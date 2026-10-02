@@ -11,7 +11,7 @@ import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.domain.auth.exception.RefreshTokenInvalidException;
 import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.LoadUserPort;
-import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
+import com.devcool.domain.auth.port.out.RefreshTokenPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -32,9 +32,9 @@ class RefreshTokenServiceTest {
   private static final String JTI = "jti-1";
   private static final Integer USER_ID = 7;
 
-  @Mock private TokenIssuerPort issuer;
-  @Mock private LoadUserPort loadUser;
-  @Mock private RefreshTokenStorePort refreshStore;
+  @Mock private TokenIssuerPort tokenIssuerPort;
+  @Mock private LoadUserPort loadUserPort;
+  @Mock private RefreshTokenPort refreshTokenPort;
   @Mock private AccessTokenPort accessTokenPort;
 
   @InjectMocks private RefreshTokenService service;
@@ -51,20 +51,20 @@ class RefreshTokenServiceTest {
   @Test
   void logout_revokesRefreshTokenThenBumpsAccessTokenVersion() throws JOSEException {
     String hashJti = HashUtils.sha256(JTI);
-    when(refreshStore.revoke(hashJti)).thenReturn(true);
+    when(refreshTokenPort.revoke(hashJti)).thenReturn(true);
     when(accessTokenPort.updateVersion(USER_ID)).thenReturn(true);
 
     service.logout(refreshTokenWithJti(JTI), USER_ID);
 
-    InOrder inOrder = inOrder(refreshStore, accessTokenPort);
-    inOrder.verify(refreshStore).revoke(hashJti);
+    InOrder inOrder = inOrder(refreshTokenPort, accessTokenPort);
+    inOrder.verify(refreshTokenPort).revoke(hashJti);
     inOrder.verify(accessTokenPort).updateVersion(USER_ID);
   }
 
   @Test
   void logout_refreshTokenAlreadyRevoked_stillBumpsAccessTokenVersion() throws JOSEException {
     String hashJti = HashUtils.sha256(JTI);
-    when(refreshStore.revoke(hashJti)).thenReturn(false);
+    when(refreshTokenPort.revoke(hashJti)).thenReturn(false);
     when(accessTokenPort.updateVersion(USER_ID)).thenReturn(true);
 
     assertThatCode(() -> service.logout(refreshTokenWithJti(JTI), USER_ID))
@@ -78,7 +78,7 @@ class RefreshTokenServiceTest {
     assertThatThrownBy(() -> service.logout(null, USER_ID))
         .isInstanceOf(RefreshTokenInvalidException.class);
 
-    verifyNoInteractions(refreshStore, accessTokenPort);
+    verifyNoInteractions(refreshTokenPort, accessTokenPort);
   }
 
   @Test
@@ -89,6 +89,6 @@ class RefreshTokenServiceTest {
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("userId");
 
-    verifyNoInteractions(refreshStore, accessTokenPort);
+    verifyNoInteractions(refreshTokenPort, accessTokenPort);
   }
 }

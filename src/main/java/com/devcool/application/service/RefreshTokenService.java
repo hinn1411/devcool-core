@@ -10,7 +10,7 @@ import com.devcool.domain.auth.port.in.LogoutUseCase;
 import com.devcool.domain.auth.port.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.port.out.AccessTokenPort;
 import com.devcool.domain.auth.port.out.LoadUserPort;
-import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
+import com.devcool.domain.auth.port.out.RefreshTokenPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
@@ -26,23 +26,23 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
   private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
-  private final TokenIssuerPort issuer;
-  private final LoadUserPort loadUser;
-  private final RefreshTokenStorePort refreshStore;
+  private final TokenIssuerPort tokenIssuerPort;
+  private final LoadUserPort loadUserPort;
+  private final RefreshTokenPort refreshTokenPort;
   private final AccessTokenPort accessTokenPort;
 
   @Override
   @Transactional
   public TokenPair refresh(String rawRefreshToken) {
-    TokenSubject sub = issuer.verifyRefresh(rawRefreshToken);
+    TokenSubject sub = tokenIssuerPort.verifyRefresh(rawRefreshToken);
     String jtiHash = HashUtils.sha256(sub.jti());
 
-    if (!refreshStore.consumeIfValid(jtiHash)) {
+    if (!refreshTokenPort.consumeIfValid(jtiHash)) {
       throw new CredentialsExpiredException("Refresh token invalid, expired or already in used");
     }
 
     User user =
-        loadUser
+        loadUserPort
             .loadById(Integer.valueOf(sub.userId()))
             .orElseThrow(
                 () -> {
@@ -50,9 +50,9 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
                   return new UserNotFoundException(Integer.valueOf(sub.userId()));
                 });
 
-    TokenPair tokenPair = issuer.rotate(user, sub.jti());
+    TokenPair tokenPair = tokenIssuerPort.rotate(user, sub.jti());
     RefreshToken refreshToken = JwtUtils.buildRefreshToken(user, tokenPair);
-    refreshStore.store(refreshToken);
+    refreshTokenPort.store(refreshToken);
 
     return tokenPair;
   }
@@ -66,7 +66,7 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
     Objects.requireNonNull(userId, "userId must not be null");
 
     String hashJti = HashUtils.sha256(JwtUtils.jtiFrom(refreshToken));
-    if (!refreshStore.revoke(hashJti)) {
+    if (!refreshTokenPort.revoke(hashJti)) {
       log.warn("Cannot revoke token!");
     }
     if (!accessTokenPort.updateVersion(userId)) {

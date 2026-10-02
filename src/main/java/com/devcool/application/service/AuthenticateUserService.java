@@ -8,7 +8,7 @@ import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.port.in.command.LoginCommand;
 import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.PasswordHasherPort;
-import com.devcool.domain.auth.port.out.RefreshTokenStorePort;
+import com.devcool.domain.auth.port.out.RefreshTokenPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
@@ -23,33 +23,33 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthenticateUserService implements AuthenticateUserUseCase {
   private static final Logger log = LoggerFactory.getLogger(AuthenticateUserService.class);
-  private final LoadUserPort loadUser;
-  private final PasswordHasherPort hasher;
-  private final TokenIssuerPort issuer;
-  private final RefreshTokenStorePort refreshStore;
+  private final LoadUserPort loadUserPort;
+  private final PasswordHasherPort passwordHasherPort;
+  private final TokenIssuerPort tokenIssuerPort;
+  private final RefreshTokenPort refreshTokenPort;
   private final UserPort userPort;
 
   @Override
   @Transactional
   public TokenPair login(LoginCommand command) {
-    Optional<User> maybeUser = loadUser.loadByUsername(command.username());
+    Optional<User> maybeUser = loadUserPort.loadByUsername(command.username());
     if (maybeUser.isEmpty()) {
       log.warn("Login failed: no account for username '{}'", command.username());
       throw new InvalidCredentialsException();
     }
     User user = maybeUser.get();
 
-    if (!hasher.matches(command.password(), user.getPassword())) {
+    if (!passwordHasherPort.matches(command.password(), user.getPassword())) {
       log.warn("Login failed: incorrect password for username '{}'", command.username());
       throw new InvalidCredentialsException();
     }
 
     updateLoginTime(user);
 
-    TokenPair tokenPair = issuer.issue(user);
+    TokenPair tokenPair = tokenIssuerPort.issue(user);
     RefreshToken refreshToken = JwtUtils.buildRefreshToken(user, tokenPair);
-    refreshStore.deleteOldRefreshTokens(user.getId());
-    refreshStore.store(refreshToken);
+    refreshTokenPort.deleteOldRefreshTokens(user.getId());
+    refreshTokenPort.store(refreshToken);
 
     return tokenPair;
   }

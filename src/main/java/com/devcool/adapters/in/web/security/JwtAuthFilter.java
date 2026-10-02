@@ -21,8 +21,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
-  private final TokenIssuerPort issuer;
-  private final LoadUserPort loader;
+  private final TokenIssuerPort tokenIssuerPort;
+  private final LoadUserPort loadUserPort;
 
   @Override
   protected void doFilterInternal(
@@ -38,7 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     String token = header.substring(7).trim();
-    if (!issuer.isAccessTokenValid(token)) {
+    if (!tokenIssuerPort.isAccessTokenValid(token)) {
       logger.warn("Access token is invalid!");
       SecurityContextHolder.clearContext();
       filterChain.doFilter(request, response);
@@ -47,7 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     Integer subject = Integer.valueOf(JwtUtils.subjectFrom(token));
     Integer currentVersion = JwtUtils.versionFrom(token);
-    User user = loader.loadById(subject).orElse(null);
+    User user = loadUserPort.loadById(subject).orElse(null);
     if (Objects.isNull(user) || !user.isTokenVersionValid(currentVersion)) {
       logger.warn("User is invalid");
       SecurityContextHolder.clearContext();

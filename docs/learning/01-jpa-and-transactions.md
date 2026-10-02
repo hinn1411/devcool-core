@@ -174,8 +174,8 @@ That inverts the default: every individual write is atomic, and no multi-step us
 ```java
 updateLoginTime(user);                        // tx 1, commits
 ...
-refreshStore.deleteOldRefreshTokens(user.getId());  // tx 2, commits
-refreshStore.store(refreshToken);                   // tx 3
+refreshTokenPort.deleteOldRefreshTokens(user.getId());  // tx 2, commits
+refreshTokenPort.store(refreshToken);                   // tx 3
 ```
 
 If `store` fails, the old refresh tokens are **already committed as deleted** and the new one was never written. The user is silently logged out of every device, holding a refresh token with no database row.
