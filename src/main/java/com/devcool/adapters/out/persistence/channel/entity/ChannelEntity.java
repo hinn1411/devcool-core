@@ -1,4 +1,3 @@
-
 package com.devcool.adapters.out.persistence.channel.entity;
 
 import com.devcool.adapters.out.persistence.member.entity.MemberEntity;
