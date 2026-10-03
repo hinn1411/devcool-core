@@ -15,7 +15,7 @@ public class AuthProviderEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "ID", nullable = false, unique = true)
+  @Column(name = "ID", nullable = false)
   private Integer id;
 
   @Column(name = "PROVIDER", nullable = false)
@@ -29,6 +29,9 @@ public class AuthProviderEntity {
   private Timestamp createdTime;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
+  @JoinColumn(
+      name = "USER_ID",
+      referencedColumnName = "ID",
+      foreignKey = @ForeignKey(name = "fk_auth_provider_user"))
   private UserEntity user;
 }

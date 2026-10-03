@@ -71,6 +71,7 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [08 — Unit Testing Exercises](08-unit-testing-exercises.md) | Twelve hands-on exercises against real classes here, several of which hide live bugs. |
 | [09 — Classic vs Mockist](09-test-schools.md) | What do the two testing schools' strengths and weaknesses look like when the code actually changes? |
 | [10 — Realtime Architecture Design](10-realtime-architecture-design.md) | How is the `/ws` layer put together, where does it stop scaling, and which of eleven options do you move to next? |
+| [11 — Flyway & Schema Management](11-flyway-and-schema-management.md) | Who owns the schema? `ddl-auto` vs Flyway, how they start together, and the traps in generating the P1-T01 baseline. |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 

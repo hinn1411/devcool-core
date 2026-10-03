@@ -48,13 +48,13 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
   - Channel roles beyond what #4 and #5 need (P3 completes role management).
 
 ## Design notes
-- **Flyway baseline:** generate DDL from the current entities once (`spring.jpa.properties.jakarta.persistence.schema-generation.scripts.*` or `pg_dump --schema-only` from a local DB created by `ddl-auto=create`), review it by hand, and commit it as `V1__baseline.sql`. Then set `ddl-auto=validate` and `spring.flyway.enabled=true` in **every** profile, including `local`.
+- **Flyway baseline:** generate DDL from the current entities once (`spring.jpa.properties.jakarta.persistence.schema-generation.scripts.*` or `pg_dump --schema-only` from a local DB created by `ddl-auto=create`), review it by hand, and commit it as `V1__baseline.sql`. Then set `ddl-auto=validate` in **every** profile, including `local`, and enable Flyway in the app everywhere except `ecs` (P2-T05 runs it as a one-off migrate task).
 - Do **not** change id types in V1; the BIGINT migration is P3-T01, as its own migration.
 - **Authorization for #4 and #5:** the caller must be a member, and the role table in `ChannelPermissionPolicy` decides the rest (see [03 §12](../architecture/03-chat-system-design.md#12-security-specifics)): Forum is `CREATOR`/`LEADER` only, Lounge is any member, and a private chat can't gain members. The check lives in `ChannelService` (the application layer): a non-member gets `MemberNotFoundException` and a wrong role gets a domain `ForbiddenException`, both mapped to 403. The controller passes the caller's id.
 - **Health:** `management.endpoint.health.probes.enabled=true`, and expose only `health` and `info` publicly. The ALB uses `/actuator/health/readiness`.
 
 ## Tasks
-- [ ] **P1-T01** Flyway `V1__baseline.sql` from the current entities. Enable Flyway and `ddl-auto=validate` in all profiles. Fix CLAUDE.md's profile table if it still differs
+- [x] **P1-T01** Flyway `V1__baseline.sql` from the current entities. `ddl-auto=validate` in all profiles; Flyway on in the app everywhere except `ecs`, where the P2-T05 migrate task runs it. Fix CLAUDE.md's profile table if it still differs
 - [x] **P1-T02** Local DB → `pgvector/pgvector:pg16` in `docker/local/compose.yaml`. Move the credentials to an `.env` file referenced by compose (not committed). Update `application-local.properties`
 - [ ] **P1-T03** `V2__message_channel_seq_index.sql`: index `(channel_id, id DESC)` (from improvements item #3)
 - [x] **P1-T04** #1: `UserController` returns a `UserProfileResponse` DTO via MapStruct. Add an IT asserting that no `password`/`tokenVersion` appears in the JSON

@@ -108,8 +108,8 @@ com.devcool/
 
 | Profile | DDL | DB |
 |---|---|---|
-| `local` | `update` today → Flyway + `validate` after P1-T01 | Docker Compose PostgreSQL |
-| `ecs` | `validate` (Flyway runs as a separate migrate task, P2) | RDS/Aurora via env vars |
+| `local` | Flyway migrates on start + `validate` | Docker Compose PostgreSQL |
+| `ecs` | `validate`; Flyway off in the app (a separate migrate task runs it, P2-T05) | RDS/Aurora via env vars |
 
 Local env vars (JWT secrets etc.) are in `local.env`. Never read or print it.
 
