@@ -14,7 +14,7 @@ public class TopicEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "ID", nullable = false, unique = true)
+  @Column(name = "ID", nullable = false)
   private Integer id;
 
   @Column(name = "NAME", nullable = false)
@@ -23,7 +23,15 @@ public class TopicEntity {
   @ManyToMany
   @JoinTable(
       name = "TOPICS_OF_CHANNELS",
-      joinColumns = @JoinColumn(name = "TOPIC_ID", referencedColumnName = "ID"),
-      inverseJoinColumns = @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID"))
+      joinColumns =
+          @JoinColumn(
+              name = "TOPIC_ID",
+              referencedColumnName = "ID",
+              foreignKey = @ForeignKey(name = "fk_topics_of_channels_topic")),
+      inverseJoinColumns =
+          @JoinColumn(
+              name = "CHANNEL_ID",
+              referencedColumnName = "ID",
+              foreignKey = @ForeignKey(name = "fk_topics_of_channels_channel")))
   private List<ChannelEntity> channels;
 }

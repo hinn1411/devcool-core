@@ -19,7 +19,7 @@ public class ChannelEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "ID", nullable = false, unique = true)
+  @Column(name = "ID", nullable = false)
   private Integer id;
 
   @Column(name = "NAME", nullable = false)
@@ -40,11 +40,18 @@ public class ChannelEntity {
   private ChannelType channelType;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "CREATOR_ID", referencedColumnName = "ID")
+  @JoinColumn(
+      name = "CREATOR_ID",
+      referencedColumnName = "ID",
+      foreignKey = @ForeignKey(name = "fk_channel_creator"))
   private UserEntity creator;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "LEADER_ID", referencedColumnName = "ID", nullable = true)
+  @JoinColumn(
+      name = "LEADER_ID",
+      referencedColumnName = "ID",
+      nullable = true,
+      foreignKey = @ForeignKey(name = "fk_channel_leader"))
   private UserEntity leader;
 
   @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)

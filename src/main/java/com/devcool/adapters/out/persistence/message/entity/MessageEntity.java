@@ -17,11 +17,15 @@ public class MessageEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "ID", nullable = false, unique = true)
+  @Column(name = "ID", nullable = false)
   private Integer id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "USER_ID", referencedColumnName = "ID", nullable = false)
+  @JoinColumn(
+      name = "USER_ID",
+      referencedColumnName = "ID",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_message_user"))
   private UserEntity user;
 
   @Column(name = "CONTENT", length = 1000, nullable = true)
@@ -41,7 +45,10 @@ public class MessageEntity {
   private Instant editedTime;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID")
+  @JoinColumn(
+      name = "CHANNEL_ID",
+      referencedColumnName = "ID",
+      foreignKey = @ForeignKey(name = "fk_message_channel"))
   private ChannelEntity channel;
 
   @OneToOne(

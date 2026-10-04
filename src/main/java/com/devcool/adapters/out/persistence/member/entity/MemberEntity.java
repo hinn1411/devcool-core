@@ -22,15 +22,23 @@ import lombok.*;
 public class MemberEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "ID", nullable = false, unique = true)
+  @Column(name = "ID", nullable = false)
   private Integer id;
 
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
-  @JoinColumn(name = "USER_ID", referencedColumnName = "ID", nullable = false)
+  @JoinColumn(
+      name = "USER_ID",
+      referencedColumnName = "ID",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_member_user"))
   private UserEntity user;
 
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
-  @JoinColumn(name = "CHANNEL_ID", referencedColumnName = "ID", nullable = false)
+  @JoinColumn(
+      name = "CHANNEL_ID",
+      referencedColumnName = "ID",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_member_channel"))
   private ChannelEntity channel;
 
   @Column(name = "ROLE", nullable = false)
