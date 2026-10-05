@@ -72,12 +72,16 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [09 — Classic vs Mockist](09-test-schools.md) | What do the two testing schools' strengths and weaknesses look like when the code actually changes? |
 | [10 — Realtime Architecture Design](10-realtime-architecture-design.md) | How is the `/ws` layer put together, where does it stop scaling, and which of eleven options do you move to next? |
 | [11 — Flyway & Schema Management](11-flyway-and-schema-management.md) | Who owns the schema? `ddl-auto` vs Flyway, how they start together, and the traps in generating the P1-T01 baseline. |
+| [12 — Integration Testing Guide](12-integration-testing-guide.md) | Which bugs only a real Postgres and a real Spring context can catch, and how to write those tests so they stay fast, independent and honest (Testcontainers, context caching, transactions, cookies, concurrency). |
+| [13 — Integration Testing Exercises](13-integration-testing-exercises.md) | Ten hands-on ITs against real code here. Four of them are P1-T11 and P1-T12, and three hide verified bugs. |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 
 07 and 08 are the practical follow-up to 06: read 07, then work through 08 and ask for a review of each exercise.
 
 10 is the design companion to 04: read 04 for the realtime bugs, then 10 for how the layer fits together and what to move to when one task is no longer enough.
+
+12 and 13 are the integration-testing follow-up to 07 and 08: read 12, then do exercise 1 of 13 (it is P1-T11) before any other.
 
 ---
 
