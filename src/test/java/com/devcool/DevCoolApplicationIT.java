@@ -14,11 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Smoke test for the whole application: the context starts against an empty pgvector database with
- * no environment variables, Flyway builds the schema, and Hibernate's {@code validate} accepts it
- * (P1-T01's Definition of Done, automated).
- */
+/** The app boots on pgvector with no env vars; Flyway builds the schema and validate passes. */
 class DevCoolApplicationIT extends AbstractIntegrationTest {
 
   @Autowired DataSource dataSource;
@@ -39,7 +35,7 @@ class DevCoolApplicationIT extends AbstractIntegrationTest {
             "select version, success from flyway_schema_history order by installed_rank",
             (rs, rowNum) -> tuple(rs.getString("version"), rs.getBoolean("success")));
 
-    // startsWith, not containsExactly: a new migration (V3, …) must not break this smoke test.
+    // startsWith: new migrations must not break this test.
     assertThat(history).startsWith(tuple("1", true), tuple("2", true));
     assertThat(history).allSatisfy(row -> assertThat(row.toList().get(1)).isEqualTo(true));
   }
@@ -53,7 +49,7 @@ class DevCoolApplicationIT extends AbstractIntegrationTest {
 
   @Test
   void database_isThePgvectorImage() {
-    // Available, not created: CREATE EXTENSION vector is P8-T01's migration.
+    // Available, not created (that's P8-T01).
     assertThat(exists("select 1 from pg_available_extensions where name = ?", "vector"))
         .as("pgvector extension available in the image (ADR-0009)")
         .isTrue();

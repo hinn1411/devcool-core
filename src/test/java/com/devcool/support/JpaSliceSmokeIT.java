@@ -7,10 +7,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/**
- * Proves the {@code @DataJpaTest} slice runs on the shared container rather than an embedded
- * database, so persistence ITs test the SQL that production runs.
- */
+/** The JPA slice uses the shared container, not an embedded database. */
 class JpaSliceSmokeIT extends AbstractJpaIT {
 
   @Autowired DataSource dataSource;

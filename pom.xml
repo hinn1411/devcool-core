@@ -113,7 +113,7 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Integration tests: a real pgvector Postgres per run (P1-T11). Versions come from the Boot BOM. -->
+        <!-- Integration tests (Testcontainers) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>

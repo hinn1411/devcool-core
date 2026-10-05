@@ -6,12 +6,8 @@ import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Base for full-stack integration tests: the whole application context, MockMvc through the real
- * security filter chain, and the shared Postgres container.
- *
- * <p>Every IT that extends this shares one cached Spring context. Don't add configuration
- * annotations ({@code @MockitoBean}, {@code @TestPropertySource}, extra profiles) in a subclass:
- * each one creates another context (learning/12 §4). Name subclasses {@code *IT}.
+ * Base for full-stack ITs: whole context + MockMvc + shared Postgres. Subclasses add no config
+ * annotations, so they all share one cached context.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
