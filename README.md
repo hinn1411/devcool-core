@@ -279,14 +279,24 @@ Docker Compose spins up:
 # Unit tests only
 ./mvnw test
 
-# Integration tests only
+# Unit + integration tests (*IT classes; needs Docker)
 ./mvnw -Dit verify
 
-# All tests + coverage report
+# Unit tests + coverage report (integration tests don't run without -Dit)
 ./mvnw verify
 ```
 
 Coverage report is generated at `target/site/jacoco/index.html`.
+
+### Integration tests
+
+`*IT` classes need Docker running (Testcontainers starts `pgvector/pgvector:pg16`).
+
+**Docker Desktop on Linux:** if Ryuk fails to start, run this, then restart the machine:
+
+```bash
+echo 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock' >> ~/.config/environment.d/docker.conf
+```
 
 ### CI Pipeline
 
