@@ -371,13 +371,13 @@ Fill this in as you go.
 | # | Exercise | Level | Task | 🐞 | Status | Reviewed |
 |---|---|---|---|---|---|---|
 | 1 | Base classes + smoke IT | Infra | **P1-T11** | | ☐ | ☐ |
-| 2 | Message cursor query | Persistence | **P1-T12** | | ☐ | ☐ |
+| 2 | Message cursor query | Persistence | **P1-T12** | | ✓ | ✓ |
 | 3 | Refresh tokens single use | Persistence | | | ☐ | ☐ |
 | 4 | Channel list + membership | Persistence | | | ☐ | ☐ |
 | 5 | Constraints → client status | Persistence + flow | | ✓ | ☐ | ☐ |
 | 6 | `@Modifying` vs the cache | Persistence | | ✓ | ☐ | ☐ |
-| 7 | Channel authz matrix | Full stack | **P1-T12** | | ☐ | ☐ |
-| 8 | Refresh-cookie round trip | Full stack | **P1-T12** | | ☐ | ☐ |
+| 7 | Channel authz matrix | Full stack | **P1-T12** | | ✓ | ✓ |
+| 8 | Refresh-cookie round trip | Full stack | **P1-T12** | | ✓ | ✓ |
 | 9 | Concurrent add-member | Full stack | | ✓ | ☐ | ☐ |
 | 10 | `@Transactional` trap (bonus) | Design | | | ☐ | ☐ |
 
