@@ -1,6 +1,8 @@
 package com.devcool.adapters.out.jwt;
 
 import com.devcool.adapters.out.jwt.enums.TokenType;
+import com.devcool.domain.auth.model.AccessClaims;
+import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.model.TokenSubject;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
@@ -32,7 +34,7 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
   private final byte[] refreshKey;
 
   private static final long accessTtlSec = 3600; // 15 min
-  private static final long refreshTtlSec = 1209600; // 14 days
+  private static final long refreshTtlSec = RefreshToken.TTL.toSeconds();
 
   private static final String TYPE = "type";
   private static final String ROLE = "role";
@@ -68,14 +70,32 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
   @Override
   public TokenPair issue(User user) {
     Instant now = Instant.now();
-    String accessToken = sign(user, now, accessTtlSec, accessKey, TokenType.ACCESS.name());
-    String refreshToken = sign(user, now, refreshTtlSec, refreshKey, TokenType.REFRESH.name());
-    return new TokenPair(accessToken, refreshToken);
+    String accessToken =
+        sign(user, now, accessTtlSec, accessKey, TokenType.ACCESS.name(), newTokenId());
+    String refreshJti = newTokenId();
+    String refreshToken =
+        sign(user, now, refreshTtlSec, refreshKey, TokenType.REFRESH.name(), refreshJti);
+    return new TokenPair(accessToken, refreshToken, refreshJti);
   }
 
   @Override
-  public boolean isAccessTokenValid(String accessToken) {
-    return Objects.nonNull(verify(accessToken, accessKey, TokenType.ACCESS.name()));
+  public Optional<AccessClaims> verifyAccess(String accessToken) {
+    var jwt = verify(accessToken, accessKey, TokenType.ACCESS.name());
+    if (Objects.isNull(jwt)) {
+      return Optional.empty();
+    }
+
+    try {
+      JWTClaimsSet claims = jwt.getJWTClaimsSet();
+      return Optional.of(
+          new AccessClaims(
+              Integer.valueOf(claims.getSubject()),
+              claims.getIntegerClaim("version"),
+              claims.getStringClaim(ROLE)));
+    } catch (ParseException | NumberFormatException e) {
+      log.warn("Cannot read access token claims");
+      return Optional.empty();
+    }
   }
 
   @Override
@@ -100,10 +120,14 @@ public class TokenIssuerAdapter implements TokenIssuerPort {
     return issue(user);
   }
 
-  private String sign(User user, Instant issuedTime, long ttlSec, byte[] key, String tokenType) {
+  private static String newTokenId() {
+    return UUID.randomUUID().toString();
+  }
+
+  private String sign(
+      User user, Instant issuedTime, long ttlSec, byte[] key, String tokenType, String tokenId) {
     String userId = String.valueOf(user.getId());
     String userRole = Optional.ofNullable(user.getRole()).map(Enum::name).orElse(null);
-    String tokenId = UUID.randomUUID().toString();
     try {
       Instant expiredTime = issuedTime.plusSeconds(ttlSec);
       JWTClaimsSet claims =

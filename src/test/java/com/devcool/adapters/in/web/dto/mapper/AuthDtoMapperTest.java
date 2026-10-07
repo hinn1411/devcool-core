@@ -32,7 +32,8 @@ class AuthDtoMapperTest {
 
   @Test
   void toLoginResponse_carriesOnlyTheAccessToken() {
-    LoginResponse response = mapper.toLoginResponse(new TokenPair("access-token", "refresh-token"));
+    LoginResponse response =
+        mapper.toLoginResponse(new TokenPair("access-token", "refresh-token", "refresh-jti"));
 
     assertThat(response.getAccessToken()).isEqualTo("access-token");
   }
@@ -40,7 +41,8 @@ class AuthDtoMapperTest {
   @Test
   void toRefreshTokenResponse_carriesOnlyTheAccessToken() {
     RefreshTokenResponse response =
-        mapper.toRefreshTokenResponse(new TokenPair("access-token", "refresh-token"));
+        mapper.toRefreshTokenResponse(
+            new TokenPair("access-token", "refresh-token", "refresh-jti"));
 
     assertThat(response.getAccessToken()).isEqualTo("access-token");
   }

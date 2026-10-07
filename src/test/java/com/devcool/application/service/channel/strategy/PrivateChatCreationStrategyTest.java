@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -19,6 +18,7 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +45,7 @@ class PrivateChatCreationStrategyTest {
   private static final List<Integer> TWO_MEMBER_IDS = List.of(OTHER_ID, THIRD_ID);
   private static final Instant SOME_EXPIRY = Instant.parse("2030-01-01T00:00:00Z");
 
-  @Mock LoadUserPort userPort;
+  @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
   @Captor ArgumentCaptor<Channel> channelCaptor;
 
@@ -117,8 +117,8 @@ class PrivateChatCreationStrategyTest {
     Integer savedChannelId = 555;
     User other = user(OTHER_ID);
     User creator = user(CREATOR_ID);
-    when(userPort.loadByIds(VALID_MEMBER_IDS)).thenReturn(List.of(other));
-    when(userPort.loadById(CREATOR_ID)).thenReturn(Optional.of(creator));
+    when(userPort.findByIds(VALID_MEMBER_IDS)).thenReturn(List.of(other));
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(creator));
     when(channelPort.save(any())).thenReturn(savedChannelId);
     CreateChannelCommand command =
         privateChat(ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE, null, VALID_MEMBER_IDS, null);

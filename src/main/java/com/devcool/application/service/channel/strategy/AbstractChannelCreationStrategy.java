@@ -1,6 +1,5 @@
 package com.devcool.application.service.channel.strategy;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
@@ -8,6 +7,7 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,15 +16,15 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class AbstractChannelCreationStrategy {
-  protected final LoadUserPort userPort;
+  protected final UserPort userPort;
   protected final ChannelPort channelPort;
 
   protected User loadUser(Integer id) {
-    return userPort.loadById(id).orElseThrow(() -> new UserNotFoundException(id));
+    return userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
   protected List<User> loadUsers(List<Integer> memberIds) {
-    return userPort.loadByIds(memberIds);
+    return userPort.findByIds(memberIds);
   }
 
   protected List<Member> getMembers(List<Integer> ids) {

@@ -1,6 +1,5 @@
 package com.devcool.application.service.channel.strategy;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -11,6 +10,7 @@ import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
     implements ChannelCreationStrategy {
-  public PrivateChatCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
+  public PrivateChatCreationStrategy(UserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
   }
 

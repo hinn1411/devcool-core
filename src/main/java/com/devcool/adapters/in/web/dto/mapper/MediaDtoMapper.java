@@ -9,8 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface MediaDtoMapper {
 
-  @Mapping(target = "file", source = "file")
-  @Mapping(target = "size", source = "file.size")
+  @Mapping(target = "filename", source = "file.originalFilename")
   @Mapping(target = "contentType", source = "file.contentType")
+  @Mapping(target = "size", source = "file.size")
+  @Mapping(target = "content", expression = "java(file::getInputStream)")
   UploadMediaCommand toUploadMediaCommand(MultipartFile file, Integer userId, Integer channelId);
 }

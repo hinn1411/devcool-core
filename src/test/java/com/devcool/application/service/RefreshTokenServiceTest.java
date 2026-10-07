@@ -10,24 +10,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.devcool.adapters.out.crypto.util.HashUtils;
 import com.devcool.domain.auth.exception.RefreshTokenInvalidException;
+import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.model.TokenSubject;
 import com.devcool.domain.auth.port.out.AccessTokenPort;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.RefreshTokenPort;
+import com.devcool.domain.auth.port.out.TokenHashPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.devcool.domain.user.port.out.UserPort;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -40,35 +37,36 @@ class RefreshTokenServiceTest {
   private static final Integer USER_ID = 7;
   private static final String REFRESH_TOKEN = "presented-refresh-token";
   private static final TokenSubject SUBJECT = new TokenSubject("7", JTI);
+  private static final String JTI_HASH = "hash-of-jti-1";
 
   @Mock private TokenIssuerPort tokenIssuerPort;
-  @Mock private LoadUserPort loadUserPort;
+  @Mock private UserPort userPort;
+  @Mock private TokenHashPort tokenHashPort;
   @Mock private RefreshTokenPort refreshTokenPort;
   @Mock private AccessTokenPort accessTokenPort;
 
   @InjectMocks private RefreshTokenService service;
 
-  // JwtUtils.buildRefreshToken reads the jti of the newly issued token, so the rotated pair
-  // needs a correctly-shaped JWT.
-  private static String refreshTokenWithJti(String jti) throws JOSEException {
-    JWTClaimsSet claims = new JWTClaimsSet.Builder().subject("7").jwtID(jti).build();
-    SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
-    jwt.sign(new MACSigner("0123456789abcdef0123456789abcdef"));
-    return jwt.serialize();
-  }
-
   @Test
-  void refresh_validToken_consumesItAndStoresTheRotatedOne() throws JOSEException {
+  void refresh_validToken_consumesItAndStoresTheRotatedOneHashedForSevenDays() {
     User user = User.builder().id(USER_ID).build();
-    TokenPair rotated = new TokenPair("new-access-token", refreshTokenWithJti("jti-2"));
+    TokenPair rotated = new TokenPair("new-access-token", "new-refresh-token", "jti-2");
     when(tokenIssuerPort.verifyRefresh(REFRESH_TOKEN)).thenReturn(Optional.of(SUBJECT));
-    when(refreshTokenPort.consumeIfValid(HashUtils.sha256(JTI))).thenReturn(true);
-    when(loadUserPort.loadById(USER_ID)).thenReturn(Optional.of(user));
+    when(tokenHashPort.hash(JTI)).thenReturn(JTI_HASH);
+    when(tokenHashPort.hash("jti-2")).thenReturn("hash-of-jti-2");
+    when(refreshTokenPort.consumeIfValid(JTI_HASH)).thenReturn(true);
+    when(userPort.findById(USER_ID)).thenReturn(Optional.of(user));
     when(tokenIssuerPort.rotate(user, JTI)).thenReturn(rotated);
 
     assertThat(service.refresh(REFRESH_TOKEN)).isEqualTo(rotated);
 
-    verify(refreshTokenPort).store(any());
+    ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
+    verify(refreshTokenPort).store(stored.capture());
+    assertThat(stored.getValue().getJti()).isEqualTo("hash-of-jti-2");
+    assertThat(stored.getValue().getUserId()).isEqualTo(USER_ID);
+    assertThat(
+            Duration.between(stored.getValue().getIssuedTime(), stored.getValue().getExpiredTime()))
+        .isEqualTo(Duration.ofDays(7));
   }
 
   @Test
@@ -79,7 +77,7 @@ class RefreshTokenServiceTest {
         .isInstanceOf(RefreshTokenInvalidException.class)
         .hasMessageNotContaining(REFRESH_TOKEN);
 
-    verifyNoInteractions(refreshTokenPort, loadUserPort, accessTokenPort);
+    verifyNoInteractions(refreshTokenPort, userPort, accessTokenPort);
   }
 
   @Test
@@ -87,25 +85,27 @@ class RefreshTokenServiceTest {
     assertThatThrownBy(() -> service.refresh(null))
         .isInstanceOf(RefreshTokenInvalidException.class);
 
-    verifyNoInteractions(refreshTokenPort, loadUserPort, accessTokenPort);
+    verifyNoInteractions(refreshTokenPort, userPort, accessTokenPort);
   }
 
   @Test
   void refresh_tokenAlreadyConsumed_throwsAndIssuesNothing() {
     when(tokenIssuerPort.verifyRefresh(REFRESH_TOKEN)).thenReturn(Optional.of(SUBJECT));
-    when(refreshTokenPort.consumeIfValid(HashUtils.sha256(JTI))).thenReturn(false);
+    when(tokenHashPort.hash(JTI)).thenReturn(JTI_HASH);
+    when(refreshTokenPort.consumeIfValid(JTI_HASH)).thenReturn(false);
 
     assertThatThrownBy(() -> service.refresh(REFRESH_TOKEN))
         .isInstanceOf(RefreshTokenInvalidException.class);
 
     verify(tokenIssuerPort, never()).rotate(any(), any());
     verify(refreshTokenPort, never()).store(any());
-    verifyNoInteractions(loadUserPort);
+    verifyNoInteractions(userPort);
   }
 
   @Test
   void logout_revokesRefreshTokenThenBumpsAccessTokenVersion() {
-    String hashJti = HashUtils.sha256(JTI);
+    String hashJti = JTI_HASH;
+    when(tokenHashPort.hash(JTI)).thenReturn(JTI_HASH);
     when(tokenIssuerPort.verifyRefresh(REFRESH_TOKEN)).thenReturn(Optional.of(SUBJECT));
     when(refreshTokenPort.revoke(hashJti)).thenReturn(true);
     when(accessTokenPort.updateVersion(USER_ID)).thenReturn(true);
@@ -119,7 +119,8 @@ class RefreshTokenServiceTest {
 
   @Test
   void logout_refreshTokenAlreadyRevoked_stillBumpsAccessTokenVersion() {
-    String hashJti = HashUtils.sha256(JTI);
+    String hashJti = JTI_HASH;
+    when(tokenHashPort.hash(JTI)).thenReturn(JTI_HASH);
     when(tokenIssuerPort.verifyRefresh(REFRESH_TOKEN)).thenReturn(Optional.of(SUBJECT));
     when(refreshTokenPort.revoke(hashJti)).thenReturn(false);
     when(accessTokenPort.updateVersion(USER_ID)).thenReturn(true);

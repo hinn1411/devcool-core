@@ -1,6 +1,5 @@
 package com.devcool.application.service.channel.strategy;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -11,6 +10,7 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 public class ForumCreationStrategy extends AbstractChannelCreationStrategy
     implements ChannelCreationStrategy {
 
-  public ForumCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
+  public ForumCreationStrategy(UserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
   }
 

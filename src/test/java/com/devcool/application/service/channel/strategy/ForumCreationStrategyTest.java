@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -21,6 +20,7 @@ import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +46,7 @@ class ForumCreationStrategyTest {
   private static final List<Integer> VALID_MEMBER_IDS = List.of(3, 4);
   private static final Instant SOME_EXPIRY = Instant.parse("2030-01-01T00:00:00Z");
 
-  @Mock LoadUserPort userPort;
+  @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
   @Captor ArgumentCaptor<Channel> channelCaptor;
 
@@ -95,8 +95,8 @@ class ForumCreationStrategyTest {
   @Test
   void createChannel_withNonexistentLeader_throwsUserNotFoundAndSavesNothing() {
     CreateChannelCommand command = forum(ChannelType.FORUM, LEADER_ID, VALID_MEMBER_IDS, null);
-    when(userPort.loadById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
-    when(userPort.loadById(LEADER_ID)).thenReturn(Optional.empty());
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
+    when(userPort.findById(LEADER_ID)).thenReturn(Optional.empty());
 
     assertThatExceptionOfType(UserNotFoundException.class)
         .isThrownBy(() -> strategy.createChannel(command))
@@ -109,9 +109,9 @@ class ForumCreationStrategyTest {
   void createChannel_withValidMemberCount_returnsSavedChannelId(int memberCount) {
     Integer savedChannelId = 101;
     List<Integer> memberIds = memberIds(memberCount);
-    when(userPort.loadByIds(memberIds)).thenReturn(memberIds.stream().map(id -> user(id)).toList());
-    when(userPort.loadById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
-    when(userPort.loadById(LEADER_ID)).thenReturn(Optional.of(user(LEADER_ID)));
+    when(userPort.findByIds(memberIds)).thenReturn(memberIds.stream().map(id -> user(id)).toList());
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
+    when(userPort.findById(LEADER_ID)).thenReturn(Optional.of(user(LEADER_ID)));
     when(channelPort.save(any())).thenReturn(savedChannelId);
     CreateChannelCommand command = forum(ChannelType.FORUM, LEADER_ID, memberIds, null);
     Integer actual = strategy.createChannel(command);
@@ -141,9 +141,9 @@ class ForumCreationStrategyTest {
   void createChannel_savesOneMemberRowPerPerson(
       String description, int leaderId, List<Integer> expectedUserIds, int expectedTotal) {
     // Any id resolves to a user with that id, so the ids in the saved members show who was loaded.
-    when(userPort.loadByIds(VALID_MEMBER_IDS))
+    when(userPort.findByIds(VALID_MEMBER_IDS))
         .thenReturn(VALID_MEMBER_IDS.stream().map(id -> user(id)).toList());
-    when(userPort.loadById(any())).thenAnswer(call -> Optional.of(user(call.getArgument(0))));
+    when(userPort.findById(any())).thenAnswer(call -> Optional.of(user(call.getArgument(0))));
 
     strategy.createChannel(forum(ChannelType.FORUM, leaderId, VALID_MEMBER_IDS, null));
 

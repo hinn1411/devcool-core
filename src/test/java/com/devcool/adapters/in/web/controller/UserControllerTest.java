@@ -7,13 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.devcool.adapters.in.web.dto.mapper.UserDtoMapperImpl;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.domain.user.port.in.GetUserQuery;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ class UserControllerTest {
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
-  @MockitoBean private LoadUserPort loadUserPort;
+  @MockitoBean private UserPort userPort;
 
   @Test
   void getProfile_exposesOnlyPublicFields() throws Exception {
