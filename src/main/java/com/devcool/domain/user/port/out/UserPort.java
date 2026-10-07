@@ -10,6 +10,8 @@ import java.util.Set;
 public interface UserPort {
   Optional<User> findById(Integer id);
 
+  Optional<User> findByUsername(String username);
+
   List<User> findByIds(Collection<Integer> ids);
 
   boolean existsByEmail(String email);

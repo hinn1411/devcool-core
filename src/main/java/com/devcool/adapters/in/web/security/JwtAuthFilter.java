@@ -1,9 +1,9 @@
 package com.devcool.adapters.in.web.security;
 
-import com.devcool.adapters.out.jwt.util.JwtUtils;
-import com.devcool.domain.auth.port.out.LoadUserPort;
+import com.devcool.domain.auth.model.AccessClaims;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
   private final TokenIssuerPort tokenIssuerPort;
-  private final LoadUserPort loadUserPort;
+  private final UserPort userPort;
 
   @Override
   protected void doFilterInternal(
@@ -38,24 +38,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     String token = header.substring(7).trim();
-    if (!tokenIssuerPort.isAccessTokenValid(token)) {
+    AccessClaims claims = tokenIssuerPort.verifyAccess(token).orElse(null);
+    if (Objects.isNull(claims)) {
       logger.warn("Access token is invalid!");
       SecurityContextHolder.clearContext();
       filterChain.doFilter(request, response);
       return;
     }
 
-    Integer subject = Integer.valueOf(JwtUtils.subjectFrom(token));
-    Integer currentVersion = JwtUtils.versionFrom(token);
-    User user = loadUserPort.loadById(subject).orElse(null);
-    if (Objects.isNull(user) || !user.isTokenVersionValid(currentVersion)) {
+    Integer subject = claims.userId();
+    User user = userPort.findById(subject).orElse(null);
+    if (Objects.isNull(user) || !user.isTokenVersionValid(claims.tokenVersion())) {
       logger.warn("User is invalid");
       SecurityContextHolder.clearContext();
       filterChain.doFilter(request, response);
       return;
     }
 
-    String role = JwtUtils.roleFrom(token);
+    String role = claims.role();
     var auth =
         new UsernamePasswordAuthenticationToken(
             subject, null, List.of(new SimpleGrantedAuthority(role)));

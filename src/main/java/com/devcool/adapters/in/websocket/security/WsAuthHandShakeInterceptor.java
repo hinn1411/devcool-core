@@ -1,11 +1,8 @@
 package com.devcool.adapters.in.websocket.security;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
-import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
@@ -17,12 +14,9 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 @Component
-@RequiredArgsConstructor
 public class WsAuthHandShakeInterceptor implements HandshakeInterceptor {
   public static final String ATTR_USER_ID = "userId";
   private static final Logger log = LoggerFactory.getLogger(WsAuthHandShakeInterceptor.class);
-  private final TokenIssuerPort tokenIssuerPort;
-  private final LoadUserPort loadUserPort;
 
   @Override
   public boolean beforeHandshake(

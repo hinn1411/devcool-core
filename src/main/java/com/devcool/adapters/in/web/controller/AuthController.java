@@ -11,6 +11,7 @@ import com.devcool.adapters.in.web.dto.schema.RegisterUserSuccess;
 import com.devcool.adapters.in.web.dto.wrapper.ApiErrorResponse;
 import com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.in.web.util.ApiResponseFactory;
+import com.devcool.domain.auth.model.RefreshToken;
 import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.port.in.LogoutUseCase;
@@ -49,7 +50,7 @@ public class AuthController {
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
   private static final String REFRESH_COOKIE = "rt";
   private static final String REFRESH_COOKIE_PATH = "/api/v1/auth";
-  private static final Duration REFRESH_COOKIE_TTL = Duration.ofDays(7);
+  private static final Duration REFRESH_COOKIE_TTL = RefreshToken.TTL;
   private final RegisterUserUseCase registerUser;
   private final AuthenticateUserUseCase authenticate;
   private final ChangePasswordUseCase changePassword;

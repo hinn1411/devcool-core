@@ -1,6 +1,5 @@
 package com.devcool.application.service.channel.strategy;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -11,6 +10,7 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
     implements ChannelCreationStrategy {
 
-  public LoungeCreationStrategy(LoadUserPort userPort, ChannelPort channelPort) {
+  public LoungeCreationStrategy(UserPort userPort, ChannelPort channelPort) {
     super(userPort, channelPort);
   }
 

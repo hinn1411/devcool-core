@@ -23,12 +23,12 @@ import com.devcool.domain.auth.model.TokenPair;
 import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.port.in.LogoutUseCase;
 import com.devcool.domain.auth.port.in.RefreshTokenUseCase;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.user.port.in.ChangePasswordUseCase;
 import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
 import com.devcool.domain.user.port.in.command.ChangePasswordCommand;
+import com.devcool.domain.user.port.out.UserPort;
 import jakarta.servlet.http.Cookie;
 import java.security.Principal;
 import org.hamcrest.Matcher;
@@ -91,12 +91,13 @@ class AuthControllerTest {
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
-  @MockitoBean private LoadUserPort loadUserPort;
+  @MockitoBean private UserPort userPort;
 
   // Audit item #7: the refresh token travels only in the cookie, scoped to the auth endpoints.
   @Test
   void login_success_setsTheScopedCookieAndKeepsTheRefreshTokenOutOfTheBody() throws Exception {
-    when(authenticate.login(any())).thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN));
+    when(authenticate.login(any()))
+        .thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN, "refresh-jti"));
 
     mockMvc
         .perform(
@@ -116,7 +117,7 @@ class AuthControllerTest {
   void refreshToken_success_rotatesTheScopedCookieAndKeepsTheRefreshTokenOutOfTheBody()
       throws Exception {
     when(tokenRefresher.refresh(PRESENTED_REFRESH_TOKEN))
-        .thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN));
+        .thenReturn(new TokenPair(ACCESS_TOKEN, REFRESH_TOKEN, "refresh-jti"));
 
     mockMvc
         .perform(

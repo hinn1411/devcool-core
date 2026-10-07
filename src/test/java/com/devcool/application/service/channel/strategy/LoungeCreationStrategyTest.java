@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -16,6 +15,7 @@ import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
+import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +42,7 @@ class LoungeCreationStrategyTest {
   private static final List<Integer> ELEVEN_MEMBER_IDS =
       IntStream.rangeClosed(100, 110).boxed().toList();
 
-  @Mock LoadUserPort userPort;
+  @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
   @Captor ArgumentCaptor<Channel> channelCaptor;
   LoungeCreationStrategy strategy;
@@ -68,8 +68,8 @@ class LoungeCreationStrategyTest {
     Integer savedChannelId = 999;
     List<Integer> memberIds = IntStream.range(100, 100 + memberCount).boxed().toList();
     List<User> members = memberIds.stream().map(id -> user(id)).toList();
-    when(userPort.loadByIds(memberIds)).thenReturn(members);
-    when(userPort.loadById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
+    when(userPort.findByIds(memberIds)).thenReturn(members);
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
     when(channelPort.save(any())).thenReturn(savedChannelId);
 
     Integer actual = strategy.createChannel(lounge(ChannelType.LOUNGE, null, memberIds));
@@ -91,7 +91,7 @@ class LoungeCreationStrategyTest {
   @Test
   void createChannel_unknownMembers_throwsUserNotFoundAndSavesNothing() {
     List<Integer> requestedIds = List.of(3, 4, 5);
-    when(userPort.loadByIds(requestedIds)).thenReturn(List.of(user(4)));
+    when(userPort.findByIds(requestedIds)).thenReturn(List.of(user(4)));
     CreateChannelCommand command = lounge(ChannelType.LOUNGE, null, requestedIds);
 
     assertThatExceptionOfType(UserNotFoundException.class)
@@ -108,9 +108,9 @@ class LoungeCreationStrategyTest {
   @Test
   void createChannel_validCommand_savesChannelWithMembersAndCreator() {
     List<User> members = MEMBER_IDS.stream().map(id -> user(id)).toList();
-    when(userPort.loadByIds(MEMBER_IDS)).thenReturn(members);
+    when(userPort.findByIds(MEMBER_IDS)).thenReturn(members);
     User creator = user(CREATOR_ID);
-    when(userPort.loadById(CREATOR_ID)).thenReturn(Optional.of(creator));
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(creator));
     CreateChannelCommand command = lounge(ChannelType.LOUNGE, null, MEMBER_IDS);
 
     strategy.createChannel(command);

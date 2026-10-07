@@ -11,12 +11,12 @@ import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.LoginRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
 import com.devcool.adapters.in.web.dto.request.UpdateChannelRequest;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.common.ErrorCode;
 import com.devcool.domain.member.model.enums.MemberType;
+import com.devcool.domain.user.port.out.UserPort;
 import com.devcool.support.AbstractIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
@@ -59,7 +59,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
   @Autowired TokenIssuerPort tokenIssuer;
-  @Autowired LoadUserPort loadUserPort;
+  @Autowired UserPort userPort;
 
   /** Who calls, relative to the seeded channel. */
   enum Caller {
@@ -437,7 +437,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
             .andExpect(status().isCreated())
             .andReturn();
     Integer id = JsonPath.read(registered.getResponse().getContentAsString(), "$.data.userId");
-    String accessToken = tokenIssuer.issue(loadUserPort.loadById(id).orElseThrow()).accessToken();
+    String accessToken = tokenIssuer.issue(userPort.findById(id).orElseThrow()).accessToken();
     return new Account(id, username, accessToken);
   }
 

@@ -5,12 +5,13 @@ paths:
 
 # Hexagonal conventions (backend main code)
 
-Layer rules. ArchUnit will enforce these from P1-T13; don't wait for the test to catch you.
+Layer rules. `src/test/java/com/devcool/architecture/HexagonalArchitectureTest.java` enforces them in `./mvnw test`; don't wait for it to catch you.
 
-- `domain/**` imports nothing from `org.springframework`, `jakarta.persistence`, `software.amazon`, `com.fasterxml.jackson` or `org.springframework.ai`. Records, plain classes, domain exceptions and port interfaces only.
-- `application/service/**` depends on `domain` ports and models only. Never inject a `*Repository`, `*Entity`, an AWS client or a Spring AI type into a service.
+- `domain/**` imports nothing from `org.springframework`, `jakarta.persistence`, `software.amazon`, `com.fasterxml.jackson`, `application` or `adapters`. Records, plain classes, domain exceptions and port interfaces only.
+- `application/service/**` depends on `domain` ports and models only. Never inject a `*Repository`, `*Entity`, an AWS client or a Spring AI type into a service, and never call an adapter's static helper. From Spring, only `stereotype` and `transaction`.
 - `adapters/in/**` translates transport → command → inbound port. No business rules. No repositories.
 - `adapters/out/**` implements an outbound port. No business rules; mapping and I/O only.
+- `adapters/in/**` and `adapters/out/**` never import each other. Shared state between two adapters means a port is missing. A bidirectional transport (the WebSocket session map and its emitter) stays in one adapter package.
 - New use case → an interface in `domain/<area>/port/in/`. New external dependency → an interface in `domain/<area>/port/out/`. The `/new-use-case` skill scaffolds both.
 
 Existing patterns to copy (they are the reference implementation):

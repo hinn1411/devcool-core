@@ -17,6 +17,7 @@ import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import com.devcool.domain.media.port.out.MediaStoragePort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.port.out.MemberPort;
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockMultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
@@ -37,6 +37,7 @@ class MediaServiceTest {
   private static final int USER_ID = 1;
   private static final int CHANNEL_ID = 42;
   private static final String UUID_PART = "123e4567-e89b-12d3-a456-426614174000";
+  private static final byte[] DATA = "data".getBytes();
   private static final String VALID_KEY = "channel/42/2026/03/08/" + UUID_PART + ".jpg";
 
   @Mock private MediaStoragePort storagePort;
@@ -62,9 +63,7 @@ class MediaServiceTest {
   void upload_forwardsCorrectMetadataToStoragePort() {
     stubMember(10);
     stubUpload();
-    MockMultipartFile file = makeFile("video.mp4", "video/mp4");
-    UploadMediaCommand command =
-        new UploadMediaCommand(file, file.getSize(), file.getContentType(), USER_ID, 10);
+    UploadMediaCommand command = makeCommand("video.mp4", "video/mp4", 10);
 
     String key = mediaService.upload(command);
 
@@ -75,15 +74,20 @@ class MediaServiceTest {
     MediaStoragePort.UploadRequest captured = captor.getValue();
     assertThat(captured.objectKey()).isEqualTo(key);
     assertThat(captured.contentType()).isEqualTo("video/mp4");
-    assertThat(captured.contentLength()).isEqualTo(file.getSize());
+    assertThat(captured.contentLength()).isEqualTo(DATA.length);
   }
 
   @Test
   void upload_withEmptyFile_throwsInvalidMediaContentException() {
     stubMember(CHANNEL_ID);
-    MockMultipartFile empty = new MockMultipartFile("file", "empty.jpg", "image/jpeg", new byte[0]);
     UploadMediaCommand command =
-        new UploadMediaCommand(empty, 0, "image/jpeg", USER_ID, CHANNEL_ID);
+        new UploadMediaCommand(
+            "empty.jpg",
+            "image/jpeg",
+            0,
+            () -> new ByteArrayInputStream(new byte[0]),
+            USER_ID,
+            CHANNEL_ID);
 
     assertThatThrownBy(() -> mediaService.upload(command))
         .isInstanceOf(InvalidMediaContentException.class);
@@ -124,9 +128,7 @@ class MediaServiceTest {
   @Test
   void upload_membershipIsCheckedAgainstTheTargetChannel() {
     // The caller may belong to channel 42, but is uploading into channel 9.
-    MockMultipartFile file = makeFile("photo.jpg", "image/jpeg");
-    UploadMediaCommand command =
-        new UploadMediaCommand(file, file.getSize(), file.getContentType(), USER_ID, 9);
+    UploadMediaCommand command = makeCommand("photo.jpg", "image/jpeg", 9);
     when(memberPort.existMemberOfChannelByUserId(9, USER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> mediaService.upload(command))
@@ -254,13 +256,19 @@ class MediaServiceTest {
 
   // ── helpers ──────────────────────────────────────────────────────────────────
 
-  private static MockMultipartFile makeFile(String filename, String contentType) {
-    return new MockMultipartFile("file", filename, contentType, "data".getBytes());
+  private static UploadMediaCommand makeCommand(String filename, String contentType) {
+    return makeCommand(filename, contentType, CHANNEL_ID);
   }
 
-  private static UploadMediaCommand makeCommand(String filename, String contentType) {
-    MockMultipartFile file = makeFile(filename, contentType);
-    return new UploadMediaCommand(file, file.getSize(), file.getContentType(), USER_ID, CHANNEL_ID);
+  private static UploadMediaCommand makeCommand(
+      String filename, String contentType, int channelId) {
+    return new UploadMediaCommand(
+        filename,
+        contentType,
+        DATA.length,
+        () -> new ByteArrayInputStream(DATA),
+        USER_ID,
+        channelId);
   }
 
   private void stubMember(int channelId) {

@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -55,15 +54,14 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
   @Override
   public String upload(UploadMediaCommand command) {
     requireMember(command.userId(), command.channelId());
-    MultipartFile file = command.file();
 
-    if (file.isEmpty()) {
-      log.warn("Media content is null!");
+    if (command.size() <= 0) {
+      log.warn("Media content is empty!");
       throw new InvalidMediaContentException();
     }
 
     MediaKind kind =
-        MediaKind.fromContentType(file.getContentType())
+        MediaKind.fromContentType(command.contentType())
             .orElseThrow(
                 () -> {
                   log.warn("Content type: {}  is invalid!", command.contentType());
@@ -75,10 +73,10 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
       throw new MediaTooLargeException(command.size(), kind.maxBytes());
     }
 
-    String mediaKey = buildMediaKey(command.channelId(), file.getOriginalFilename());
-    try (InputStream in = file.getInputStream()) {
+    String mediaKey = buildMediaKey(command.channelId(), command.filename());
+    try (InputStream in = command.content().open()) {
       MediaStoragePort.UploadRequest uploadRequest =
-          new MediaStoragePort.UploadRequest(mediaKey, in, file.getSize(), file.getContentType());
+          new MediaStoragePort.UploadRequest(mediaKey, in, command.size(), command.contentType());
       storagePort.upload(uploadRequest);
       return mediaKey;
     } catch (IOException e) {

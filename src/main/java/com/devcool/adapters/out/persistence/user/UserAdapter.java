@@ -8,6 +8,7 @@ import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -26,7 +27,15 @@ public class UserAdapter implements UserPort {
   }
 
   @Override
+  public Optional<User> findByUsername(String username) {
+    return repo.findByUsername(username).map(mapper::toDomain);
+  }
+
+  @Override
   public List<User> findByIds(Collection<Integer> ids) {
+    if (Objects.isNull(ids) || ids.isEmpty()) {
+      return List.of();
+    }
     return repo.findByIdIn(ids).stream().map(mapper::toDomain).toList();
   }
 

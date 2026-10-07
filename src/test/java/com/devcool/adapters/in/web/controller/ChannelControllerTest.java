@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.devcool.adapters.in.web.dto.mapper.ChannelDtoMapperImpl;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
@@ -20,6 +19,7 @@ import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.common.ForbiddenException;
+import com.devcool.domain.user.port.out.UserPort;
 import java.security.Principal;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -58,7 +58,7 @@ class ChannelControllerTest {
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
-  @MockitoBean private LoadUserPort loadUserPort;
+  @MockitoBean private UserPort userPort;
 
   @Test
   void updateChannel_passesTheAuthenticatedCallerIdToTheUseCase() throws Exception {

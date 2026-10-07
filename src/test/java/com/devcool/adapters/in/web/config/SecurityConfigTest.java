@@ -18,10 +18,10 @@ import com.devcool.adapters.in.web.dto.mapper.AuthDtoMapperImpl;
 import com.devcool.adapters.in.web.dto.mapper.ChannelDtoMapperImpl;
 import com.devcool.adapters.in.web.security.ApiAuthenticationEntryPoint;
 import com.devcool.domain.auth.exception.InvalidCredentialsException;
+import com.devcool.domain.auth.model.AccessClaims;
 import com.devcool.domain.auth.port.in.AuthenticateUserUseCase;
 import com.devcool.domain.auth.port.in.LogoutUseCase;
 import com.devcool.domain.auth.port.in.RefreshTokenUseCase;
-import com.devcool.domain.auth.port.out.LoadUserPort;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
@@ -30,12 +30,7 @@ import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.in.ChangePasswordUseCase;
 import com.devcool.domain.user.port.in.GetUserQuery;
 import com.devcool.domain.user.port.in.RegisterUserUseCase;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.devcool.domain.user.port.out.UserPort;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,23 +83,14 @@ class SecurityConfigTest {
 
   // The ports JwtAuthFilter authenticates with.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
-  @MockitoBean private LoadUserPort loadUserPort;
+  @MockitoBean private UserPort userPort;
 
-  // JwtAuthFilter asks the port whether the token is valid, then reads the claims itself, so an
-  // accepted token must be a correctly-shaped JWT.
-  private String acceptedBearerToken() throws JOSEException {
-    JWTClaimsSet claims =
-        new JWTClaimsSet.Builder()
-            .subject(String.valueOf(USER_ID))
-            .claim("version", TOKEN_VERSION)
-            .claim("role", "USER")
-            .build();
-    SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
-    jwt.sign(new MACSigner("0123456789abcdef0123456789abcdef"));
-    String token = jwt.serialize();
-
-    when(tokenIssuerPort.isAccessTokenValid(token)).thenReturn(true);
-    when(loadUserPort.loadById(USER_ID))
+  // JwtAuthFilter takes the caller's identity from the claims the port verified.
+  private String acceptedBearerToken() {
+    String token = "accepted-token";
+    when(tokenIssuerPort.verifyAccess(token))
+        .thenReturn(Optional.of(new AccessClaims(USER_ID, TOKEN_VERSION, "USER")));
+    when(userPort.findById(USER_ID))
         .thenReturn(Optional.of(User.builder().id(USER_ID).tokenVersion(TOKEN_VERSION).build()));
     return "Bearer " + token;
   }
@@ -144,7 +130,7 @@ class SecurityConfigTest {
 
   @Test
   void listChannels_rejectedToken_returns401WithoutEchoingTheToken() throws Exception {
-    when(tokenIssuerPort.isAccessTokenValid(REJECTED_TOKEN)).thenReturn(false);
+    when(tokenIssuerPort.verifyAccess(REJECTED_TOKEN)).thenReturn(Optional.empty());
 
     ResultActions result =
         mockMvc.perform(
