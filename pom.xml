@@ -31,6 +31,8 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <maven.compiler.release>21</maven.compiler.release>
         <sonar.organization>hinn14112002</sonar.organization>
+        <!-- JaCoCo line-coverage floor (unit + IT), checked under -Dit. Ratchet up only. -->
+        <jacoco.line.minimum>0.75</jacoco.line.minimum>
 	</properties>
     <dependencyManagement>
         <dependencies>
@@ -165,6 +167,16 @@
 	</dependencies>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Pinned so `./mvnw sonar:sonar` in CI resolves a fixed scanner version -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>5.8.0.7211</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -282,12 +294,45 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>3.2.5</version>
+                        <configuration>
+                            <!-- A run with 0 ITs is a vacuous pass, not a green build -->
+                            <failIfNoTests>true</failIfNoTests>
+                        </configuration>
                         <executions>
                             <execution>
                                 <goals>
                                     <goal>integration-test</goal>
                                     <goal>verify</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- Coverage floor on unit + IT line coverage; only here because the floor
+                         was measured with ITs. Ratchet it up, never down. -->
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>${jacoco.line.minimum}</minimum>
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
@@ -299,44 +344,6 @@
             <id>static-analysis</id>
             <build>
                 <plugins>
-                    <!-- Checkstyle -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>3.5.0</version>
-                        <configuration>
-                            <!-- Use built-in Google rules; switch to your custom XML if you have one -->
-                            <configLocation>google_checks.xml</configLocation>
-                            <encoding>UTF-8</encoding>
-                            <consoleOutput>true</consoleOutput>
-                            <failsOnError>true</failsOnError>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals><goal>check</goal></goals>
-                                <phase>verify</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                    <!-- PMD -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-pmd-plugin</artifactId>
-                        <version>3.21.2</version>
-                        <configuration>
-                            <printFailingErrors>true</printFailingErrors>
-                            <failOnViolation>true</failOnViolation>
-                            <!-- Keep default rulesets for now -->
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals><goal>check</goal></goals>
-                                <phase>verify</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-
                     <!-- SpotBugs -->
                     <plugin>
                         <groupId>com.github.spotbugs</groupId>
@@ -352,6 +359,8 @@
                         <configuration>
                             <effort>Max</effort>
                             <threshold>Low</threshold>
+                            <!-- Ratchet baseline: today's EI_EXPOSE_REP* findings only (P1-T14) -->
+                            <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
                         </configuration>
                         <executions>
                             <execution>

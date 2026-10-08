@@ -10,8 +10,14 @@ import org.testcontainers.utility.DockerImageName;
  */
 public interface PostgresTestContainer {
 
+  /**
+   * {@code pgvector/pgvector:pg16}, pinned by digest so every run (and the CI image cache) uses the
+   * same image. Bump with {@code docker buildx imagetools inspect pgvector/pgvector:pg16}.
+   */
   DockerImageName PGVECTOR =
-      DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres");
+      DockerImageName.parse(
+              "pgvector/pgvector@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a")
+          .asCompatibleSubstituteFor("postgres");
 
   @ServiceConnection PostgreSQLContainer<?> POSTGRES = startedPostgres();
 

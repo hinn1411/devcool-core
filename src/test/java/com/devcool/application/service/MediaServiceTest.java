@@ -20,6 +20,7 @@ import com.devcool.domain.member.port.out.MemberPort;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,6 +58,21 @@ class MediaServiceTest {
 
     assertThat(key)
         .matches("channel/%d/\\d{4}/\\d{2}/\\d{2}/[a-f0-9\\-]+\\.jpg".formatted(CHANNEL_ID));
+  }
+
+  @Test
+  void upload_uppercaseExtensionUnderTurkishLocale_isLowercasedLocaleIndependently() {
+    stubMember(CHANNEL_ID);
+    stubUpload();
+    Locale original = Locale.getDefault();
+    Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+    try {
+      String key = mediaService.upload(makeCommand("PHOTO.JPG", "image/jpeg"));
+
+      assertThat(key).endsWith(".jpg");
+    } finally {
+      Locale.setDefault(original);
+    }
   }
 
   @Test

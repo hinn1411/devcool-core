@@ -16,8 +16,8 @@ Run only the groups whose paths changed. Run them in the order shown and stop a 
 |---|---|---|
 | Backend format | `src/**`, `pom.xml` | `./mvnw -q spotless:check` (if it fails: `./mvnw -q spotless:apply`, then re-check) |
 | Backend unit | `src/**`, `pom.xml` | `./mvnw -q test` |
-| Backend integration | `src/main/resources/db/migration/**`, `**/persistence/**`, `**/websocket/**`, `**/messaging/**`, `**/web/controller/**`, `**/config/**`, `pom.xml` | `./mvnw -q -Dit verify` (needs Docker) |
-| Backend static analysis | `src/main/**` | `./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify` |
+| Backend integration | `src/main/resources/db/migration/**`, `**/persistence/**`, `**/websocket/**`, `**/messaging/**`, `**/web/controller/**`, `**/config/**`, `pom.xml` | `./mvnw -q -Dit verify` (needs Docker; also enforces the JaCoCo floor) |
+| Backend static analysis (SpotBugs) | `src/main/**`, `pom.xml`, `spotbugs-exclude.xml` | `./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify` |
 | Frontend | `frontend/**` | from `frontend/`: `npm run lint`, `npm run typecheck`, `npm run test -- --run`, `npm run build` |
 | Infra | `infra/**` | `terraform fmt -check -recursive infra`; for each changed stack: `terraform -chdir=infra/stacks/<s> init -backend=false` then `validate`; `tflint --chdir infra` if installed |
 | Docs | `docs/**` | Check that relative links in changed markdown files resolve |

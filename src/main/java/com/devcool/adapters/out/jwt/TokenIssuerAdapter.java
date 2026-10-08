@@ -27,7 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TokenIssuerAdapter implements TokenIssuerPort {
+public final class TokenIssuerAdapter implements TokenIssuerPort {
 
   private static final Logger log = LoggerFactory.getLogger(TokenIssuerAdapter.class);
   private final byte[] accessKey;

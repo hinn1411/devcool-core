@@ -8,7 +8,7 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class WsSessionStore {
 
-  public final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+  private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
   public void put(WebSocketSession session) {
     sessions.put(session.getId(), session);

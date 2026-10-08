@@ -71,7 +71,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
   - `application..` depends on `domain..` ports only (no `adapters..`, no `*Repository`/`*Entity`; Spring only for `stereotype`/`transaction`). Channel services don't use auth ports.
   - `adapters.in..` and `adapters.out..` don't depend on each other.
   - Fixes the existing leaks from learning/03 §1–4 instead of freezing them.
-- [ ] **P1-T14** CI:
+- [x] **P1-T14** CI (brief: `docs/journal/briefs/P1-T14.md`):
   - Run ITs (`./mvnw -B verify -Dit`).
   - Drop `|| true` from static analysis. Fix or suppress the existing findings explicitly first.
   - Cache Testcontainers images.
@@ -79,6 +79,8 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 - [ ] **P1-T16** Enable virtual threads (`spring.threads.virtual.enabled=true`). Check that no `synchronized` block wraps blocking I/O in the WS send path
 - [ ] **P1-T17** Update `docs/learning/README.md` "Fix these first" with the status of each item and link the PRs
 - [ ] **P1-T18** Channel update validation per type (split from P1-T06): a `PRIVATE_CHAT` can't change type or get an expiry; a `FORUM` can't get an expiry; the type may only toggle between `LOUNGE` and `FORUM`; a `LOUNGE` expiry must be more than 7 days ahead. 422 via `InvalidChannelConfigException`, with a unit test per rule
+- [ ] **P1-T19** Make the domain and DTO models immutable (records or defensive copies) and delete the matching entries from `spotbugs-exclude.xml`. Done when the file has no entries left (from P1-T14)
+- [ ] **P1-T20** (Could) Re-add PMD 7 with a curated Java 21 ruleset, blocking, with a baseline like SpotBugs (from P1-T14)
 
 ## Files touched
 - `src/main/resources/db/migration/*`

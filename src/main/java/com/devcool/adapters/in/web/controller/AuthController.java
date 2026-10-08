@@ -199,7 +199,7 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<ApiSuccessResponse<LogoutResponse>> logout(
+  public ResponseEntity<Void> logout(
       @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
       Authentication auth) {
 
