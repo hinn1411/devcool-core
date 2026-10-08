@@ -37,6 +37,7 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - **Media upload:** move to browser-direct `POST /medias/presign-upload` → S3 presigned PUT (key and content-type bound, size limit via policy), then `SEND` with the key. The existing multipart endpoint stays until the frontend switches.
 
 ## Tasks
+- [ ] **P3-T00** (Debt from P1-T18, split from P1-T06) Channel update validation per type: a `PRIVATE_CHAT` can't change type or get an expiry; a `FORUM` can't get an expiry; the type may only toggle between `LOUNGE` and `FORUM`; a `LOUNGE` expiry must be more than 7 days ahead. 422 via `InvalidChannelConfigException`, with a unit test per rule
 - [ ] **P3-T01** Migration:
   - Ids `INTEGER` → `BIGINT` (all PK/FK).
   - Update entities and domain types (`Integer` → `Long`) consistently across ports, DTOs and mappers.

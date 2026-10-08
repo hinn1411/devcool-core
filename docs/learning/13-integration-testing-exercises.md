@@ -383,4 +383,4 @@ Fill this in as you go.
 
 **Suggested path:** 1 → 2 → 7 → 8 finishes P1-T11 and P1-T12. Then 5 → 9 for concurrency, and 6 → 10 for transactions. 3 and 4 are for repetition.
 
-**Note:** the specs cite code as of `master` at `2e33734` (2026-10-04). If P1-T18 (channel update validation) lands first, exercise 7's `PATCH` bodies must satisfy its rules. Tell me and I'll update the specs.
+**Note:** the specs cite code as of `master` at `2e33734` (2026-10-04). If P3-T00 (channel update validation, formerly P1-T18) lands first, exercise 7's `PATCH` bodies must satisfy its rules. Tell me and I'll update the specs.
