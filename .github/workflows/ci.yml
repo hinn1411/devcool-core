@@ -7,14 +7,14 @@ on:
 
 jobs:
   build-test:
-    name: Build, Test, Coverage, (Sonar if token)
+    name: Build, Test, Coverage, Sonar
     runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
       # Keep outputs consistent
       MAVEN_OPTS: -Duser.language=en -Duser.region=US -Dfile.encoding=UTF-8
-      # Job level, so a step `if:` can see it (a step's own env is applied after its `if:`)
+      # Read by the scanner in the Sonar step. Fork and Dependabot PRs get no secrets, so Sonar fails there.
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
@@ -49,7 +49,6 @@ jobs:
 
       # Reuses target/ from the step above: no second compile or test run.
       - name: Sonar analysis
-        if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         run: ./mvnw -B sonar:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.projectKey=hinn1411_devcool-core
 
       - name: Upload surefire & failsafe reports

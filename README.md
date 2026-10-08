@@ -304,7 +304,7 @@ Every pull request and every push to `master` runs `.github/workflows/ci.yml`. A
 
 1. Spotless format check
 2. Unit tests + integration tests + JaCoCo line-coverage floor + SpotBugs, in one `./mvnw -Dit -Pstatic-analysis verify`
-3. SonarCloud analysis (when `SONAR_TOKEN` is set)
+3. SonarCloud analysis (always; needs the `SONAR_TOKEN` repo secret)
 4. Test and JaCoCo reports uploaded as artifacts
 
 ---

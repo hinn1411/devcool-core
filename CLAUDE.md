@@ -132,7 +132,7 @@ Runs on every PR and on push to `master`. Every step is blocking.
 
 1. Spotless format check
 2. One build: `./mvnw -B -U -Dit -Pstatic-analysis verify`. It runs unit tests, ITs (fails if 0 run), the JaCoCo line-coverage floor (`jacoco.line.minimum` in `pom.xml`; raise it, never lower it), and SpotBugs.
-3. SonarCloud (`sonar:sonar`, reusing `target/`) when `SONAR_TOKEN` is set
+3. SonarCloud (`sonar:sonar`, reusing `target/`). Always runs; needs the `SONAR_TOKEN` repo secret
 4. Upload test and JaCoCo reports
 
 SpotBugs findings that existed at P1-T14 are baselined in `spotbugs-exclude.xml`. Only remove entries; fix new findings instead of adding them.
