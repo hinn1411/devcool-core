@@ -41,7 +41,7 @@ The codebase enforces strict layering so that domain logic never depends on Spri
 | Code generation | Lombok + MapStruct 1.5.5 |
 | API Docs | SpringDoc OpenAPI (Swagger UI at `/docs`) |
 | Build | Maven 3.9+ |
-| Code quality | Spotless (Google Java Format), Checkstyle, PMD, SpotBugs |
+| Code quality | Spotless (Google Java Format), SpotBugs, ArchUnit |
 | Test coverage | JaCoCo + optional SonarQube |
 
 ---
@@ -267,7 +267,7 @@ Docker Compose spins up:
 # Check formatting
 ./mvnw spotless:check
 
-# Static analysis (Checkstyle, PMD, SpotBugs)
+# Static analysis (SpotBugs)
 ./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify
 ```
 
@@ -279,7 +279,7 @@ Docker Compose spins up:
 # Unit tests only
 ./mvnw test
 
-# Unit + integration tests (*IT classes; needs Docker)
+# Unit + integration tests (*IT classes; needs Docker) + coverage floor
 ./mvnw -Dit verify
 
 # Unit tests + coverage report (integration tests don't run without -Dit)
@@ -300,13 +300,12 @@ echo 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock' >> ~/.config/e
 
 ### CI Pipeline
 
-Every push triggers the GitHub Actions workflow (`.github/workflows/ci.yml`):
+Every pull request and every push to `master` runs `.github/workflows/ci.yml`. Any failing step fails the run:
 
 1. Spotless format check
-2. Static analysis (Checkstyle / PMD / SpotBugs)
-3. Unit tests + integration tests
-4. JaCoCo coverage report (uploaded as artifact)
-5. SonarQube analysis (when `SONAR_TOKEN` is set)
+2. Unit tests + integration tests + JaCoCo line-coverage floor + SpotBugs, in one `./mvnw -Dit -Pstatic-analysis verify`
+3. SonarCloud analysis (always; needs the `SONAR_TOKEN` repo secret)
+4. Test and JaCoCo reports uploaded as artifacts
 
 ---
 

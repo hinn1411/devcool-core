@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -127,7 +128,7 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
       return "";
     }
 
-    String ext = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+    String ext = filename.substring(filename.lastIndexOf(".")).toLowerCase(Locale.ROOT);
 
     // Optional: allowlist extensions
     if (!ext.matches("\\.(" + ALLOWED_EXTENSIONS + ")$")) {

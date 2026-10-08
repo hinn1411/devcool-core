@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs ratchet baseline (P1-T14).
+
+  Each <Match> is a (class, pattern) pair that existed when the gate became blocking. All are
+  EI_EXPOSE_REP / EI_EXPOSE_REP2: mutable models (Lombok getters/setters, Date/List fields) that
+  expose or store internal state. Fixing them means making the models immutable, tracked as its
+  own phase task. The trailing comment is the finding count at baseline time. Only remove entries
+  from this file; never add new ones to get a build green.
+-->
+<FindBugsFilter
+    xmlns="https://github.com/spotbugs/filter/3.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+  <Match><Class name="com.devcool.adapters.in.web.config.SecurityConfig"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.controller.ChannelController"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.request.AddMembersRequest"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.request.AddMembersRequest"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.request.CreateChannelRequest"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.request.CreateChannelRequest"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetChannelResponse"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetChannelResponse"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetChannelResponse$GetChannelResponseBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetMessagesResponse"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetMessagesResponse"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.response.GetMessagesResponse$GetMessagesResponseBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiErrorResponse"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiErrorResponse"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiErrorResponse$ApiErrorResponseBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse$ApiSuccessResponseBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.security.ApiAuthenticationEntryPoint"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.web.security.JwtAuthFilter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.in.websocket.handler.RawWebSocketHandler"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.adapters.in.websocket.handler.WsRealtimeEmitterAdapter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.auth.AuthAdapter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.channel.entity.ChannelEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.channel.entity.ChannelEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.AuthProviderEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.AuthProviderEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.FriendRequestEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 4 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.FriendRequestEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 4 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.TopicEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.entity.TopicEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.media.entity.MediaEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.media.entity.MediaEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.member.MemberAdapter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.member.entity.MemberEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.member.entity.MemberEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.member.entity.MemberEntity$MemberEntityBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.message.MessageAdapter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.message.entity.MessageEntity"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.adapters.out.persistence.message.entity.MessageEntity"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.adapters.out.storage.S3StorageAdapter"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.application.service.AuthenticateUserService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.application.service.MediaService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.application.service.RefreshTokenService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.application.service.UserService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.application.service.channel.ChannelService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.application.service.channel.strategy.AbstractChannelCreationStrategy"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.application.service.chat.MessageService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.application.service.chat.WsSendMessageService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.application.service.chat.WsSubscribeService"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 2 -->
+  <Match><Class name="com.devcool.application.service.chat.strategy.AbstractMessageCreationStrategy"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.model.Channel"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.domain.channel.model.Channel"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.domain.channel.model.Channel$ChannelBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 3 -->
+  <Match><Class name="com.devcool.domain.channel.model.ChannelListPage"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.model.ChannelListPage"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.port.in.command.AddMembersCommand"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.port.in.command.AddMembersCommand"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.port.in.command.CreateChannelCommand"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.channel.port.in.command.CreateChannelCommand"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.chat.model.Message"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.chat.model.Message"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.chat.model.Message$MessageBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.chat.model.MessageList"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.chat.model.MessageList"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.member.model.Member"/><Bug pattern="EI_EXPOSE_REP"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.member.model.Member"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+  <Match><Class name="com.devcool.domain.member.model.Member$MemberBuilder"/><Bug pattern="EI_EXPOSE_REP2"/></Match> <!-- 1 -->
+</FindBugsFilter>

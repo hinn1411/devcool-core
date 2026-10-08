@@ -1,22 +1,21 @@
 name: ci
 
 on:
+  pull_request:
   push:
-    branches: [ "**" ]
+    branches: [ "master" ]
 
 jobs:
   build-test:
-    name: Build, Test, Coverage, (Sonar if token)
+    name: Build, Test, Coverage, Sonar
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    # Shared env for the whole job
     env:
       # Keep outputs consistent
       MAVEN_OPTS: -Duser.language=en -Duser.region=US -Dfile.encoding=UTF-8
-      # Testcontainers works out-of-the-box on GitHub runners (Docker is available)
-      # You usually don't need to set anything, but leaving hooks here for clarity:
-      # TESTCONTAINERS_RYUK_DISABLED: "false"
+      # Read by the scanner in the Sonar step. Fork and Dependabot PRs get no secrets, so Sonar fails there.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout
@@ -31,7 +30,7 @@ jobs:
           cache: maven
 
       - name: Validate Maven Wrapper
-        run: mvn -v && ./mvnw -v
+        run: ./mvnw -v
 
       - name: Cache sonar packages
         uses: actions/cache@v4
@@ -40,28 +39,17 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-
       - name: Formatting check
         run: ./mvnw -B spotless:check
 
-      - name: Static analysis
-        run: |
-          ./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify || true
+      # One build, every gate: unit tests, ITs (Testcontainers, fails on 0 ITs),
+      # JaCoCo line-coverage floor, SpotBugs (EI baseline in spotbugs-exclude.xml).
+      - name: Build + unit tests + ITs + coverage + SpotBugs
+        run: ./mvnw -B -U -Dit -Pstatic-analysis verify
 
-      - name: Build + Tests + ITs
-        run: ./mvnw -B -U -DskipITs verify
-
+      # Reuses target/ from the step above: no second compile or test run.
       - name: Sonar analysis
-        if: env.SONAR_TOKEN != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=hinn1411_devcool-core
+        run: ./mvnw -B sonar:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.projectKey=hinn1411_devcool-core
 
       - name: Upload surefire & failsafe reports
         if: always()

@@ -45,7 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Check formatting
 ./mvnw spotless:check
 
-# Static analysis (Checkstyle, PMD, SpotBugs)
+# Static analysis (SpotBugs; EI_EXPOSE_REP* baseline in spotbugs-exclude.xml)
 ./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify
 ```
 
@@ -128,7 +128,11 @@ When reviewing a pull request, check for:
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
+Runs on every PR and on push to `master`. Every step is blocking.
+
 1. Spotless format check
-2. Static analysis (Checkstyle / PMD / SpotBugs via `static-analysis` profile). It is currently non-blocking (`|| true`); P1-T14 makes it blocking.
-3. Build + unit tests. Integration tests are currently skipped (`-DskipITs`); P1-T14 enables them.
-4. JaCoCo coverage report + optional SonarQube
+2. One build: `./mvnw -B -U -Dit -Pstatic-analysis verify`. It runs unit tests, ITs (fails if 0 run), the JaCoCo line-coverage floor (`jacoco.line.minimum` in `pom.xml`; raise it, never lower it), and SpotBugs.
+3. SonarCloud (`sonar:sonar`, reusing `target/`). Always runs; needs the `SONAR_TOKEN` repo secret
+4. Upload test and JaCoCo reports
+
+SpotBugs findings that existed at P1-T14 are baselined in `spotbugs-exclude.xml`. Only remove entries; fix new findings instead of adding them.

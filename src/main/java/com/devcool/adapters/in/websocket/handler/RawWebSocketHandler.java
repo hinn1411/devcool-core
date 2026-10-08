@@ -9,6 +9,7 @@ import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Map;
@@ -46,7 +47,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     WsClientFrame clientFrame;
     try {
       clientFrame = objectMapper.readValue(message.getPayload(), WsClientFrame.class);
-    } catch (Exception ex) {
+    } catch (JsonProcessingException ex) {
       session.sendMessage(
           new TextMessage(
               objectMapper.writeValueAsString(
