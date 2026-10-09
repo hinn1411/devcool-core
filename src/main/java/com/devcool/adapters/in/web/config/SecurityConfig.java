@@ -41,7 +41,9 @@ public class SecurityConfig {
                         "/api/v1/auth/refresh_token", // the rt cookie authenticates the caller
                         "/public/**", // reserved for public assets; nothing is served here yet
                         "/error", // Spring's error dispatch, also for anonymous callers
-                        "/ws") // WsAuthHandShakeInterceptor is the gate (ADR-0011)
+                        "/ws", // WsAuthHandShakeInterceptor is the gate (ADR-0011)
+                        "/actuator/health", // ALB health check and deploy smoke test: no token
+                        "/actuator/health/**") // liveness/readiness; details are never shown
                     .permitAll()
                     .requestMatchers("/api/v1/auth/profile")
                     .hasAuthority("USER")
