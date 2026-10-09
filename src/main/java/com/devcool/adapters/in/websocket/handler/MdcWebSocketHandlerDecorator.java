@@ -10,16 +10,11 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 /**
- * Puts {@code userId} and {@code connectionId} into the MDC for every callback, so each log line
- * written while a frame is handled carries them as fields (P1-T15). A WS frame has no request
- * around it, so this is the only way to tie a log line to a connection.
+ * Adds {@code userId} and {@code connectionId} to the MDC for every WS callback (P1-T15).
  *
- * <p>The keys are removed in {@code finally}: Tomcat reuses threads, and a leftover value would
- * label the next connection's logs with this user. Only our keys are removed, so MDC entries set by
- * others survive. The MDC is per thread: work handed to an executor doesn't see these values.
- *
- * <p>Spring's own "Closing session due to exception" log comes from an outer decorator, after this
- * one has cleaned up, so it has no MDC fields. Its message includes the session id.
+ * <p>Only these keys are removed, in {@code finally}, so pooled threads don't leak them to the next
+ * connection. The MDC is per thread: executor work doesn't see them. Spring's "Closing session due
+ * to exception" log runs after cleanup, so it lacks these fields.
  */
 public class MdcWebSocketHandlerDecorator extends WebSocketHandlerDecorator {
 

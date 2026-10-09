@@ -23,9 +23,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.StandardEnvironment;
 
 /**
- * The log format per profile (P1-T15). Boots an empty context with the real profile files, so it
- * needs no database and doesn't extend the Testcontainers base: logging is set up from the
- * profile's properties before any bean exists.
+ * The log format per profile (P1-T15). An empty context with the real profile files is enough, so
+ * no database or Testcontainers base.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class StructuredLoggingIT {
@@ -38,9 +37,8 @@ class StructuredLoggingIT {
 
   @AfterEach
   void restoreDefaultLogging() {
-    // Other ITs share this JVM and their cached contexts don't re-initialize logging, so put the
-    // default text format back. The final cleanUp() keeps that format but drops Logback's
-    // "already initialized" marker, so the next SpringApplication applies its own profile.
+    // Restore text logging for other ITs in this JVM. The last cleanUp() lets the next
+    // SpringApplication apply its own profile.
     LoggingSystem system = LoggingSystem.get(getClass().getClassLoader());
     system.cleanUp();
     system.beforeInitialize();
