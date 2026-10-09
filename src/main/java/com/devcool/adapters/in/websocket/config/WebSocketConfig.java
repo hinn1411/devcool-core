@@ -1,5 +1,6 @@
 package com.devcool.adapters.in.websocket.config;
 
+import com.devcool.adapters.in.websocket.handler.MdcWebSocketHandlerDecorator;
 import com.devcool.adapters.in.websocket.handler.RawWebSocketHandler;
 import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    registry.addHandler(handler, "/ws").addInterceptors(authInterceptor).setAllowedOrigins("*");
+    registry
+        .addHandler(new MdcWebSocketHandlerDecorator(handler), "/ws")
+        .addInterceptors(authInterceptor)
+        .setAllowedOrigins("*");
   }
 }
