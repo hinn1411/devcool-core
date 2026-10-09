@@ -74,6 +74,7 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [11 — Flyway & Schema Management](11-flyway-and-schema-management.md) | Who owns the schema? `ddl-auto` vs Flyway, how they start together, and the traps in generating the P1-T01 baseline. |
 | [12 — Integration Testing Guide](12-integration-testing-guide.md) | Which bugs only a real Postgres and a real Spring context can catch, and how to write those tests so they stay fast, independent and honest (Testcontainers, context caching, transactions, cookies, concurrency). |
 | [13 — Integration Testing Exercises](13-integration-testing-exercises.md) | Ten hands-on ITs against real code here. Four of them are P1-T11 and P1-T12, and three hide verified bugs. |
+| [14 — Health Checks & Graceful Shutdown](14-health-checks-and-graceful-shutdown.md) | Liveness vs readiness, why no probe may check the DB (with a worked outage), how ECS turns the ALB check into a kill switch, and the deploy drain behind P1-T10. |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 

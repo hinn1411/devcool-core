@@ -64,7 +64,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 - [ ] **P4-T12** Typing: `TYPING` frame → rate limit 1/2 s per connection → publish; never persisted
 ### Limits, drain, scaling
 - [ ] **P4-T13** Rate limits with Bucket4j + Redis: `SEND` 10/s burst 20 per user, `TYPING` per connection; `NACK{code: RATE_LIMITED, retryAfterMs}`
-- [ ] **P4-T14** Graceful drain: on `ContextClosedEvent`, send `RECONNECT{afterMs: rand(0..10000)}`, then close 1012. Tune the ALB deregistration delay and ECS stopTimeout (P2 values)
+- [ ] **P4-T14** Graceful drain: on `ContextClosedEvent`, send `RECONNECT{afterMs: rand(0..10000)}`, then close 1012. Tune the ALB deregistration delay and ECS stopTimeout (P2 values). Note (P1-T10): ECS deregisters the task from the ALB and waits out the deregistration delay *before* SIGTERM, so `ContextClosedEvent` fires after the delay. Revisit the drain order in [01 §4.5](../architecture/01-system-architecture.md#45-deploy-with-graceful-websocket-drain) and the P2 health-check row
 - [ ] **P4-T15** Metrics listed above. Publish `ws.connections.active` to CloudWatch (Micrometer CloudWatch registry, or via the collector in P7). Add a target-tracking scaling policy on it (target 3,000/task)
 - [ ] **P4-T16** Multi-node IT: two Spring contexts on random ports sharing a Valkey Testcontainer + Postgres. User A on node 1 and user B on node 2: send, typing, presence, and resume after a forced disconnect
 - [ ] **P4-T17** Remove legacy v1 frames once the frontend uses v2 (coordinate with P5)
