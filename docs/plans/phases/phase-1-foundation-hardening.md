@@ -78,7 +78,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
   - Drop `|| true` from static analysis. Fix or suppress the existing findings explicitly first.
   - Cache Testcontainers images.
 - [x] **P1-T15** Structured JSON logging (`logging.structured.format.console=ecs` in `ecs`; human-readable locally). Log `userId`/`connectionId` via MDC in the WS handler
-- [ ] **P1-T16** Enable virtual threads (`spring.threads.virtual.enabled=true`). Check that no `synchronized` block wraps blocking I/O in the WS send path
+- [x] **P1-T16** Enable virtual threads (`spring.threads.virtual.enabled=true`). Check that no `synchronized` block wraps blocking I/O in the WS send path
 - [ ] **P1-T17** Update `docs/learning/README.md` "Fix these first" with the status of each item and link the PRs
 - [ ] **P1-T19** (Optional) Make the domain and DTO models immutable (records or defensive copies) and delete the matching entries from `spotbugs-exclude.xml`. Done when the file has no entries left (from P1-T14)
 - [ ] **P1-T20** (Optional) Re-add PMD 7 with a curated Java 21 ruleset, blocking, with a baseline like SpotBugs (from P1-T14)
