@@ -49,6 +49,8 @@ frontend/test-results/
 *.tfstate
 *.tfstate.*
 *.tfplan
+*.auto.tfvars
+*.local.tfvars
 crash.log
 
 ### Claude Code (personal) ###

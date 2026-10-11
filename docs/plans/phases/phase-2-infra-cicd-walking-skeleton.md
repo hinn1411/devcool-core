@@ -105,7 +105,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 - [ ] **P2-T10** CI infra job: `terraform fmt -check`, `validate`, `tflint`, `trivy config infra/`
 - [ ] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent
 - [ ] **P2-T12** Update `README.md` "Deployment" (replace the manual steps) and fill in `docker/ecs/README.md`
-- [ ] **P2-T13** Budget alarm (AWS Budgets, email) at the monthly limit you set
+- [x] **P2-T13** Budget alarm (AWS Budgets, email) at the monthly limit you set
 
 ## Files touched
 `infra/**`, `.github/workflows/*.yml`, `Dockerfile`, `src/main/resources/application-ecs.properties`, `application-migrate.properties`, `README.md`
