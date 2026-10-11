@@ -1,11 +1,10 @@
 package com.devcool.application.service.chat.strategy;
 
-import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.media.model.Media;
-import com.devcool.domain.member.port.out.MemberPort;
 import java.time.Instant;
 
 /**
@@ -15,8 +14,8 @@ import java.time.Instant;
 public abstract class AbstractMediaMessageCreationStrategy extends AbstractMessageCreationStrategy {
 
   protected AbstractMediaMessageCreationStrategy(
-      ChannelPort channelPort, MemberPort memberPort, MessagePort messagePort) {
-    super(channelPort, memberPort, messagePort);
+      ChannelAuthorizer channelAuthorizer, MessagePort messagePort) {
+    super(channelAuthorizer, messagePort);
   }
 
   @Override

@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.devcool.application.service.channel.ChannelAuthorizer;
+import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.media.exception.InvalidMediaContentException;
 import com.devcool.domain.media.exception.InvalidObjectKeyException;
 import com.devcool.domain.media.exception.UnsupportedMediaTypeException;
@@ -21,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,7 +31,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -42,9 +44,15 @@ class MediaServiceTest {
   private static final String VALID_KEY = "channel/42/2026/03/08/" + UUID_PART + ".jpg";
 
   @Mock private MediaStoragePort storagePort;
+  @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
 
-  @InjectMocks private MediaService mediaService;
+  private MediaService mediaService;
+
+  @BeforeEach
+  void setUp() {
+    mediaService = new MediaService(storagePort, new ChannelAuthorizer(channelPort, memberPort));
+  }
 
   // ── upload ──────────────────────────────────────────────────────────────────
 

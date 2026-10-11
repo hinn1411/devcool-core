@@ -8,7 +8,6 @@ import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelAction;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
-import com.devcool.domain.channel.policy.ChannelPermissionPolicy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
@@ -17,11 +16,8 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
-import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.exception.MemberAlreadyInChannelException;
-import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.Member;
-import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.port.out.UserPort;
@@ -40,18 +36,21 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   private final ChannelPort channelPort;
   private final MemberPort memberPort;
   private final UserPort userPort;
+  private final ChannelAuthorizer channelAuthorizer;
 
   public ChannelService(
       List<ChannelCreationStrategy> creationStrategies,
       ChannelPort channelPort,
       MemberPort memberPort,
-      UserPort userPort) {
+      UserPort userPort,
+      ChannelAuthorizer channelAuthorizer) {
     this.channelPort = channelPort;
     this.creationStrategies = new EnumMap<>(ChannelType.class);
     creationStrategies.forEach(
         strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
     this.memberPort = memberPort;
     this.userPort = userPort;
+    this.channelAuthorizer = channelAuthorizer;
   }
 
   @Override
@@ -70,7 +69,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   @Transactional
   public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
-    requireAllowed(channelId, command.callerId(), ChannelAction.UPDATE_CHANNEL);
+    channelAuthorizer.requireAllowed(channelId, command.callerId(), ChannelAction.UPDATE_CHANNEL);
 
     Channel channel =
         Channel.builder()
@@ -89,7 +88,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Transactional
   public boolean addMember(Integer channelId, AddMembersCommand command) {
     ChannelAccessInfo channel =
-        requireAllowed(channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
+        channelAuthorizer.requireAllowed(channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
 
     Set<Integer> distinctMemberIds = new HashSet<>(command.userIds());
     if (distinctMemberIds.size() < command.userIds().size()) {
@@ -118,36 +117,6 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
 
     channelPort.increaseTotalMembers(channelId, existingUserIds.size());
     return memberPort.addMembers(channelId, existingUserIds);
-  }
-
-  /**
-   * Channel exists → caller is a member → the action exists for this channel type → the caller's
-   * role may perform it. Returns the channel's access info for the checks that follow.
-   */
-  private ChannelAccessInfo requireAllowed(
-      Integer channelId, Integer callerId, ChannelAction action) {
-
-    ChannelAccessInfo channelInfo =
-        channelPort
-            .findAccessInfo(channelId)
-            .orElseThrow(() -> new ChannelNotFoundException(channelId));
-    ChannelType type = channelInfo.channelType();
-    MemberType callerRole =
-        memberPort
-            .findRoleOfMember(channelId, callerId)
-            .orElseThrow(() -> new MemberNotFoundException(callerId));
-    if (!ChannelPermissionPolicy.supports(type, action)) {
-      log.warn("Action {} not allowed in channel type {}", action, channelInfo.channelType());
-      throw new InvalidChannelConfigException("Action not supported");
-    }
-
-    if (!ChannelPermissionPolicy.allows(type, callerRole, action)) {
-      log.warn(
-          "Role {} cannot perform action {} in {}", callerRole, action, channelInfo.channelType());
-      throw new ForbiddenException("Action not allowed");
-    }
-
-    return channelInfo;
   }
 
   @Override
