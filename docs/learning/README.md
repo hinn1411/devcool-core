@@ -14,24 +14,26 @@ Every claim cites `file:line` and quotes the real code. Nothing here is a hypoth
 
 ## Fix these first
 
-The audit found live security holes, not just teaching material. These are not "learning topics" — they are open in `master` today.
+The audit found live security holes, not just teaching material. Phase 1 closes them, each with a test (P1 Definition of Done). This table is the single status record; `Where` keeps the `file:line` as found on 2026-09-21, and the PR shows the fix. Status as of 2026-10-10:
 
-| # | Issue | Where | Effect |
-|---|---|---|---|
-| 1 | **Every user's password hash is downloadable** | `UserController.java:24-31` | Returns the raw domain `User`. Any logged-in user walks `/api/v1/users/1..N` and harvests every bcrypt hash, email, role and `tokenVersion`. |
-| 2 | **Login returns the caller's plaintext password** | `PasswordIncorrectException.java:9` → `ApiExceptionHandler.java:27` | A failed login echoes the submitted password in `details.password` — into the response body, proxy logs and APM traces. |
-| 3 | **Logout does not log anyone out** | `User.java:40-42` | `tokenVersion >= currentVersion`. Logout sets DB to 4, the old token claims 3, `4 >= 3` passes. Access tokens stay valid for their full TTL — which is 3600s, not the 15 min the comment claims. |
-| 4 | **Any user can join any channel** | `ChannelController.java:66-75` | No `Authentication` parameter. POST your own id to any `channelId`. This one gap defeats the three membership checks elsewhere that are written correctly. |
-| 5 | **Any user can modify any channel** | `ChannelController.java:55-64` | Same cause. Rename, re-type or set an expiry on any channel by id. |
-| 6 | **Password change silently does nothing** | `AuthController.java:140-144` | `return null;` from a `@RestController` makes Spring send **HTTP 200, empty body**. The backing `UserAdapter.updatePassword:60-64` is `return false;`. |
-| 7 | **Refresh and logout are broken for browsers** | `AuthController.java:129` | Cookie `path` is `/api/v1/auth/refresh`; the endpoint is `/refresh_token`. Under RFC 6265 the browser never sends the cookie → `MissingRequestCookieException` → 500. |
-| 8 | **Production cannot start against a fresh database** | `application-ecs.properties:7,10` | `ddl-auto=validate` with Flyway disabled and zero migration files. Nothing in the repo can create the schema it validates. |
+| # | Issue | Where (as audited) | Effect | Status | Fixed in · proving test |
+|---|---|---|---|---|---|
+| 1 | **Every user's password hash is downloadable** | `UserController.java:24-31` | Returns the raw domain `User`. Any logged-in user walks `/api/v1/users/1..N` and harvests every bcrypt hash, email, role and `tokenVersion`. | Fixed | [#104](https://github.com/hinn1411/devcool-core/pull/104), [#115](https://github.com/hinn1411/devcool-core/pull/115) · `UserProfileIT` |
+| 2 | **Login returns the caller's plaintext password** | `PasswordIncorrectException.java:9` → `ApiExceptionHandler.java:27` | A failed login echoes the submitted password in `details.password` — into the response body, proxy logs and APM traces. | Fixed | [#105](https://github.com/hinn1411/devcool-core/pull/105) · `PasswordExceptionsTest`, `AuthControllerTest.login_invalidCredentials_errorBodyDoesNotEchoTheSubmittedPassword` |
+| 3 | **Logout does not log anyone out** | `User.java:40-42` | `tokenVersion >= currentVersion`. Logout sets DB to 4, the old token claims 3, `4 >= 3` passes. Access tokens stay valid for their full TTL — which is 3600s, not the 15 min the comment claims. | Fixed | [#82](https://github.com/hinn1411/devcool-core/pull/82) · `UserTest.isTokenVersionValid_*`, `AuthFlowIT.Logout.oldCredential_isRejected` |
+| 4 | **Any user can join any channel** | `ChannelController.java:66-75` | No `Authentication` parameter. POST your own id to any `channelId`. This one gap defeats the three membership checks elsewhere that are written correctly. | Fixed | [#106](https://github.com/hinn1411/devcool-core/pull/106) · `ChannelServiceTest`, `ChannelControllerAuthzIT.memberOfChannelA_addsSelfToChannelB` |
+| 5 | **Any user can modify any channel** | `ChannelController.java:55-64` | Same cause. Rename, re-type or set an expiry on any channel by id. | Fixed | [#106](https://github.com/hinn1411/devcool-core/pull/106) · `ChannelServiceTest`, `ChannelControllerAuthzIT.memberOfChannelA_onChannelB` |
+| 6 | **Password change silently does nothing** | `AuthController.java:140-144` | `return null;` from a `@RestController` makes Spring send **HTTP 200, empty body**. The backing `UserAdapter.updatePassword:60-64` is `return false;`. | Fixed | [#107](https://github.com/hinn1411/devcool-core/pull/107), [#108](https://github.com/hinn1411/devcool-core/pull/108) · `UserServiceTest`, `AuthFlowIT.ChangePassword` |
+| 7 | **Refresh and logout are broken for browsers** | `AuthController.java:129` | Cookie `path` is `/api/v1/auth/refresh`; the endpoint is `/refresh_token`. Under RFC 6265 the browser never sends the cookie → `MissingRequestCookieException` → 500. | Fixed | [#109](https://github.com/hinn1411/devcool-core/pull/109) · `AuthFlowIT.RefreshCookieAttributes` |
+| 8 | **Production cannot start against a fresh database** | `application-ecs.properties:7,10` | `ddl-auto=validate` with Flyway disabled and zero migration files. Nothing in the repo can create the schema it validates. | Fixed in repo; ECS runs it in P2-T05 | [#112](https://github.com/hinn1411/devcool-core/pull/112) · `DevCoolApplicationIT.flyway_appliedTheBaselineAndIndexMigrations_allSuccessfully` |
+| + | `/api/v1/channels` is `permitAll` | `SecurityConfig` | No token → NPE on `auth.getName()` → 500 instead of 401. | Fixed | [#110](https://github.com/hinn1411/devcool-core/pull/110) · `ChannelControllerAuthzIT.*.withoutToken` |
+| + | `verifyRefresh` returns `null` | `RefreshTokenService.refresh` | A bad refresh token → NPE → 500 instead of 401. | Fixed | [#109](https://github.com/hinn1411/devcool-core/pull/109) · `TokenIssuerAdapterTest.verifyRefresh_*`, `AuthFlowIT.RefreshToken.rejectedCookie_isUnauthorizedAndChangesNothing` |
 
-Numbers 1, 2 and 3 are the ones to fix today. Number 8 blocks deployment.
+#1–#3 were the ones to fix first and #8 blocked deployment. Every row is now fixed, each with a test.
 
 Two things that are *not* as bad as they look, because accuracy matters:
 
-- `PasswordNotMatchException` has the same plaintext-password flaw but is constructed nowhere. Latent, not live.
+- `PasswordNotMatchException` has the same plaintext-password flaw but is constructed nowhere. Latent, not live (its details were removed too, in [#105](https://github.com/hinn1411/devcool-core/pull/105)).
 - The `// Validate member permission later` comment in `WsSubscribeService` looks like a missing membership check. It isn't — membership *is* verified at lines 40-50. The comment refers to role/status checks.
 
 ---

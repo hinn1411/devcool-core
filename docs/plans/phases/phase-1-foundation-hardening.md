@@ -17,25 +17,12 @@ Make the existing backend safe and deployable before building on it:
 - P0 done.
 - Docker running locally.
 
-## Current state (verified 2026-09-29)
-Status of the security audit in [`learning/README.md`](../../learning/README.md) "Fix these first":
-
-| # | Issue | Status |
-|---|---|---|
-| 1 | `UserController` returns the raw `User` domain object (password hash, tokenVersion) | **Open** |
-| 2 | `PasswordIncorrectException` puts the submitted password in `details` | **Open** |
-| 3 | `tokenVersion >=` comparison | Fixed (`Objects.equals`) |
-| 4 | `POST /channels/{id}/members`: no authorization | **Open** |
-| 5 | `PATCH /channels/{id}`: no authorization | **Open** |
-| 6 | `POST /auth/password` returns `null`; `UserAdapter.updatePassword` returns `false` | **Open** |
-| 7 | Refresh cookie `path=/api/v1/auth/refresh` doesn't match `/refresh_token` or `/logout` | **Open** |
-| 8 | No Flyway migrations; `ecs` can't start on a fresh DB | **Open** |
-| + | `/api/v1/channels` is `permitAll` → NPE on `auth.getName()` without a token | **Open** |
-| + | `verifyRefresh` returns `null` → NPE in `refresh` | **Open** |
+## Current state
+The status of every security-audit row (with the PR that fixed it and the proving test) lives in one place: [`learning/README.md`](../../learning/README.md#fix-these-first) "Fix these first". Rows still **Open** there block this phase's Definition of Done.
 
 ## Scope
 - **In:**
-  - The items above.
+  - The Open rows of the audit table (see Current state).
   - Flyway baseline.
   - pgvector image.
   - Actuator.
@@ -79,7 +66,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
   - Cache Testcontainers images.
 - [x] **P1-T15** Structured JSON logging (`logging.structured.format.console=ecs` in `ecs`; human-readable locally). Log `userId`/`connectionId` via MDC in the WS handler
 - [x] **P1-T16** Enable virtual threads (`spring.threads.virtual.enabled=true`). Check that no `synchronized` block wraps blocking I/O in the WS send path
-- [ ] **P1-T17** Update `docs/learning/README.md` "Fix these first" with the status of each item and link the PRs
+- [x] **P1-T17** Update `docs/learning/README.md` "Fix these first" with the status of each item and link the PRs
 - [ ] **P1-T19** (Optional) Make the domain and DTO models immutable (records or defensive copies) and delete the matching entries from `spotbugs-exclude.xml`. Done when the file has no entries left (from P1-T14)
 - [ ] **P1-T20** (Optional) Re-add PMD 7 with a curated Java 21 ruleset, blocking, with a baseline like SpotBugs (from P1-T14)
 
@@ -103,7 +90,7 @@ Status of the security audit in [`learning/README.md`](../../learning/README.md)
 ## Definition of Done
 - `docker compose down -v && ./mvnw spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=local` builds the schema from Flyway alone.
 - CI runs unit + IT + static analysis, and fails on any of them.
-- Every "Open" row above is Fixed, with a test.
+- Every "Open" row in the audit table is Fixed, with a test.
 
 ## Interview talking points
 - Why `ddl-auto` in production is dangerous, and how baseline migrations work on an existing schema.
