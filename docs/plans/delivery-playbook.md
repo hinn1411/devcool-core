@@ -131,7 +131,7 @@ Copy these and adapt the task id.
 | Review, not rewrite | `Review my changes in <files> for race conditions, missing authorization and missing tests. Point at lines and explain the failure. Don't rewrite the code.` |
 | Break it | `Suggest three one-line changes that would break the invariant in <class>, and for each, the test that should catch it. Don't apply them.` |
 | Mode C kick-off | `claude --worktree p5-t04`, then: `Implement P5-T04 per the phase file and frontend/CLAUDE.md. Run the frontend checks from /verify. Summarize what you did and anything you guessed. Don't push.` |
-| Terraform review | `Explain this terraform plan resource by resource: why it exists, whether it bills hourly in ap-southeast-1, and what breaks without it.` |
+| Terraform review | `Explain this terraform plan resource by resource: why it exists, whether it bills hourly in us-east-1, and what breaks without it.` |
 | Grill me | `Act as a senior backend interviewer. Ask me one question at a time about <topic> in DevCool, broad first, then follow-ups on my answers. Don't give answers until I've tried. After 8 questions, score me and list the gaps with the files I should read.` |
 | Incident report | `Here is my game-day log: <paste>. Fill the incident template from docs/plans/delivery-playbook.md §9. Ask me for anything missing; don't invent timings or numbers.` |
 | Story | `Turn these journal entries <paths> into a STAR story under 250 words, using only numbers that appear in them. Mark anything you'd need me to confirm.` |
@@ -262,7 +262,7 @@ Incident reports; before/after numbers; dashboard screenshots (in the journal, n
 
 ### What the planned stack costs
 
-On-demand prices in ap-southeast-1 from the AWS Price List API on 2026-09-29. Check again before you rely on them.
+On-demand prices in ap-southeast-1 from the AWS Price List API on 2026-09-29. The project has since moved to us-east-1, where these are usually lower; refresh the table before you rely on it.
 
 | Resource | Price | Per awake hour in DevCool |
 |---|---|---|

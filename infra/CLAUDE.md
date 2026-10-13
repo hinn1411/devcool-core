@@ -27,7 +27,7 @@ tflint --chdir infra
 Claude may run `init`, `fmt`, `validate` and `plan`. `apply` always needs the user's approval. `destroy` is blocked; the user runs it (or the `env-power` workflow does).
 
 ## Conventions
-- Region `ap-southeast-1` (ACM certs for CloudFront in `us-east-1` via a provider alias).
+- Region `us-east-1`. CloudFront requires its ACM cert there too, so the `edge` stack needs no provider alias (add one only if the app moves region again).
 - Tag every resource: `Project=devcool`, `Environment=<env>`, `Stack=<stack>`, `ManagedBy=terraform`.
 - Prefer `terraform-aws-modules/*` for undifferentiated resources. Pin module and provider versions.
 - **IAM:** specific actions on specific ARNs. No `*` resources except where AWS requires it (and say why in a comment).

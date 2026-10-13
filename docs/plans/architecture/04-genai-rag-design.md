@@ -226,6 +226,6 @@ Record the numbers per run in `docs/plans/eval-results.md`. Tuning chunk size, t
 | Filtered HNSW under-returns | pgvector ≥ 0.8 iterative scan; test with a small `allowed` set |
 | Prompt injection via chat content | Delimited sources, explicit instruction, no tools, citations validated against retrieved ids |
 | Embedding model change | `embedding_model` column + re-index job |
-| Bedrock quotas in `ap-southeast-1` | Cross-region inference profile; request a quota increase early (P2) |
+| Bedrock quotas in `us-east-1` | Cross-region inference profile; request a quota increase early (P2) |
 | Cost runaway | Rate limit + token budget + dashboard alert on token spend |
 | Stale chunks after membership changes | No stale access: permission check is at query time, not index time |

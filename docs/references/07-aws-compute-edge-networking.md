@@ -80,7 +80,7 @@
 - List the steps between "ECS decides to stop task X" and "task X's process exits". Which three timeouts must line up?
 - What does the execution role need that the task role doesn't, and vice versa?
 - Why does `/api/*` need `CachingDisabled` *and* an origin request policy? What breaks if you forward the `Host` header to the ALB?
-- Why does the CloudFront certificate have to be in `us-east-1` when everything else is in `ap-southeast-1`?
+- Why must the CloudFront certificate be in `us-east-1`? What would change in `edge` if the app ran in another region?
 - Which traffic still needs the NAT gateway after you add S3, ECR, Logs, Secrets Manager and Bedrock endpoints? (Hint: Grafana Cloud.)
 - How does scaling on `ws.connections.active` differ from scaling on CPU for a WebSocket service?
 - Which resources cost money when desired count is 0? Which ones does "hibernate" destroy?

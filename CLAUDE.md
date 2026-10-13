@@ -88,7 +88,7 @@ com.devcool/
 | DB | PostgreSQL (Docker Compose locally; Aurora PostgreSQL in AWS) |
 | ORM | Spring Data JPA + Flyway migrations |
 | Auth | JWT (nimbus-jose-jwt) + refresh token cookie |
-| Storage | AWS S3 (SDK v2, region: `ap-southeast-1`) |
+| Storage | AWS S3 (SDK v2, region: `us-east-1`) |
 | Code gen | Lombok + MapStruct 1.5.5 |
 | Docs | Swagger UI at `/docs` |
 
