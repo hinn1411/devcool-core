@@ -5,7 +5,7 @@
 - **Phase:** P8
 
 ## Context
-Phase 8 needs text generation (streaming), embeddings, and structured output. The app runs on ECS in `ap-southeast-1`. The user is studying for an AWS GenAI certification.
+Phase 8 needs text generation (streaming), embeddings, and structured output. The app runs on ECS in `us-east-1`. The user is studying for an AWS GenAI certification.
 
 ## Options considered
 

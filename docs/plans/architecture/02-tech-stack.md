@@ -37,7 +37,7 @@ This doc lists each concern, the choice, the main alternatives and why. Decision
 | Concern | Choice | Alternatives | Pros | Cons |
 |---|---|---|---|---|
 | Model provider | **Amazon Bedrock** (ADR-0010) | Anthropic API direct, OpenAI | IAM task role (no API keys), VPC endpoint, AWS GenAI certification alignment | Model availability per region; newest models may arrive on the direct API first |
-| Generation model | **Claude Sonnet** for RAG, **Claude Haiku** for summaries/tags | — | Quality where it matters, cheap where it doesn't | Check the model ids available in `ap-southeast-1` (or use a cross-region inference profile) |
+| Generation model | **Claude Sonnet** for RAG, **Claude Haiku** for summaries/tags | — | Quality where it matters, cheap where it doesn't | Check the model ids available in `us-east-1` (or use a cross-region inference profile) |
 | Embeddings | **Amazon Titan Text Embeddings v2, 1024 dims** | Cohere Embed v3 (multilingual), OpenAI | Cheap, configurable dims | Changing the model means re-indexing everything; store `embedding_model` per row |
 | Java LLM framework | **Spring AI** (Bedrock Converse + embedding clients) | LangChain4j, raw AWS SDK | Spring-native config, streaming `Flux`, observations for token usage | Fast-moving API; pin the version compatible with Boot 3.5 |
 | Local LLM | **Ollama** (`mxbai-embed-large` 1024-d + a small chat model) | Bedrock in dev | Free, offline, same dims as Titan v2 | Answer quality differs from Claude; don't evaluate on it |

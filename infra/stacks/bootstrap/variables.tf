@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region for the stack."
   type        = string
-  default     = "ap-southeast-1"
+  default     = "us-east-1"
 }
 
 variable "environment" {

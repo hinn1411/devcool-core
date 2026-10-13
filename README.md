@@ -36,7 +36,7 @@ The codebase enforces strict layering so that domain logic never depends on Spri
 | Database | PostgreSQL 15 |
 | ORM / Migrations | Spring Data JPA + Flyway |
 | Auth | JWT (nimbus-jose-jwt) |
-| Storage | AWS S3 (SDK v2, region: `ap-southeast-1`) |
+| Storage | AWS S3 (SDK v2, region: `us-east-1`) |
 | WebSocket | Spring WebSocket (raw, not STOMP) |
 | Code generation | Lombok + MapStruct 1.5.5 |
 | API Docs | SpringDoc OpenAPI (Swagger UI at `/docs`) |
@@ -140,7 +140,7 @@ POST /api/v1/medias/upload (MultipartFile + channelId)
 
 ## AWS Architecture
 
-The production deployment runs on **AWS ap-southeast-1 (Singapore)** using ECS Fargate, RDS PostgreSQL, and S3.
+The production deployment runs on **AWS us-east-1 (N. Virginia)** using ECS Fargate, RDS PostgreSQL, and S3.
 
 ```
                   Internet
@@ -207,15 +207,15 @@ The production deployment runs on **AWS ap-southeast-1 (Singapore)** using ECS F
 ```bash
 # Build and push image to ECR
 docker build -t devcool .
-docker tag devcool:latest <ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/devcool:latest
-docker push <ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/devcool:latest
+docker tag devcool:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
+docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
 
 # Force ECS to deploy the new image
 aws ecs update-service \
   --cluster devcool-cluster \
   --service devcool-service \
   --force-new-deployment \
-  --region ap-southeast-1
+  --region us-east-1
 ```
 
 ### Environment variables (ECS task definition)

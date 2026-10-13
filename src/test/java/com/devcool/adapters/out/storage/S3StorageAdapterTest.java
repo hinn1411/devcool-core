@@ -42,7 +42,7 @@ class S3StorageAdapterTest {
 
   @BeforeEach
   void setUp() {
-    AwsProps awsProps = new AwsProps("ap-southeast-1", new AwsProps.S3Props(BUCKET));
+    AwsProps awsProps = new AwsProps("us-east-1", new AwsProps.S3Props(BUCKET));
     adapter = new S3StorageAdapter(s3Client, s3Presigner, awsProps);
   }
 

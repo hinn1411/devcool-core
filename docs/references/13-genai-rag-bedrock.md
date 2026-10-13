@@ -45,7 +45,7 @@
 ### Amazon Bedrock
 
 - [ConverseStream API reference](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_ConverseStream.html) — *API reference* · Stream events, usage metadata, errors (`ThrottlingException`).
-- [Supported models by Region](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) — *AWS docs* · Check Claude and Titan availability in `ap-southeast-1`.
+- [Supported models by Region](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) — *AWS docs* · Check Claude and Titan availability in `us-east-1`.
 - [Cross-Region inference](https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html) — *AWS docs* · Inference profiles when a model isn't in-region, and the IAM ARNs they need.
 - [Model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) — *AWS docs* · Enabling models before P8.
 - [Bedrock quotas](https://docs.aws.amazon.com/bedrock/latest/userguide/quotas.html) — *AWS docs* · Tokens/requests per minute; request increases early.
