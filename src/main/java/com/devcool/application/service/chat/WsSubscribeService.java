@@ -1,15 +1,10 @@
 package com.devcool.application.service.chat;
 
-import com.devcool.domain.channel.exception.ChannelNotFoundException;
-import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
-import com.devcool.domain.member.exception.MemberNotFoundException;
-import com.devcool.domain.member.port.out.MemberPort;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,24 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WsSubscribeService implements WsSubscribeUseCase {
 
-  private static final Logger log = LoggerFactory.getLogger(WsSubscribeService.class);
-  private final ChannelPort channelPort;
-  private final MemberPort memberPort;
+  private final ChannelAuthorizer channelAuthorizer;
   private final ConnectionRegistryPort connectionRegistryPort;
 
   @Override
   @Transactional
   public void subscribe(SubscribeCommand command) {
-    // Validate channel status later
-    if (!channelPort.existById(command.channelId())) {
-      log.warn("Channel id {} does not exist", command.channelId());
-      throw new ChannelNotFoundException(command.channelId());
-    }
-    // Validate member permission later
-    if (!memberPort.existMemberOfChannelByUserId(command.channelId(), command.userId())) {
-      log.info("User id {} does not exist in channel id {}", command.userId(), command.channelId());
-      throw new MemberNotFoundException(command.userId());
-    }
+    // Validate channel status and member permission later
+    channelAuthorizer.requireMember(command.channelId(), command.userId());
 
     connectionRegistryPort.subscribe(command.connectionId(), command.channelId());
   }

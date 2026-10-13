@@ -1,5 +1,6 @@
 package com.devcool.application.service;
 
+import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.media.exception.InvalidMediaContentException;
 import com.devcool.domain.media.exception.InvalidObjectKeyException;
 import com.devcool.domain.media.exception.MediaTooLargeException;
@@ -9,8 +10,6 @@ import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
 import com.devcool.domain.media.port.in.UploadMediaUseCase;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import com.devcool.domain.media.port.out.MediaStoragePort;
-import com.devcool.domain.member.exception.MemberNotFoundException;
-import com.devcool.domain.member.port.out.MemberPort;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -49,12 +48,12 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
               + "))?");
 
   private final MediaStoragePort storagePort;
-  private final MemberPort memberPort;
+  private final ChannelAuthorizer channelAuthorizer;
   private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
   @Override
   public String upload(UploadMediaCommand command) {
-    requireMember(command.userId(), command.channelId());
+    channelAuthorizer.requireMembership(command.channelId(), command.userId());
 
     if (command.size() <= 0) {
       log.warn("Media content is empty!");
@@ -87,19 +86,12 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
 
   @Override
   public PresignedUrlResult getPresignedUrl(Integer userId, String objectKey) {
-    requireMember(userId, channelIdFrom(objectKey));
+    channelAuthorizer.requireMembership(channelIdFrom(objectKey), userId);
 
     MediaStoragePort.PresignedGetResult presignedResult =
         storagePort.presignGet(
             new MediaStoragePort.PresignGetRequest(objectKey, DEFAULT_PRESIGN_TTL));
     return new PresignedUrlResult(presignedResult.url(), presignedResult.expiresAt());
-  }
-
-  private void requireMember(Integer userId, Integer channelId) {
-    if (!memberPort.existMemberOfChannelByUserId(channelId, userId)) {
-      log.warn("User {} is not a member of channel {}", userId, channelId);
-      throw new MemberNotFoundException(userId);
-    }
   }
 
   private static Integer channelIdFrom(String objectKey) {

@@ -1,7 +1,6 @@
 package com.devcool.application.service.chat;
 
-import com.devcool.domain.channel.exception.ChannelNotFoundException;
-import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
@@ -12,8 +11,6 @@ import com.devcool.domain.chat.port.in.SaveMessageUseCase;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
-import com.devcool.domain.member.exception.MemberNotFoundException;
-import com.devcool.domain.member.port.out.MemberPort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -28,20 +25,17 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   private static final Logger log = LoggerFactory.getLogger(MessageService.class);
   private final Map<ContentType, MessageCreationStrategy> creationStrategies;
   private final MessagePort messagePort;
-  private final ChannelPort channelPort;
-  private final MemberPort memberPort;
+  private final ChannelAuthorizer channelAuthorizer;
 
   public MessageService(
       List<MessageCreationStrategy> creationStrategies,
       MessagePort messagePort,
-      ChannelPort channelPort,
-      MemberPort memberPort) {
+      ChannelAuthorizer channelAuthorizer) {
     this.creationStrategies = new EnumMap<>(ContentType.class);
     creationStrategies.forEach(
         strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
     this.messagePort = messagePort;
-    this.channelPort = channelPort;
-    this.memberPort = memberPort;
+    this.channelAuthorizer = channelAuthorizer;
   }
 
   @Override
@@ -60,12 +54,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   @Override
   @Transactional(readOnly = true)
   public MessageList getMessages(GetMessageCommand command) {
-    if (!channelPort.existById(command.channelId())) {
-      throw new ChannelNotFoundException(command.channelId());
-    }
-    if (!memberPort.existMemberOfChannelByUserId(command.channelId(), command.userId())) {
-      throw new MemberNotFoundException(command.userId());
-    }
+    channelAuthorizer.requireMember(command.channelId(), command.userId());
 
     // Fetch one extra row to know whether another page exists.
     List<MessageItem> fetched =

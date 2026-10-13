@@ -44,7 +44,12 @@ class ChannelServiceTest {
   @Mock private UserPort userPort;
 
   private ChannelService newService() {
-    return new ChannelService(List.of(), channelPort, memberPort, userPort);
+    return new ChannelService(
+        List.of(),
+        channelPort,
+        memberPort,
+        userPort,
+        new ChannelAuthorizer(channelPort, memberPort));
   }
 
   private void channelIs(ChannelType type, int totalOfMembers) {
