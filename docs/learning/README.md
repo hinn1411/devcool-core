@@ -78,6 +78,8 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [13 — Integration Testing Exercises](13-integration-testing-exercises.md) | Ten hands-on ITs against real code here. Four of them are P1-T11 and P1-T12, and three hide verified bugs. |
 | [14 — Health Checks & Graceful Shutdown](14-health-checks-and-graceful-shutdown.md) | Liveness vs readiness, why no probe may check the DB (with a worked outage), how ECS turns the ALB check into a kill switch, and the deploy drain behind P1-T10. |
 | [15 — Architecture Styles by Analogy](15-architecture-styles-analogies.md) | Modular monolith vs microservices vs distributed monolith as three ways to run a restaurant, with pros and cons and how DevCool's `api` + `worker` and outbox fit. |
+| [16 — IaC Fundamentals](16-iac-fundamentals.md) | What changes when infrastructure is a reviewed program? Declarative vs imperative, convergence, drift, blast radius, one owner per field, plan → review → apply. |
+| [17 — Terraform in DevCool](17-terraform-in-devcool.md) | How Terraform works (state, modules, lifecycle, `moved`/`import`/`removed`), how P2's five stacks connect through SSM, and eleven production incidents with their fixes. |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 
@@ -86,6 +88,8 @@ Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first becau
 10 is the design companion to 04: read 04 for the realtime bugs, then 10 for how the layer fits together and what to move to when one task is no longer enough.
 
 12 and 13 are the integration-testing follow-up to 07 and 08: read 12, then do exercise 1 of 13 (it is P1-T11) before any other.
+
+16 and 17 are the P2 (infrastructure) pair: read 16 for the tool-agnostic ideas, then 17 before writing any `infra/` code.
 
 ---
 
