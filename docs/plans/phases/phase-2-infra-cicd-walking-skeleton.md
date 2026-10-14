@@ -91,12 +91,13 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 - [ ] **P2-T02** `infra/stacks/network`: VPC across 2 AZs, NAT (toggle), S3 gateway endpoint, interface endpoints (ECR api/dkr, logs, secretsmanager), security groups (ALB → api:8080; api → Aurora:5432)
 - [ ] **P2-T03** `infra/stacks/data`: Aurora Serverless v2 PG16 (dev min 0 ACU), RDS-managed master secret, S3 media bucket (existing name via var), JWT secrets in Secrets Manager
   - Review carry-over (P2-T01): #4, #3b → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)
+  - Carry-over (P2-T05): tasks read the RDS secret only at start, so lengthen its rotation interval in dev
 - [ ] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
   - Cluster, `api` service, ALB, HTTPS listener.
   - Task role (S3 media, secrets) and execution role.
   - CloudWatch log group with 14-day retention.
   - Review carry-over (P2-T01): #2 (before the first CI apply), #3a, #3c, #3d, #10 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t04--ecs-service-module--app-stack)
-- [ ] **P2-T05** `application-ecs.properties`: datasource from injected secrets, Flyway off; add `application-migrate.properties`
+- [x] **P2-T05** `application-ecs.properties`: datasource from injected secrets, Flyway off; add `application-migrate.properties`
 - [ ] **P2-T06** `Dockerfile`:
   - Non-root user, `JAVA_TOOL_OPTIONS` with `-XX:MaxRAMPercentage=75`.
   - Layered jar for caching.
