@@ -22,7 +22,8 @@ Apply order: bootstrap → network → data → app → edge.
 terraform -chdir=infra/stacks/<stack> init -backend-config=../../envs/<env>.backend.hcl
 terraform -chdir=infra/stacks/<stack> plan -var-file=../../envs/<env>.tfvars
 terraform fmt -recursive infra
-tflint --chdir infra
+tflint --chdir infra --init
+tflint --chdir infra --recursive --config "$PWD/infra/.tflint.hcl"   # absolute path: --recursive resolves --config per module dir
 ```
 Claude may run `init`, `fmt`, `validate` and `plan`. `apply` always needs the user's approval. `destroy` is blocked; the user runs it (or the `env-power` workflow does).
 

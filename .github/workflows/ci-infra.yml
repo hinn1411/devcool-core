@@ -1,0 +1,80 @@
+name: ci-infra
+
+# Reusable (called by ci.yml when infra paths changed).
+# Static checks only: no AWS credentials and no backend (`init -backend=false`).
+# `terraform plan` needs OIDC and comes with infra-plan.yml (P2-T08).
+on:
+  workflow_call:
+
+jobs:
+  infra:
+    name: Terraform fmt, validate, tflint, Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff infra
+
+      - name: terraform validate (every stack and module)
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          for dir in infra/stacks/*/ infra/modules/*/; do
+            [ -d "$dir" ] || continue # infra/modules/ doesn't exist until P2-T04
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            echo "::endgroup::"
+          done
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.64.0
+          cache: true
+          tflint_config_path: infra/.tflint.hcl
+
+      - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # plugin downloads hit the GitHub API rate limit without it
+        run: |
+          tflint --chdir infra --init
+          tflint --chdir infra --recursive --config "$GITHUB_WORKSPACE/infra/.tflint.hcl" --format compact
+
+      # Full report first (never fails), then the gate. Accepted findings are suppressed
+      # inline with `#trivy:ignore:<id>` and a reason next to the resource.
+      - name: Trivy config (report, all severities)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          scan-type: config
+          scan-ref: infra
+          exit-code: "0"
+
+      - name: Trivy config (gate, HIGH and CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          skip-setup-trivy: true
+          scan-type: config
+          scan-ref: infra
+          severity: HIGH,CRITICAL
+          exit-code: "1"

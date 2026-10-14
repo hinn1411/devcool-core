@@ -9,6 +9,8 @@ resource "aws_ecr_repository" "app" {
     scan_on_push = true
   }
 
+  # AES256, not a KMS key: same $20 envelope trade-off as the state bucket (P2-T01 brief).
+  #trivy:ignore:AWS-0033
   encryption_configuration {
     encryption_type = "AES256"
   }
