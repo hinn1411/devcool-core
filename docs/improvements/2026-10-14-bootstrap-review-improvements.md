@@ -121,7 +121,8 @@ The environment's rule "master only" therefore means "anything that reaches mast
 
 **Fix (before merging the first `infra-apply.yml`):**
 - Enable the `master` ruleset: require a PR, block force-push and deletion, and give no bypass to apps.
-- Add the CI checks as required status checks. Since P2-T10 they're reusable workflows, so the names are `<router job> / <job>`: `changes / Detect changed areas`, `backend / Build, Test, Coverage, Sonar`, `infra / Terraform fmt, validate, tflint, Trivy`. Skipped ones count as passing.
+- Require exactly one status check: `ci-gate`. Don't require the per-area checks. When an area runs, its check is named `backend / Build, Test, Coverage, Sonar`; when its `if:` skips it, the check is named just `backend` (seen on PR #130). Either name, if required, would leave some PRs stuck on "Expected" forever. `ci-gate` always runs under one name and fails if any CI job failed or was cancelled.
+- Make `infra-plan` a router job in `ci.yml` and add it to `ci-gate`'s `needs`. A separate workflow file can't be checked by the gate.
 - Set admin bypass off on `aws-deploy`.
 
 ### #5 · Medium · `gha-deploy` can destroy state history
