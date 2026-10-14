@@ -27,3 +27,15 @@ variable "budget_alert_emails" {
     error_message = "budget_alert_emails must hold at least one email address."
   }
 }
+
+variable "github_repo" {
+  description = "GitHub repo (owner/name) whose Actions workflows may assume the gha-* roles."
+  type        = string
+  default     = "hinn1411/devcool-core"
+}
+
+variable "deploy_environment" {
+  description = "GitHub environment whose jobs may assume gha-deploy. Its deployment-branch rule (master only) lives in GitHub, not here."
+  type        = string
+  default     = "aws-deploy"
+}

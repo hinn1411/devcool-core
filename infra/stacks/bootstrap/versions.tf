@@ -8,6 +8,5 @@ terraform {
     }
   }
 
-  # Local state for now: this stack creates the state bucket, so it can't start in it.
-  # P2-T01 adds the bucket, then moves this state there with `terraform init -migrate-state`.
+  # Backend: backend.tf (S3, in the bucket this stack creates).
 }
