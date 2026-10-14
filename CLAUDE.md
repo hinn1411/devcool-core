@@ -128,11 +128,14 @@ When reviewing a pull request, check for:
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
-Runs on every PR and on push to `master`. Every step is blocking.
+Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` job (`ci-changes.yml`, dorny/paths-filter) decides which areas changed, and each area runs a reusable workflow. A job that doesn't apply shows as skipped (a passing check). Check names are `<router job> / <job>`, e.g. `backend / Build, Test, Coverage, Sonar`. Every step is blocking.
 
+**`backend`** → `ci-backend.yml` (backend paths changed; gets only `SONAR_TOKEN`):
 1. Spotless format check
 2. One build: `./mvnw -B -U -Dit -Pstatic-analysis verify`. It runs unit tests, ITs (fails if 0 run), the JaCoCo line-coverage floor (`jacoco.line.minimum` in `pom.xml`; raise it, never lower it), and SpotBugs.
-3. SonarCloud (`sonar:sonar`, reusing `target/`). Always runs; needs the `SONAR_TOKEN` repo secret
+3. SonarCloud (`sonar:sonar`, reusing `target/`). Needs the `SONAR_TOKEN` repo secret
 4. Upload test and JaCoCo reports
+
+**`infra`** → `ci-infra.yml` (`infra/**` changed; no AWS credentials): `terraform fmt -check`, `init -backend=false` + `validate` per stack/module, `tflint --recursive` (`infra/.tflint.hcl`: recommended preset + AWS ruleset), Trivy config (fails on HIGH/CRITICAL; accepted findings use an inline `#trivy:ignore:<id>` with a reason).
 
 SpotBugs findings that existed at P1-T14 are baselined in `spotbugs-exclude.xml`. Only remove entries; fix new findings instead of adding them.

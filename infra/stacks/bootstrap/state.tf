@@ -17,6 +17,8 @@ resource "aws_s3_bucket_versioning" "tfstate" {
 }
 
 # SSE-S3, not a KMS key: a CMK adds $1/month plus request costs (playbook §6).
+# Accepted in docs/journal/briefs/P2-T01.md (Decisions: state encryption).
+#trivy:ignore:AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
   bucket = aws_s3_bucket.tfstate.id
 

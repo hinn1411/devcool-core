@@ -121,6 +121,7 @@ The environment's rule "master only" therefore means "anything that reaches mast
 
 **Fix (before merging the first `infra-apply.yml`):**
 - Enable the `master` ruleset: require a PR, block force-push and deletion, and give no bypass to apps.
+- Add the CI checks as required status checks. Since P2-T10 they're reusable workflows, so the names are `<router job> / <job>`: `changes / Detect changed areas`, `backend / Build, Test, Coverage, Sonar`, `infra / Terraform fmt, validate, tflint, Trivy`. Skipped ones count as passing.
 - Set admin bypass off on `aws-deploy`.
 
 ### #5 · Medium · `gha-deploy` can destroy state history

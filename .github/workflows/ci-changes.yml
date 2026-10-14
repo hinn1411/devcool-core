@@ -1,0 +1,50 @@
+name: ci-changes
+
+# Reusable (called by ci.yml): decides which CI areas a push or PR changed.
+on:
+  workflow_call:
+    outputs:
+      backend:
+        description: "'true' when backend files changed"
+        value: ${{ jobs.filter.outputs.backend }}
+      infra:
+        description: "'true' when infra files changed"
+        value: ${{ jobs.filter.outputs.infra }}
+
+jobs:
+  filter:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists PR files through the API
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      # Pushes are diffed with git (against the previous commit), so they need the repo.
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          # Dockerfile and docker/** are left out: no job here builds the image, and the
+          # Testcontainers ITs don't read docker/local. P2-T06 adds a `docker` filter + build check.
+          # Each list includes the workflows that run it, so editing a workflow runs it.
+          filters: |
+            backend:
+              - 'src/**'
+              - 'pom.xml'
+              - 'mvnw*'
+              - '.mvn/**'
+              - 'spotbugs-exclude.xml'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/ci-changes.yml'
+              - '.github/workflows/ci-backend.yml'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/ci-changes.yml'
+              - '.github/workflows/ci-infra.yml'
