@@ -31,12 +31,16 @@ jobs:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
 
+      # Every terraform command (fmt included) checks TF_PLUGIN_CACHE_DIR and errors if it's
+      # missing, which is the case on a cache miss. Create it before the first command.
+      - name: Create the provider cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
       - name: terraform fmt
         run: terraform fmt -check -recursive -diff infra
 
       - name: terraform validate (every stack and module)
         run: |
-          mkdir -p "$TF_PLUGIN_CACHE_DIR"
           for dir in infra/stacks/*/ infra/modules/*/; do
             [ -d "$dir" ] || continue # infra/modules/ doesn't exist until P2-T04
             echo "::group::$dir"
