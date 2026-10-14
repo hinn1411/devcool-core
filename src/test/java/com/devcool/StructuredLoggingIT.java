@@ -2,6 +2,7 @@ package com.devcool;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.devcool.support.LoggingUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -14,13 +15,10 @@ import org.slf4j.MDC;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.logging.LoggingInitializationContext;
-import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.StandardEnvironment;
 
 /**
  * The log format per profile (P1-T15). An empty context with the real profile files is enough, so
@@ -37,14 +35,7 @@ class StructuredLoggingIT {
 
   @AfterEach
   void restoreDefaultLogging() {
-    // Restore text logging for other ITs in this JVM. The last cleanUp() lets the next
-    // SpringApplication apply its own profile.
-    LoggingSystem system = LoggingSystem.get(getClass().getClassLoader());
-    system.cleanUp();
-    system.beforeInitialize();
-    system.initialize(new LoggingInitializationContext(new StandardEnvironment()), null, null);
-    system.cleanUp();
-    MDC.clear();
+    LoggingUtils.restoreDefaults();
   }
 
   @Test

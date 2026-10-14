@@ -3,6 +3,7 @@ package com.devcool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.devcool.support.LoggingUtils;
 import com.devcool.support.PostgresTestContainer;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.web.context.WebServerApplicationContext;
@@ -24,6 +26,12 @@ class MigrateProfileIT {
   // Same test keys as application-test.properties.
   private static final String JWT_ACCESS = "7poLGgBQYOjm5si8gg16ww/8rLeZ5NxF/m/Df9i4Dm4=";
   private static final String JWT_REFRESH = "HPQMi5tro5vb4sTgZcNaGydQBSoAqqQzIGgdFmOYLAQ=";
+
+  // The ecs profile would otherwise leave JSON logging on for later ITs in this JVM.
+  @AfterEach
+  void restoreLogging() {
+    LoggingUtils.restoreDefaults();
+  }
 
   @Test
   void migrate_onAnEmptyDatabase_appliesEveryMigrationAndStartsNoWebServer() {
