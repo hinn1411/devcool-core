@@ -87,7 +87,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 | `env-power.yml` | workflow_dispatch (`sleep`/`wake`/`hibernate`/`resume`) + optional nightly schedule | as the table above |
 
 ## Tasks
-- [ ] **P2-T01** `infra/stacks/bootstrap`: state bucket (versioned, encrypted, public access blocked), GitHub OIDC provider, `gha-plan` (read-only) and `gha-deploy` roles scoped to this repo/branch, ECR repo with scan on push and a lifecycle policy (keep the last 20)
+- [x] **P2-T01** `infra/stacks/bootstrap`: state bucket (versioned, encrypted, public access blocked), GitHub OIDC provider, `gha-plan` (read-only) and `gha-deploy` roles scoped to this repo/branch, ECR repo with scan on push and a lifecycle policy (keep the last 20)
 - [ ] **P2-T02** `infra/stacks/network`: VPC across 2 AZs, NAT (toggle), S3 gateway endpoint, interface endpoints (ECR api/dkr, logs, secretsmanager), security groups (ALB → api:8080; api → Aurora:5432)
 - [ ] **P2-T03** `infra/stacks/data`: Aurora Serverless v2 PG16 (dev min 0 ACU), RDS-managed master secret, S3 media bucket (existing name via var), JWT secrets in Secrets Manager
 - [ ] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
