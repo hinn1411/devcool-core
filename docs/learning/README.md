@@ -80,6 +80,7 @@ That's why every chapter here ends with **"Where else this applies"**. Reading t
 | [15 — Architecture Styles by Analogy](15-architecture-styles-analogies.md) | Modular monolith vs microservices vs distributed monolith as three ways to run a restaurant, with pros and cons and how DevCool's `api` + `worker` and outbox fit. |
 | [16 — IaC Fundamentals](16-iac-fundamentals.md) | What changes when infrastructure is a reviewed program? Declarative vs imperative, convergence, drift, blast radius, one owner per field, plan → review → apply. |
 | [17 — Terraform in DevCool](17-terraform-in-devcool.md) | How Terraform works (state, modules, lifecycle, `moved`/`import`/`removed`), how P2's five stacks connect through SSM, and eleven production incidents with their fixes. |
+| [18 — Docker & ECS](18-docker-and-ecs.md) | What is inside the image you ship, and what does ECS do with it? Layers and cache, the layered jar, non-root, PID 1, JVM sizing, then task definitions, the two IAM roles, `awsvpc`, deploys, and one image run as `api`, `worker` and `migrate`. |
 
 Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first because it is live; testing second because it explains why everything else survived this long.
 
@@ -90,6 +91,8 @@ Suggested order: **02 → 06 → 01 → 04 → 05 → 03.** Security first becau
 12 and 13 are the integration-testing follow-up to 07 and 08: read 12, then do exercise 1 of 13 (it is P1-T11) before any other.
 
 16 and 17 are the P2 (infrastructure) pair: read 16 for the tool-agnostic ideas, then 17 before writing any `infra/` code.
+
+18 is the container companion to 14 and 17: read it before P2-T06 (the `Dockerfile`) and P2-T04 (the ECS service).
 
 ---
 
