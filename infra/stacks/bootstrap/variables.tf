@@ -1,3 +1,4 @@
+# Inputs for the bootstrap stack. Only budget_alert_emails has no default (set it in budget.local.tfvars, which is gitignored).
 variable "region" {
   description = "AWS region for the stack."
   type        = string
