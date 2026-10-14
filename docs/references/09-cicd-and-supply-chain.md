@@ -8,7 +8,7 @@
 - **OIDC federation instead of access keys.** GitHub issues a short-lived OIDC token per job; AWS STS exchanges it for a role session. The role's trust policy pins the repo, branch or environment (`sub` claim). No long-lived AWS keys in secrets.
 - **Two roles.** A read-only `gha-plan` role for PR plans and a `gha-deploy` role only assumable from `main`/a protected environment.
 - **Environments and approvals.** GitHub environments gate deploys with required reviewers and scope secrets and OIDC `sub` claims.
-- **Path filters in a monorepo.** Run Maven only when backend files change, npm only for `frontend/`, Terraform checks only for `infra/`.
+- **Path filters in a monorepo.** Run Maven only when backend files change, npm only for `frontend/`, Terraform checks only for `infra/`. A required check is matched by name, and a skipped job's check can have a different name (or none), so require a single **gate job** (`if: always()`, `needs` every filtered job, fails on any failure) instead of each filtered job.
 - **Concurrency groups.** Prevent two deploys (or two `apply`s) to the same environment from overlapping.
 - **Build once, deploy the same artifact.** Image tagged with the git SHA, pushed to ECR, the task definition rendered with that tag, then the ECS service updated. The DB migrate task runs before the service update.
 - **Caching.** Maven repository, npm, Testcontainers images; cache keys based on lockfiles.

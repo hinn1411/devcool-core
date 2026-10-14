@@ -79,8 +79,8 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 ### GitHub Actions
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `ci.yml` (existing, extended) | push / PR | path filters → backend (spotless, static analysis, unit + IT), frontend (P5), infra (fmt, validate, tflint, Trivy config) |
-| `infra-plan.yml` | PR touching `infra/**` | OIDC (`gha-plan` role, read-only) → `terraform plan` per changed stack → comment on PR |
+| `ci.yml` (existing, extended) | push / PR | path filters → backend (spotless, static analysis, unit + IT), frontend (P5), infra (fmt, validate, tflint, Trivy config) → `ci-gate` (the only required check; P2-T10) |
+| `infra-plan.yml` (reusable, called by `ci.yml` and listed in `ci-gate`'s `needs`) | PR touching `infra/**` | OIDC (`gha-plan` role, read-only) → `terraform plan` per changed stack → comment on PR |
 | `infra-apply.yml` | push to `master` touching `infra/**` | OIDC (`gha-deploy`) → apply changed stacks in order; `prod` uses a GitHub environment with required reviewers |
 | `deploy.yml` | push to `master` touching backend | build → Trivy image scan (fail on HIGH/CRITICAL with fix) → push `:<sha>` to ECR → run the migrate task and wait → render the task def with the new image → `amazon-ecs-deploy-task-definition` (wait for stability) → smoke test `GET /actuator/health` through CloudFront |
 | `frontend-deploy.yml` | push to `master` touching `frontend/**` (P5) | build → `aws s3 sync --delete` → CloudFront invalidation `/index.html` |

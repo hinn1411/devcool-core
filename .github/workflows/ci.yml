@@ -6,9 +6,9 @@ on:
     branches: [ "master" ]
 
 # Router: `changes` decides which areas changed, and each area's checks live in a reusable
-# workflow (ci-*.yml). A job skipped by `if:` still reports a (passing) check, so it can be
-# required; a workflow skipped by `on.paths` would leave the check pending forever.
-# Check names look like `<job here> / <job name in the called workflow>`.
+# workflow (ci-*.yml). Check names look like `<job here> / <job name in the called workflow>`
+# when the area runs, but just `<job here>` when its `if:` skips it (PR #130). Requiring either
+# name would block some PRs forever ("Expected"), so `ci-gate` is the only required check.
 permissions: {}
 
 jobs:
@@ -33,3 +33,22 @@ jobs:
     uses: ./.github/workflows/ci-infra.yml
     permissions:
       contents: read
+
+  # The one required check: always runs, always has this name. Skipped areas pass; a failed or
+  # cancelled job (including `changes`, which would skip everything) fails it.
+  # Add every new router job to `needs`.
+  ci-gate:
+    needs: [changes, backend, infra]
+    if: always() # otherwise a skipped `needs` job skips the gate too
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check the results of every CI job
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "Job results: $RESULTS"
+          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
+            echo "::error::A required CI job failed or was cancelled."
+            exit 1
+          fi

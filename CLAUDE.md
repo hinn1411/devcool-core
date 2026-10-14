@@ -128,7 +128,9 @@ When reviewing a pull request, check for:
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
-Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` job (`ci-changes.yml`, dorny/paths-filter) decides which areas changed, and each area runs a reusable workflow. A job that doesn't apply shows as skipped (a passing check). Check names are `<router job> / <job>`, e.g. `backend / Build, Test, Coverage, Sonar`. Every step is blocking.
+Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` job (`ci-changes.yml`, dorny/paths-filter) decides which areas changed, and each area runs a reusable workflow. An area that runs reports as `<router job> / <job>` (e.g. `backend / Build, Test, Coverage, Sonar`); a skipped one reports as just `<router job>`. Every step is blocking.
+
+**`ci-gate`** is the only check to make required. It always runs, passes when every job passed or was skipped, and fails if any failed or was cancelled. Add each new router job to its `needs`.
 
 **`backend`** → `ci-backend.yml` (backend paths changed; gets only `SONAR_TOKEN`):
 1. Spotless format check
