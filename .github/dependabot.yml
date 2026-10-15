@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # Bumps the digest-pinned base images in the root Dockerfile (P2-T06), so the pins don't go
+  # stale with unpatched CVEs. Maven and GitHub Actions updates aren't configured yet.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore

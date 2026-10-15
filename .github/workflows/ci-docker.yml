@@ -1,0 +1,85 @@
+name: ci-docker
+
+# Reusable (called by ci.yml when the image's inputs changed).
+# Builds the production image without pushing it (deploy.yml pushes, P2-T08), checks what the
+# Dockerfile promises, and scans it. Background: docs/learning/18-docker-and-ecs.md.
+on:
+  workflow_call:
+
+env:
+  IMAGE: devcool:ci
+
+jobs:
+  docker:
+    name: Build, lint and scan image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: hadolint
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # `mode=max` also caches the build stage, so the dependency layer survives between runs.
+      - name: Build the image (no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check non-root user, heap sizing and Boot layers
+        run: |
+          user=$(docker inspect -f '{{.Config.User}}' "$IMAGE")
+          uid=$(docker run --rm --entrypoint id "$IMAGE" -u)
+          echo "USER '$user', uid $uid"
+          if [ -z "$user" ] || [ "$uid" = "0" ]; then
+            echo "::error::The image runs as root"; exit 1
+          fi
+
+          # 75 % of a 1 GiB limit is 768 MiB; the JVM default (25 %) would give 256 MiB.
+          heap=$(docker run --rm -m 1g --entrypoint java "$IMAGE" -XX:+PrintFlagsFinal -version 2>/dev/null \
+            | awk '$2 == "MaxHeapSize" {print $4}')
+          echo "MaxHeapSize with -m 1g: $heap bytes"
+          if [ "$heap" -lt $((700 * 1024 * 1024)) ]; then
+            echo "::error::Heap is not sized from the container limit (MaxRAMPercentage=75)"; exit 1
+          fi
+
+          for layer in dependencies spring-boot-loader snapshot-dependencies application; do
+            docker history --no-trunc --format '{{.CreatedBy}}' "$IMAGE" | grep -q "extracted/$layer/" \
+              || { echo "::error::Missing the '$layer' layer (layered jar)"; exit 1; }
+          done
+
+      # Report first (never fails), then the gate. The gate covers the OS packages, which the
+      # Dockerfile owns. Library CVEs come from the Boot BOM in pom.xml and are only reported
+      # until the Boot bump lands (see the P2-T06 brief); then add `library` to the gate.
+      - name: Trivy image (report, HIGH and CRITICAL, OS + libraries)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          scan-type: image
+          image-ref: ${{ env.IMAGE }}
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Trivy image (gate, fixable HIGH and CRITICAL, OS)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          skip-setup-trivy: true
+          scan-type: image
+          image-ref: ${{ env.IMAGE }}
+          vuln-type: os
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
