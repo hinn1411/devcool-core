@@ -10,6 +10,9 @@ on:
       infra:
         description: "'true' when infra files changed"
         value: ${{ jobs.filter.outputs.infra }}
+      docker:
+        description: "'true' when the production image's inputs changed"
+        value: ${{ jobs.filter.outputs.docker }}
 
 jobs:
   filter:
@@ -21,6 +24,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       infra: ${{ steps.filter.outputs.infra }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       # Pushes are diffed with git (against the previous commit), so they need the repo.
       - name: Checkout
@@ -30,8 +34,9 @@ jobs:
         id: filter
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
-          # Dockerfile and docker/** are left out: no job here builds the image, and the
-          # Testcontainers ITs don't read docker/local. P2-T06 adds a `docker` filter + build check.
+          # `docker` covers everything the image build reads (the .dockerignore allow-list), so a
+          # code change that breaks the image fails here, not at deploy. docker/** stays out:
+          # the image doesn't use it, and the Testcontainers ITs don't read docker/local.
           # Each list includes the workflows that run it, so editing a workflow runs it.
           filters: |
             backend:
@@ -48,3 +53,13 @@ jobs:
               - '.github/workflows/ci.yml'
               - '.github/workflows/ci-changes.yml'
               - '.github/workflows/ci-infra.yml'
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'src/**'
+              - 'pom.xml'
+              - 'mvnw'
+              - '.mvn/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/ci-changes.yml'
+              - '.github/workflows/ci-docker.yml'

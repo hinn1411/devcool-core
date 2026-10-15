@@ -34,11 +34,18 @@ jobs:
     permissions:
       contents: read
 
+  docker:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    uses: ./.github/workflows/ci-docker.yml
+    permissions:
+      contents: read
+
   # The one required check: always runs, always has this name. Skipped areas pass; a failed or
   # cancelled job (including `changes`, which would skip everything) fails it.
   # Add every new router job to `needs`.
   ci-gate:
-    needs: [changes, backend, infra]
+    needs: [changes, backend, infra, docker]
     if: always() # otherwise a skipped `needs` job skips the gate too
     runs-on: ubuntu-latest
     permissions: {}

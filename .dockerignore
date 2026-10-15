@@ -1,0 +1,7 @@
+# Allow-list: the build context holds only what the Dockerfile copies.
+# Keeps local.env (JWT secrets), .git, target/, frontend/ and infra/ out of every build (ch18 §2.2).
+*
+!pom.xml
+!mvnw
+!.mvn/
+!src/
