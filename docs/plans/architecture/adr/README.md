@@ -10,7 +10,7 @@ Create a new one with `/write-adr <title>`.
 |---|---|---|
 | [0001](0001-modular-monolith-hexagonal.md) | Hexagonal modular monolith, deployed as `api` + `worker` from one image | Accepted |
 | [0002](0002-ecs-fargate.md) | ECS Fargate for compute | Accepted |
-| [0003](0003-terraform-layered-stacks.md) | Terraform with layered stacks and per-env tfvars | Accepted |
+| [0003](0003-terraform-layered-stacks.md) | Terraform with layered stacks and per-env tfvars | Accepted; Valkey placement and envs amended by 0013 |
 | [0004](0004-monorepo.md) | Monorepo: backend at root, `frontend/`, `infra/` | Accepted |
 | [0005](0005-raw-websocket-protocol-v2.md) | Keep raw WebSocket; typed protocol v2 envelope | Accepted |
 | [0006](0006-redis-pubsub-backplane.md) | Valkey/Redis pub/sub backplane with per-channel topics | Accepted |
@@ -20,6 +20,7 @@ Create a new one with `/write-adr <title>`.
 | [0010](0010-bedrock-spring-ai.md) | Amazon Bedrock through Spring AI, behind ports | Accepted |
 | [0011](0011-ws-ticket-auth-single-origin.md) | One-time WS tickets and a single CloudFront origin | Accepted |
 | [0012](0012-message-ordering-per-channel-seq.md) | Per-channel sequence numbers for ordering and gap detection | Accepted |
+| [0013](0013-dev-cost-envelope-under-20-usd.md) | Dev cost envelope under $20/month: dev only, toggled NAT + endpoints, destroyable Valkey | Accepted |
 
 ## Template
 
