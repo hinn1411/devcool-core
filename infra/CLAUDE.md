@@ -9,8 +9,8 @@ infra/
   stacks/
     bootstrap/      # state bucket, GitHub OIDC + roles, ECR — applied once by hand
     network/        # VPC, subnets, NAT (toggle), endpoints, SGs
-    data/           # Aurora PG + pgvector, Valkey, S3 media, SNS/SQS, secrets — never destroyed
-    app/            # ECS cluster/services, ALB, autoscaling, IAM task roles
+    data/           # Aurora PG + pgvector, S3 media, SNS/SQS, secrets — never destroyed
+    app/            # ECS cluster/services, ALB, autoscaling, IAM task roles, Valkey (ADR-0013)
     edge/           # CloudFront, S3 SPA bucket, ACM, Route 53
   envs/{dev,prod}.tfvars
   observability/    # collector config, Grafana dashboards/alerts as code (P7)
@@ -19,7 +19,7 @@ Apply order: bootstrap → network → data → app → edge.
 
 ## Commands
 ```bash
-terraform -chdir=infra/stacks/<stack> init -backend-config=../../envs/<env>.backend.hcl
+terraform -chdir=infra/stacks/<stack> init -backend-config=../../envs/<env>.backend.hcl -backend-config=key=devcool/<env>/<stack>.tfstate
 terraform -chdir=infra/stacks/<stack> plan -var-file=../../envs/<env>.tfvars
 terraform fmt -recursive infra
 tflint --chdir infra --init

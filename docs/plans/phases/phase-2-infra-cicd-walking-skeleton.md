@@ -88,7 +88,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 
 ## Tasks
 - [x] **P2-T01** `infra/stacks/bootstrap`: state bucket (versioned, encrypted, public access blocked), GitHub OIDC provider, `gha-plan` (read-only) and `gha-deploy` roles scoped to this repo/branch, ECR repo with scan on push and a lifecycle policy (keep the last 20)
-- [ ] **P2-T02** `infra/stacks/network`: VPC across 2 AZs, NAT (toggle), S3 gateway endpoint, interface endpoints (ECR api/dkr, logs, secretsmanager), security groups (ALB → api:8080; api → Aurora:5432)
+- [x] **P2-T02** `infra/stacks/network`: VPC across 2 AZs, NAT (toggle), S3 gateway endpoint, interface endpoints (ECR api/dkr, logs, secretsmanager), security groups (ALB → api:8080; api → Aurora:5432)
 - [ ] **P2-T03** `infra/stacks/data`: Aurora Serverless v2 PG16 (dev min 0 ACU), RDS-managed master secret, S3 media bucket (existing name via var), JWT secrets in Secrets Manager
   - Review carry-over (P2-T01): #4, #3b → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)
   - Carry-over (P2-T05): tasks read the RDS secret only at start, so lengthen its rotation interval in dev
@@ -105,6 +105,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Add a `docker` path filter + image build (and hadolint) job to `ci.yml`; P2-T10 left `Dockerfile` unfiltered.
 - [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + ALB origin, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query), ACM cert in us-east-1, Route 53 alias
 - [ ] **P2-T08** `deploy.yml` with the migrate task and ECS deploy; `infra-plan.yml`, `infra-apply.yml`
+  - `dev` only: no `prod` apply or `prod` GitHub environment (ADR-0013)
   - Review carry-over (P2-T01): #1 (before merging `infra-apply.yml`), #5, #6, #7, #9 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t08--deployyml-infra-planyml-infra-applyyml)
 - [ ] **P2-T09** `env-power.yml` (sleep/wake/hibernate/resume). Document the costs in `infra/README.md`
   - Review carry-over (P2-T01): #8 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t09--env-poweryml)
