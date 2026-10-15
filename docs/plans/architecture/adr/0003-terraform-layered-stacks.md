@@ -1,6 +1,6 @@
 # 0003 — Terraform with layered stacks
 
-- **Status:** Accepted
+- **Status:** Accepted; Valkey placement and environments amended by [0013](0013-dev-cost-envelope-under-20-usd.md)
 - **Date:** 2026-09-29
 - **Phase:** P2
 

@@ -23,7 +23,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 ## Scope
 - **In:**
   - Everything in the goal.
-  - Valkey in Terraform (`data` stack).
+  - Valkey in Terraform (`app` stack, ADR-0013).
   - A multi-node IT.
 - **Out:**
   - Durable offline notifications (P6).
@@ -52,7 +52,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 - [ ] **P4-T03** `PING`/`PONG` heartbeat; server-side idle close after 90 s without frames
 - [ ] **P4-T04** `EDIT`, `DELETE`, `REACT`, `READ` frames call the P3 use cases, and broadcast `MESSAGE_UPDATED`, `MESSAGE_DELETED`, `REACTION`, `READ_RECEIPT`
 ### Auth and origin
-- [ ] **P4-T05** Valkey in Terraform (`data` stack, ElastiCache Serverless) and in local compose (`valkey/valkey`). Spring Data Redis (Lettuce). **Verify pub/sub support on the serverless offering** and record the result in ADR-0006
+- [ ] **P4-T05** Valkey in Terraform (`app` stack so hibernate destroys it, ADR-0013; ElastiCache Serverless) and in local compose (`valkey/valkey`). Spring Data Redis (Lettuce). **Verify pub/sub support on the serverless offering** and record the result in ADR-0006
 - [ ] **P4-T06** `POST /api/v1/ws/ticket` + handshake redeem (`GETDEL`). Reject with 401 on missing or invalid tickets. Origin allowlist from config. Remove the header-based path (or keep it for non-browser clients)
 ### Stage 2: backplane
 - [ ] **P4-T07** Refactor: move fan-out out of `WsSendMessageService` into `DeliverToLocalConnectionsUseCase`. `RealtimeEmitterPort` → `RealtimeBackplanePort`
@@ -74,7 +74,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 - `adapters/out/realtime/**` (new `redis/` package)
 - `domain/chat/port/**`, a new `domain/presence/**`
 - `application/service/chat/**`, `application/service/presence/**`
-- `infra/stacks/data` (Valkey), `infra/stacks/app` (scaling policy)
+- `infra/stacks/app` (Valkey, scaling policy)
 - `docker/local/compose.yaml`
 
 ## Test plan
