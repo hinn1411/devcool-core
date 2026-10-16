@@ -98,6 +98,12 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Task role (S3 media, secrets) and execution role.
   - CloudWatch log group with 14-day retention.
   - The HTTPS listener uses the `edge` cert; a fixed `origin.<domain>` alias points at the ALB (ADR-0013). Needs P2-T07's zone and cert first.
+  - **Done when** a manual first deploy passes the end-to-end smoke test, before any pipeline exists (T08). This tests the top risk early:
+    1. Push the image to ECR by hand.
+    2. Run the `ecs,migrate` task once (`aws ecs run-task`).
+    3. The ALB targets are healthy (`aws elbv2 describe-target-health`).
+    4. `curl https://<domain>/actuator/health` returns 200 `{"status":"UP"}` through CloudFront.
+    5. `wscat -c wss://<domain>/ws` reaches the app (rejected without auth until P4).
   - Review carry-over (P2-T01): #2 (before the first CI apply), #3a, #3c, #3d, #10 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t04--ecs-service-module--app-stack)
 - [x] **P2-T05** `application-ecs.properties`: datasource from injected secrets, Flyway off; add `application-migrate.properties`
 - [x] **P2-T06** `Dockerfile`:
@@ -105,7 +111,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Layered jar for caching.
   - `HEALTHCHECK` not needed (the ALB does it).
   - Add a `docker` path filter + image build (and hadolint) job to `ci.yml`; P2-T10 left `Dockerfile` unfiltered.
-- [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + API origin `origin.<domain>`, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query), ACM cert in us-east-1 for `<domain>` and `origin.<domain>` (shared with the ALB via SSM), Route 53 hosted zone + alias
+- [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + API origin `origin.<domain>`, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query) and `/actuator/health` (exact path, caching disabled; the `deploy.yml` smoke test goes through it), ACM cert in us-east-1 for `<domain>` and `origin.<domain>` (shared with the ALB via SSM), Route 53 hosted zone + alias
   - Survives hibernate (ADR-0013), so nothing billed hourly goes here. Optional: a custom error response so `/api/*` explains that the env is asleep instead of a bare 502
 - [ ] **P2-T08** `deploy.yml` with the migrate task and ECS deploy; `infra-plan.yml`, `infra-apply.yml`
   - `dev` only: no `prod` apply or `prod` GitHub environment (ADR-0013)

@@ -344,13 +344,16 @@ This is the hexagonal idea ([03](03-hexagonal-architecture.md)) applied to infra
 - **The ALB's HTTPS listener reuses the `edge` cert.** The app is in `us-east-1`, the same region CloudFront requires, so one cert covering `<domain>` and `origin.<domain>` serves both. `app` also creates the `origin.<domain>` alias to the ALB, so CloudFront's origin name survives the ALB being recreated (ADR-0013).
 
 **edge** (P2-T07)
-- **One CloudFront distribution, three behaviours** (ADR-0011):
+- **One CloudFront distribution, four behaviours** (ADR-0011):
 
   | Path | Origin | Cache policy | Origin request policy |
   |---|---|---|---|
   | `/api/*` | ALB | `CachingDisabled` | `AllViewerExceptHostHeader` |
   | `/ws` | ALB | `CachingDisabled` | `AllViewerExceptHostHeader` |
+  | `/actuator/health` | ALB | `CachingDisabled` | — |
   | default `/*` | SPA bucket via **OAC** | cached | — |
+
+  `/actuator/health` is an exact path, not `/actuator/*`. Only the overall status is public, so the `deploy.yml` smoke test can reach the app without exposing other actuator endpoints.
 
   There's no "enable WebSocket" switch in CloudFront. The upgrade works when the behaviour forwards the viewer's `Upgrade`, `Connection` and `Sec-WebSocket-*` headers and doesn't cache. "All viewer headers" does exactly that.
 - **ACM in us-east-1** through the aliased provider. CloudFront only accepts certificates from that region, whatever region the rest of the stack uses:
