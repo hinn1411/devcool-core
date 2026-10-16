@@ -234,32 +234,30 @@ These are config-driven versions of `terraform state mv`, `terraform import` and
                           └──────────────────────┬───────────────────────┘
                                                  │ (state bucket, roles used by every other stack)
                           ┌──────────────────────▼───────────────────────┐
-  rarely; NAT toggle      │ network     VPC (2 AZ) · subnets · NAT? ·    │
-                          │             VPC endpoints · security groups  │
-                          └──────────┬────────────────────────┬──────────┘
-                     SSM: vpc_id, private_subnet_ids, sg ids  │
-                          ┌──────────▼──────────┐             │
-  NEVER destroyed         │ data   Aurora PG16  │             │
-                          │        S3 media     │             │
-                          │        secrets      │             │
-                          └──────────┬──────────┘             │
-                     SSM: db endpoint, secret ARNs, bucket    │
-                          ┌──────────▼────────────────────────▼──────────┐
+  toggles off on          │ network     VPC (2 AZ) · subnets · NAT? ·    │
+  hibernate               │             VPC endpoints? · security groups │
+                          └──────────┬───────────────────────────────────┘
+                                     │ SSM: vpc_id, private_subnet_ids, sg ids
+                          ┌──────────▼──────────┐  ┌─────────────────────┐
+  never destroyed;        │ data   Aurora PG16  │  │ edge  CloudFront ·  │
+  Valkey toggle off       │        S3 media     │  │       SPA bucket ·  │
+  on hibernate            │        secrets      │  │       ACM · Route 53│
+                          │        Valkey?      │  │ kept on hibernate   │
+                          └──────────┬──────────┘  └───────────┬─────────┘
+                                     │ SSM: db endpoint,       │ SSM: zone id,
+                                     │ secret ARNs, bucket     │ cert ARN
+                          ┌──────────▼─────────────────────────▼─────────┐
   often; destroyed on     │ app     ECS cluster · api service · ALB ·    │
-  hibernate               │         listener · task/exec roles · logs    │
-                          └──────────────────────┬───────────────────────┘
-                     SSM: alb dns name           │
-                          ┌──────────────────────▼───────────────────────┐
-  destroyed on hibernate  │ edge    CloudFront · SPA bucket (OAC) ·      │
-                          │         ACM (us-east-1) · Route 53           │
+  hibernate               │         listener · roles · logs ·            │
+                          │         origin.<domain> alias → ALB          │
                           └──────────────────────────────────────────────┘
 ```
 
-Apply order follows the arrows: **bootstrap → network → data → app → edge**. Destroy order is the reverse. `hibernate` destroys `edge`, then `app`, then re-applies `network` with `enable_nat=false`. `data` never moves.
+Apply order follows the arrows: **bootstrap → network → data → edge → app** (`app` also reads the network ids). Destroy order is the reverse. `hibernate` destroys only `app`, then re-applies `data` with `enable_valkey=false` and `network` with `enable_nat=false` and `enable_interface_endpoints=false` (ADR-0013). `edge` stays: nothing in it bills by the hour, and keeping the hosted zone keeps the domain's name servers. Aurora and S3 in `data` never move.
 
 ### 4.1 How values cross stacks: SSM parameters
 
-Each stack has its own state, so `app` can't write `aws_lb.api` and expect `edge` to see it. There are two ways to pass values across:
+Each stack has its own state, so `edge` can't write `aws_route53_zone.main` and expect `app` to see it. There are two ways to pass values across:
 
 | | `terraform_remote_state` | SSM Parameter Store (**DevCool's choice**) |
 |---|---|---|
@@ -343,7 +341,7 @@ This is the hexagonal idea ([03](03-hexagonal-architecture.md)) applied to infra
   | **Task role** | *Your Spring app* at runtime | `s3:PutObject`/`GetObject` on the media bucket ARN, and nothing else |
 
 - **The service doesn't own the image** (`ignore_changes = [task_definition]`, §6.4).
-- **A regional ACM cert** for the ALB's HTTPS listener. The app is in `us-east-1`, the same region CloudFront requires, so one cert covering both hostnames can serve both; keep two if you want separate lifecycles.
+- **The ALB's HTTPS listener reuses the `edge` cert.** The app is in `us-east-1`, the same region CloudFront requires, so one cert covering `<domain>` and `origin.<domain>` serves both. `app` also creates the `origin.<domain>` alias to the ALB, so CloudFront's origin name survives the ALB being recreated (ADR-0013).
 
 **edge** (P2-T07)
 - **One CloudFront distribution, three behaviours** (ADR-0011):
@@ -389,8 +387,8 @@ And which workflow touches which stack:
 | `infra-apply.yml` (master) | — (by hand) | apply | apply | apply | apply | — |
 | `deploy.yml` | — | — | — | — | — | ECR push, migrate task, new task def revision |
 | `env-power.yml sleep/wake` | — | — | — | — | — | ECS desired count |
-| `env-power.yml hibernate` | — | apply `enable_nat=false` | — | **destroy** | **destroy** | — |
-| `env-power.yml resume` | — | apply | — | apply | apply | — |
+| `env-power.yml hibernate` | — | apply both toggles off | apply `enable_valkey=false` | **destroy** | — | — |
+| `env-power.yml resume` | — | apply | apply | apply | — | — |
 
 ---
 
@@ -449,7 +447,7 @@ Each scenario: **symptom → cause → fix → prevention.** They are the incide
 
 - **Symptom:** `env-power resume` fails in `app` with `parameter /devcool/dev/network/... not found`, or ECS tasks can't pull images (`CannotPullContainerError ... i/o timeout`).
 - **Cause:** the order was broken (`app` before `network`), or `network` came back without NAT and without the endpoints the tasks need to reach ECR.
-- **Fix:** rerun in the right order: `network` → `app` → `edge`. It's convergent, so rerunning is safe.
+- **Fix:** rerun in the right order: `network` → `data` → `app`. It's convergent, so rerunning is safe.
 - **Prevention:** the workflow encodes the order as dependent jobs (`needs:`), never as parallel ones. `resume` sets `enable_nat` back explicitly. The P2 test plan step "`sleep` → 503, `wake` → 200" is run regularly, not just once.
 
 ### 6.8 The migration fails mid-deploy
@@ -488,7 +486,7 @@ Each scenario: **symptom → cause → fix → prevention.** They are the incide
 
 ## Interview talking points
 
-- **Why layered stacks?** Blast radius and lifecycle. You can destroy `app`/`edge` for cost and never touch `data`.
+- **Why layered stacks?** Blast radius and lifecycle. You can destroy `app` for cost, keep `edge`, and touch `data` only through the guarded Valkey toggle.
 - **Why SSM over remote state?** Consumers depend on a named contract, not on read access to another stack's state, which may hold secrets.
 - **Why doesn't Terraform own the image tag?** One owner per field. The deploy pipeline changes it every merge, so Terraform must ignore it or the two fight (§6.4).
 - **How do you keep secrets out of state?** RDS-managed secrets, write-only arguments, and the value set outside Terraform (§6.5).

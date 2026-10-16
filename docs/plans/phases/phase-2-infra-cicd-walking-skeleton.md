@@ -71,10 +71,10 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 ### Scale to zero
 | Mode | What | Idle cost left |
 |---|---|---|
-| `sleep` (workflow_dispatch) | ECS desired count 0; Aurora auto-pauses on its own (min 0 ACU) | ALB, NAT, CloudFront (≈ ALB + NAT hourly) |
+| `sleep` (workflow_dispatch) | ECS desired count 0; Aurora auto-pauses on its own (min 0 ACU) | ALB, NAT, interface endpoints, Valkey (P4) |
 | `wake` | desired count back to N | — |
-| `hibernate` | `terraform destroy` on `edge` and `app`, and the NAT (`network` with `enable_nat=false`) | Aurora storage, S3, ECR, secrets |
-| `resume` | apply `network` → `app` → `edge` | — |
+| `hibernate` | `terraform destroy` on `app`; apply `data` with `enable_valkey=false`, then `network` with `enable_nat=false` and `enable_interface_endpoints=false`. `edge` stays (ADR-0013) | Aurora storage, S3, ECR, secrets, Route 53 zone |
+| `resume` | apply `network` → `data` (toggles on) → `app` | — |
 
 ### GitHub Actions
 | Workflow | Trigger | Steps |
@@ -84,7 +84,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 | `infra-apply.yml` | push to `master` touching `infra/**` | OIDC (`gha-deploy`) → apply changed stacks in order; `prod` uses a GitHub environment with required reviewers |
 | `deploy.yml` | push to `master` touching backend | build → Trivy image scan (fail on HIGH/CRITICAL with fix) → push `:<sha>` to ECR → run the migrate task and wait → render the task def with the new image → `amazon-ecs-deploy-task-definition` (wait for stability) → smoke test `GET /actuator/health` through CloudFront |
 | `frontend-deploy.yml` | push to `master` touching `frontend/**` (P5) | build → `aws s3 sync --delete` → CloudFront invalidation `/index.html` |
-| `env-power.yml` | workflow_dispatch (`sleep`/`wake`/`hibernate`/`resume`) + optional nightly schedule | as the table above |
+| `env-power.yml` | workflow_dispatch (`sleep`/`wake`/`hibernate`/`resume`) + nightly `hibernate` schedule (mandatory, ADR-0013) | as the table above |
 
 ## Tasks
 - [x] **P2-T01** `infra/stacks/bootstrap`: state bucket (versioned, encrypted, public access blocked), GitHub OIDC provider, `gha-plan` (read-only) and `gha-deploy` roles scoped to this repo/branch, ECR repo with scan on push and a lifecycle policy (keep the last 20)
@@ -92,10 +92,12 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 - [ ] **P2-T03** `infra/stacks/data`: Aurora Serverless v2 PG16 (dev min 0 ACU), RDS-managed master secret, S3 media bucket (existing name via var), JWT secrets in Secrets Manager
   - Review carry-over (P2-T01): #4, #3b → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)
   - Carry-over (P2-T05): tasks read the RDS secret only at start, so lengthen its rotation interval in dev
+  - `prevent_destroy` on the Aurora cluster and the media bucket: hibernate applies `data` to toggle Valkey (ADR-0013)
 - [ ] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
   - Cluster, `api` service, ALB, HTTPS listener.
   - Task role (S3 media, secrets) and execution role.
   - CloudWatch log group with 14-day retention.
+  - The HTTPS listener uses the `edge` cert; a fixed `origin.<domain>` alias points at the ALB (ADR-0013). Needs P2-T07's zone and cert first.
   - Review carry-over (P2-T01): #2 (before the first CI apply), #3a, #3c, #3d, #10 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t04--ecs-service-module--app-stack)
 - [x] **P2-T05** `application-ecs.properties`: datasource from injected secrets, Flyway off; add `application-migrate.properties`
 - [x] **P2-T06** `Dockerfile`:
@@ -103,11 +105,13 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Layered jar for caching.
   - `HEALTHCHECK` not needed (the ALB does it).
   - Add a `docker` path filter + image build (and hadolint) job to `ci.yml`; P2-T10 left `Dockerfile` unfiltered.
-- [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + ALB origin, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query), ACM cert in us-east-1, Route 53 alias
+- [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + API origin `origin.<domain>`, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query), ACM cert in us-east-1 for `<domain>` and `origin.<domain>` (shared with the ALB via SSM), Route 53 hosted zone + alias
+  - Survives hibernate (ADR-0013), so nothing billed hourly goes here. Optional: a custom error response so `/api/*` explains that the env is asleep instead of a bare 502
 - [ ] **P2-T08** `deploy.yml` with the migrate task and ECS deploy; `infra-plan.yml`, `infra-apply.yml`
   - `dev` only: no `prod` apply or `prod` GitHub environment (ADR-0013)
   - Review carry-over (P2-T01): #1 (before merging `infra-apply.yml`), #5, #6, #7, #9 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t08--deployyml-infra-planyml-infra-applyyml)
 - [ ] **P2-T09** `env-power.yml` (sleep/wake/hibernate/resume). Document the costs in `infra/README.md`
+  - The `data` step applies a saved plan and fails unless the Valkey cache is the only change (ADR-0013)
   - Review carry-over (P2-T01): #8 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t09--env-poweryml)
 - [x] **P2-T10** CI infra job: `terraform fmt -check`, `validate`, `tflint`, `trivy config infra/`
 - [ ] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent

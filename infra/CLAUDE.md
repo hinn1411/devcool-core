@@ -9,13 +9,13 @@ infra/
   stacks/
     bootstrap/      # state bucket, GitHub OIDC + roles, ECR — applied once by hand
     network/        # VPC, subnets, NAT (toggle), endpoints, SGs
-    data/           # Aurora PG + pgvector, S3 media, SNS/SQS, secrets — never destroyed
-    app/            # ECS cluster/services, ALB, autoscaling, IAM task roles, Valkey (ADR-0013)
-    edge/           # CloudFront, S3 SPA bucket, ACM, Route 53
+    data/           # Aurora PG + pgvector, S3 media, SNS/SQS, secrets, Valkey (toggle) — never destroyed
+    app/            # ECS cluster/services, ALB, origin.<domain> alias, autoscaling, IAM task roles — destroyed on hibernate
+    edge/           # CloudFront, S3 SPA bucket, ACM, Route 53 zone — kept on hibernate (ADR-0013)
   envs/{dev,prod}.tfvars
   observability/    # collector config, Grafana dashboards/alerts as code (P7)
 ```
-Apply order: bootstrap → network → data → app → edge.
+Apply order: bootstrap → network → data → edge → app (`app` reads the zone and cert from `edge`).
 
 ## Commands
 ```bash
@@ -35,5 +35,5 @@ Claude may run `init`, `fmt`, `validate` and `plan`. `apply` always needs the us
 - No secrets in `.tfvars` or code. Use Secrets Manager / RDS-managed secrets and reference them by ARN.
 - The ECS service ignores `task_definition` changes; the deploy pipeline owns the image tag.
 - Cross-stack values go through SSM parameters written by the producer stack.
-- Keep scale-to-zero working: anything always-on and billed hourly must be in `app`, `edge` or a toggle in `network`, never in `data`, unless it holds state.
+- Keep scale-to-zero working: anything billed hourly must be in `app` or behind a hibernate toggle in `network` or `data` (ADR-0013), unless it holds state. `edge` survives hibernate, so nothing billed hourly goes there.
 - Use the `aws-architect` agent to review plans; check provider arguments with the Terraform MCP/AWS Knowledge MCP rather than from memory.
