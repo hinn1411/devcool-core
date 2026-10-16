@@ -4,7 +4,7 @@
 
 # ---- build: compile the fat jar and split it into Spring Boot's layers ----
 # eclipse-temurin:21-jdk-noble
-FROM eclipse-temurin:21-jdk-noble@sha256:b468c3fc688b14450571494f588bd939378e7fd542ed5a73f8efc13f17872a87 AS build
+FROM eclipse-temurin:25-jdk-noble@sha256:589ff4cc3f71aab462e7048a47a0d10edf57fbccde3fceea2281e610bf5880b4 AS build
 WORKDIR /build
 
 # Dependencies get their own layer, so a src-only change doesn't download them again (ch18 §2.3).
@@ -21,7 +21,7 @@ RUN ./mvnw -B -q package -DskipTests -Djacoco.skip=true \
 
 # ---- runtime: JRE only, non-root, one layer per Boot layer ----
 # eclipse-temurin:21-jre-noble
-FROM eclipse-temurin:21-jre-noble@sha256:000fd431958bc81a24abe1e8e5f0f0fd3ae365a594bd50aadb20696805f9408c
+FROM eclipse-temurin:25-jre-noble@sha256:d9a39a23634650173f1e2bbc176227af9728587ecf0f4b62d53e9355cd7a19ab
 
 # Fixed numeric IDs: USER must be numeric for the platform to prove non-root (hadolint DL3066).
 RUN groupadd --system --gid 10001 app \
