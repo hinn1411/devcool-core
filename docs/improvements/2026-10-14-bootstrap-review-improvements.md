@@ -21,6 +21,8 @@ Each item is fixed in the task that first needs it. The tasks are linked back fr
 ## P2-T03 — `data` stack
 
 ### #4 · Medium · `gha-plan` can't plan stacks that read secret values
+**Resolved in P2-T03:** `data` creates the JWT secrets without a `secret_version`; the values are set out of band ([`infra/README.md`](../../infra/README.md)), and the SSM params are `String`.
+
 **File:** `infra/stacks/bootstrap/oidc.tf:55` (`ReadOnlyAccess`)
 
 `ReadOnlyAccess` grants Secrets Manager `Describe*`/`List*` only, and KMS `Get*`/`Describe*`/`List*`. It doesn't grant `secretsmanager:GetSecretValue`, and it doesn't grant `kms:Decrypt`.
@@ -34,6 +36,8 @@ Each item is fixed in the task that first needs it. The tasks are linked back fr
 **Alternative:** grant `gha-plan` `secretsmanager:GetSecretValue` on `arn:aws:secretsmanager:us-east-1:<acct>:secret:devcool/*`. This is consistent with the already accepted "PR jobs can read state", but it widens the plan role.
 
 ### #3b · Medium · PassRole only allows `ecs-tasks.amazonaws.com`
+**Not needed in P2-T03:** enhanced monitoring is off, and nothing in `data` passes a role (Aurora uses its service-linked role). Still applies to any later feature that passes one.
+
 **File:** `infra/stacks/bootstrap/oidc.tf:162`
 
 **Failure:** if Aurora enhanced monitoring is turned on, the apply fails, because it passes a role to `monitoring.rds.amazonaws.com`. VPC flow logs (P2-T02, if added) need `vpc-flow-logs.amazonaws.com` in the same way.
