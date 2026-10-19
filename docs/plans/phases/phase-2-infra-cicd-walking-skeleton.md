@@ -106,14 +106,14 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
     5. `wscat -c wss://<domain>/ws` reaches the app (rejected without auth until P4).
   - Review carry-over (P2-T01): #2 (before the first CI apply), #3a, #3c, #3d, #10 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t04--ecs-service-module--app-stack)
   - Carry-over (P2-T03): the execution role's secret scope needs the RDS-managed secret (`rds!cluster-…`, from SSM `db_master_secret_arn`) as well as `devcool/<env>/*`. A resume after > 24 h paused can take ≥ 30 s, so raise pgjdbc `connectTimeout` and `sslResponseTimeout` in `SPRING_DATASOURCE_URL`; Hikari's 60 s alone doesn't cover it
+  - Carry-over (P2-T07): the CloudFront prefix list on the ALB SG admits *any* distribution, so add an `X-Origin-Verify` `custom_header` on edge's `api-alb` origin and have the ALB listener return 403 without it. The app sees `Host: origin.<domain>`, so `/ws` allowed origins must list `https://<domain>` (not `*`; the allowlist itself is P4-T06)
 - [x] **P2-T05** `application-ecs.properties`: datasource from injected secrets, Flyway off; add `application-migrate.properties`
 - [x] **P2-T06** `Dockerfile`:
   - Non-root user, `JAVA_TOOL_OPTIONS` with `-XX:MaxRAMPercentage=75`.
   - Layered jar for caching.
   - `HEALTHCHECK` not needed (the ALB does it).
   - Add a `docker` path filter + image build (and hadolint) job to `ci.yml`; P2-T10 left `Dockerfile` unfiltered.
-- [ ] **P2-T07** `infra/stacks/edge`: CloudFront with the SPA bucket (OAC) + API origin `origin.<domain>`, behaviours `/api/*` and `/ws` (caching disabled, all viewer headers/cookies/query) and `/actuator/health` (exact path, caching disabled; the `deploy.yml` smoke test goes through it), ACM cert in us-east-1 for `<domain>` and `origin.<domain>` (shared with the ALB via SSM), Route 53 hosted zone + alias
-  - Survives hibernate (ADR-0013), so nothing billed hourly goes here. Optional: a custom error response so `/api/*` explains that the env is asleep instead of a bare 502
+- [x] **P2-T07** `infra/stacks/edge`: CloudFront single origin, SPA bucket, ACM cert, Route 53 zone; survives hibernate (brief: `docs/journal/briefs/P2-T07.md`)
 - [ ] **P2-T08** `deploy.yml` with the migrate task and ECS deploy; `infra-plan.yml`, `infra-apply.yml`
   - `dev` only: no `prod` apply or `prod` GitHub environment (ADR-0013)
   - Review carry-over (P2-T01): #1 (before merging `infra-apply.yml`), #5, #6, #7, #9 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t08--deployyml-infra-planyml-infra-applyyml)
