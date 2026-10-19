@@ -170,7 +170,7 @@ The roadmap has ~150 tasks. Not all of them matter equally for your goals. **Cut
 |---|---|---|---|
 | P0 | T10, T11 | T13 | T12 |
 | P1 | T01–T16 | T17 | — |
-| P2 | T01–T06, T08, **T09**, T10, **T13** | T07, T12 | T11 |
+| P2 | T01–T08, **T09**, T10, **T13** | T12 | T11 |
 | P3 | T01–T07, T10, T11, T16 | T13 (per-channel search), T14 | T08, T09, T12, T13 (global search), T15 |
 | P4 | T01–T03, T05–T10, T13, T14, T16 | T04, T11, T12, T15 | T17 |
 | P5 | T01–T07, T10 | T12, T13, T14 | T08, T09, T11, T15 |
@@ -179,7 +179,7 @@ The roadmap has ~150 tasks. Not all of them matter equally for your goals. **Cut
 | P8 | T01–T05, T08–T10, T12–T14, T16, T19, T20 | T06, T17, T18 | T11, T15, T21–T23 |
 | P9 | T01–T05, T08, T10, T11 | T06, T07, T09 | — |
 
-P2-T09 (sleep/wake/hibernate) and P2-T13 (budget alarm) are Must only because of the $20 budget.
+P2-T09 (sleep/wake/hibernate) and P2-T13 (budget alarm) are Must only because of the $20 budget. P2-T07 (`edge`) is Must because P2-T04 needs its zone and cert (ADR-0013).
 
 **Behind schedule?** Cut in this order: P5 Coulds, then P3 Coulds, then P8e (T21–T23), then P7 Grafana Cloud (T07, T10; keep local LGTM), then P4-T15/T17. Never cut tests, the leak test (P8-T10), or the journal.
 
