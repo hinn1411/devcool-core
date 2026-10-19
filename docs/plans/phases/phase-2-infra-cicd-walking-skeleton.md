@@ -95,7 +95,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - `prevent_destroy` on the Aurora cluster and the media bucket: hibernate applies `data` to toggle Valkey (ADR-0013)
 - [ ] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
   - Cluster, `api` service, ALB, HTTPS listener.
-  - Task role (S3 media, secrets) and execution role.
+  - Task role (S3 media) and execution role (image pull, logs, injected secrets).
   - CloudWatch log group with 14-day retention.
   - The HTTPS listener uses the `edge` cert; a fixed `origin.<domain>` alias points at the ALB (ADR-0013). Needs P2-T07's zone and cert first.
   - **Done when** a manual first deploy passes the end-to-end smoke test, before any pipeline exists (T08). This tests the top risk early:
@@ -116,9 +116,11 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 - [x] **P2-T07** `infra/stacks/edge`: CloudFront single origin, SPA bucket, ACM cert, Route 53 zone; survives hibernate (brief: `docs/journal/briefs/P2-T07.md`)
 - [ ] **P2-T08** `deploy.yml` with the migrate task and ECS deploy; `infra-plan.yml`, `infra-apply.yml`
   - `dev` only: no `prod` apply or `prod` GitHub environment (ADR-0013)
+  - Carry-over (P2-T04): `app` has no default `image_tag`, so `infra-plan`/`infra-apply` pass the running tag (the family's last ACTIVE revision: `aws ecs describe-task-definition --task-definition devcool-dev-api`; revisions survive hibernate via `skip_destroy`)
   - Review carry-over (P2-T01): #1 (before merging `infra-apply.yml`), #5, #6, #7, #9 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t08--deployyml-infra-planyml-infra-applyyml)
 - [ ] **P2-T09** `env-power.yml` (sleep/wake/hibernate/resume). Document the costs in `infra/README.md`
   - The `data` step applies a saved plan and fails unless the Valkey cache is the only change (ADR-0013)
+  - Carry-over (P2-T04): `sleep` sets the autoscaling min to 0 as well (registering the target moves the count into [min, max]); `resume` passes the image tag of the family's last ACTIVE revision (the service and `/devcool/dev/app/*` are gone after hibernate). The ALB cuts open sockets after the 30 s deregistration delay, before SIGTERM, so clients see 1006, not 1012 (check the drain design in P4)
   - Review carry-over (P2-T01): #8 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t09--env-poweryml)
 - [x] **P2-T10** CI infra job: `terraform fmt -check`, `validate`, `tflint`, `trivy config infra/`
 - [ ] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent

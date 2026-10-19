@@ -12,6 +12,7 @@ locals {
     media_bucket_arn       = aws_s3_bucket.media.arn
     jwt_access_secret_arn  = aws_secretsmanager_secret.jwt["access"].arn
     jwt_refresh_secret_arn = aws_secretsmanager_secret.jwt["refresh"].arn
+    log_group_api          = aws_cloudwatch_log_group.api.name
   }
 }
 

@@ -1,5 +1,3 @@
-data "aws_caller_identity" "current" {}
-
 # Account-wide cost guardrail (P2-T13). It only alerts: AWS Budgets data lags by hours,
 # and stopping spend is the env-power workflow's job (P2-T09).
 resource "aws_budgets_budget" "monthly" {
