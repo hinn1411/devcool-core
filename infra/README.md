@@ -56,7 +56,9 @@ The image tag has no default: the pipeline owns the task definition after the fi
 SHA=$(git rev-parse HEAD)
 REPO=$(terraform -chdir=infra/stacks/bootstrap output -raw ecr_repository_url)
 aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO%%/*}"
-docker build --platform linux/amd64 -t "$REPO:$SHA" . && docker push "$REPO:$SHA"
+# No attestations: with Docker Desktop's containerd store, the immutable tag can land on the
+# provenance manifest instead of the image (the push then fails with a 400 on the index).
+docker build --platform linux/amd64 --provenance=false --sbom=false -t "$REPO:$SHA" . && docker push "$REPO:$SHA"
 
 # 1. Apply at 0 tasks
 terraform -chdir=infra/stacks/app init -backend-config=../../envs/dev.backend.hcl -backend-config=key=devcool/dev/app.tfstate
@@ -72,6 +74,9 @@ TASK=$(aws ecs run-task --cluster "$CLUSTER" --task-definition "$(get api_task_f
   --query 'tasks[0].taskArn' --output text)
 aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK"
 aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK" --query 'tasks[0].[stoppedReason,containers[0].exitCode]'
+# The Flyway lines from the task's log: expect "Successfully applied N migrations" (or "up to date").
+aws logs get-log-events --log-group-name /ecs/devcool-dev/api --log-stream-name "api/api/${TASK##*/}" \
+  --query 'events[].message' --output text | tr '\t' '\n' | grep -E 'Flyway|igrat|ERROR'
 
 # 3. Apply at the default min (1): autoscaling starts the first api task
 terraform -chdir=infra/stacks/app apply -var-file=../../envs/dev.tfvars -var image_tag="$SHA"
@@ -90,7 +95,12 @@ terraform -chdir=infra/stacks/app plan -var-file=../../envs/dev.tfvars -var imag
 If a task stops before it's healthy, check `aws ecs describe-tasks … --query 'tasks[0].stoppedReason'` and the `/ecs/devcool-dev/api` log group:
 - `ResourceInitializationError … secrets`: an empty JWT secret (see `data` above) or the execution role's secret ARNs.
 - `CannotPullContainerError`: the NAT or the interface endpoints are off (`network` toggles).
+- Push fails with `400 Bad Request` on the manifest, or the task can't find a linux/amd64 image: the tag points at a
+  provenance attestation (check `aws ecr batch-get-image … --query 'images[0].imageManifest'`). Tags are immutable, so
+  delete the image (`aws ecr batch-delete-image`) and rebuild with `--provenance=false --sbom=false`.
 - `Read-only file system`: a path outside `/tmp` is being written. Add it to the module's `scratch_paths` and as a `VOLUME` in the `Dockerfile`.
-- Connection timeouts at start: Aurora resuming. The pgjdbc timeouts in `SPRING_DATASOURCE_URL` allow 60 s.
+- Connection timeouts at start (`SocketTimeoutException: Connect timed out`): Aurora resuming. The pgjdbc timeouts in
+  `SPRING_DATASOURCE_URL` allow 60 s, but the first resume after a long pause can take longer (seen 2026-10-20: the migrate
+  task failed cold, passed on a re-run). Re-run the task once `ServerlessDatabaseCapacity` is above 0.
 
 Carry-overs: `env-power` sleep must set the autoscaling min to 0, not only the desired count (registering the target moves the count into [min, max]); resume and `infra-apply` must pass the running `image_tag`, read from the family's last ACTIVE revision (`aws ecs describe-task-definition --task-definition devcool-dev-api`), since `skip_destroy` keeps revisions through hibernate (P2-T08, P2-T09).
