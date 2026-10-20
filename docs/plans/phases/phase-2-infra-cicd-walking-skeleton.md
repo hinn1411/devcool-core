@@ -124,7 +124,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
 - [ ] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent
 - [ ] **P2-T12** Update `README.md` "Deployment" (replace the manual steps) and fill in `docker/ecs/README.md`
 - [x] **P2-T13** Budget alarm (AWS Budgets, email) at the monthly limit you set
-- [ ] **P2-T14** Patch the backend dependencies before the first deploy (found by P2-T06's Trivy image scan: 50 fixable HIGH/CRITICAL in the Boot 3.5.6 BOM and `nimbus-jose-jwt` 9.37)
+- [x] **P2-T14** Patch the backend dependencies before the first deploy (found by P2-T06's Trivy image scan: 50 fixable HIGH/CRITICAL in the Boot 3.5.6 BOM and `nimbus-jose-jwt` 9.37)
   - Bump Spring Boot to the latest 3.5.x and `nimbus-jose-jwt` to ≥ 9.37.2; record the Framework-7-only fixes (CVE-2026-47884, CVE-2026-47890 in `spring-webmvc`) in a `.trivyignore` with a reason.
   - Add the `maven` ecosystem to `.github/dependabot.yml`, then add `library` to the Trivy gate in `ci-docker.yml`.
 

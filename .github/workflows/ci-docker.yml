@@ -60,9 +60,8 @@ jobs:
               || { echo "::error::Missing the '$layer' layer (layered jar)"; exit 1; }
           done
 
-      # Report first (never fails), then the gate. The gate covers the OS packages, which the
-      # Dockerfile owns. Library CVEs come from the Boot BOM in pom.xml and are only reported
-      # until the Boot bump lands (see the P2-T06 brief); then add `library` to the gate.
+      # Report first (never fails, no ignores), then the gate: fixable HIGH/CRITICAL in OS and
+      # libraries, minus the accepted findings in .trivyignore.yaml.
       - name: Trivy image (report, HIGH and CRITICAL, OS + libraries)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -72,14 +71,15 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "0"
 
-      - name: Trivy image (gate, fixable HIGH and CRITICAL, OS)
+      - name: Trivy image (gate, fixable HIGH and CRITICAL, OS + libraries)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.70.0
           skip-setup-trivy: true
           scan-type: image
           image-ref: ${{ env.IMAGE }}
-          vuln-type: os
+          vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: "1"

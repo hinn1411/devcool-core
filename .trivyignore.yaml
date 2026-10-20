@@ -1,0 +1,12 @@
+# Accepted findings for the ci-docker.yml gate: only CVEs with no fix on our Boot line.
+# Each needs a statement and an expiry; on expiry the gate fails and forces a re-check.
+vulnerabilities:
+  # Fixed only in Framework 7 (Boot 4).
+  - id: CVE-2026-47884
+    statement: >-
+      XsltView RCE. Not reachable: no XsltView or view resolvers, JSON endpoints only.
+    expired_at: 2027-01-18
+  - id: CVE-2026-47890
+    statement: >-
+      SSE view-fragment corruption. Not reachable: no SseEmitter or SSE endpoints.
+    expired_at: 2027-01-18
