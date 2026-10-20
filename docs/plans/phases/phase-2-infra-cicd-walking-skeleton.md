@@ -93,7 +93,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Review carry-over (P2-T01): #4, #3b → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)
   - Carry-over (P2-T05): tasks read the RDS secret only at start, so lengthen its rotation interval in dev
   - `prevent_destroy` on the Aurora cluster and the media bucket: hibernate applies `data` to toggle Valkey (ADR-0013)
-- [ ] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
+- [x] **P2-T04** `infra/modules/ecs-service` + `infra/stacks/app`:
   - Cluster, `api` service, ALB, HTTPS listener.
   - Task role (S3 media) and execution role (image pull, logs, injected secrets).
   - CloudWatch log group with 14-day retention.

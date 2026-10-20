@@ -87,8 +87,8 @@ aws elbv2 describe-target-health --target-group-arn "$(terraform -chdir=infra/st
 Checks:
 ```bash
 curl -s https://dev-cool.click/actuator/health                                   # {"status":"UP"} through CloudFront
-wscat -c wss://dev-cool.click/ws                                                 # reaches the app, rejected (4xx) until P4 auth
-curl -s -o /dev/null -w '%{http_code}\n' https://origin.dev-cool.click/actuator/health   # 403: no X-Origin-Verify
+wscat -c wss://dev-cool.click/ws                                                 # reaches the app, no 101: the interceptor rejects with an empty 200 until P4 auth
+curl -s -m 8 -o /dev/null -w '%{http_code}\n' https://origin.dev-cool.click/actuator/health   # 000 (timeout): the SG admits CloudFront only; another distribution gets 403
 terraform -chdir=infra/stacks/app plan -var-file=../../envs/dev.tfvars -var image_tag="$SHA"   # No changes
 ```
 
