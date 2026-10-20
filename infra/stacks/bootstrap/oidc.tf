@@ -13,8 +13,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # ---------------------------------------------------------------------------
 # gha-plan: `terraform plan` on pull requests. Read-only, except the state lock.
-# The gha-* roles are deliberately not named devcool-*, so gha-deploy's IAM rights
-# (below) can't touch them.
+# The gha-* roles aren't devcool-*, so gha-deploy can't touch them, directly or through a
+# role it creates (boundary.tf).
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "gha_plan_trust" {
   statement {
@@ -113,28 +113,76 @@ resource "aws_iam_role_policy_attachment" "gha_deploy_poweruser" {
   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
 }
 
-# The IAM part: only roles and policies the stacks own (named devcool-*).
-# Accepted risk: it could create an over-privileged devcool-* role; a permission
-# boundary is the later hardening.
+# The IAM part: only devcool-* roles and policies, and only roles carrying the boundary;
+# without it, gha-deploy could create a role, attach AdministratorAccess and assume it.
 data "aws_iam_policy_document" "gha_deploy_iam" {
   statement {
-    sid = "ManageDevcoolRolesAndPolicies"
+    sid = "ReadAndTagDevcoolRoles"
     actions = [
-      "iam:CreateRole",
-      "iam:DeleteRole",
       "iam:GetRole",
+      "iam:DeleteRole",
       "iam:UpdateRole",
+      "iam:UpdateRoleDescription",
+      # Unconditioned: the role stays bounded, so a new trust policy shares it, not escalates.
       "iam:UpdateAssumeRolePolicy",
       "iam:TagRole",
+      "iam:ListRoleTags",
       "iam:UntagRole",
       "iam:ListRolePolicies",
       "iam:ListAttachedRolePolicies",
       "iam:ListInstanceProfilesForRole",
       "iam:GetRolePolicy",
+    ]
+    resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
+  }
+
+  # The boundary after the call (Create/PutBoundary) or the current one (policy edits).
+  statement {
+    sid = "ChangeBoundedDevcoolRoles"
+    actions = [
+      "iam:CreateRole",
+      "iam:PutRolePermissionsBoundary",
       "iam:PutRolePolicy",
       "iam:DeleteRolePolicy",
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
+    ]
+    resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PermissionsBoundary"
+      values   = [aws_iam_policy.workload_boundary.arn]
+    }
+  }
+
+  # Attach also passes DenyAttachingOtherPolicies: only devcool-* and the ECS execution policy.
+  statement {
+    sid       = "DenyAttachingOtherPolicies"
+    effect    = "Deny"
+    actions   = ["iam:AttachRolePolicy"]
+    resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
+
+    condition {
+      test     = "ArnNotLike"
+      variable = "iam:PolicyARN"
+      values = [
+        "arn:aws:iam::${local.account_id}:policy/devcool-*",
+        "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+      ]
+    }
+  }
+
+  statement {
+    sid       = "KeepTheBoundary"
+    effect    = "Deny"
+    actions   = ["iam:DeleteRolePermissionsBoundary"]
+    resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
+  }
+
+  statement {
+    sid = "ManageDevcoolPolicies"
+    actions = [
       "iam:CreatePolicy",
       "iam:DeletePolicy",
       "iam:GetPolicy",
@@ -144,18 +192,16 @@ data "aws_iam_policy_document" "gha_deploy_iam" {
       "iam:DeletePolicyVersion",
       "iam:TagPolicy",
       "iam:UntagPolicy",
+      "iam:ListPolicyTags",
     ]
-    resources = [
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/devcool-*",
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/devcool-*",
-    ]
+    resources = ["arn:aws:iam::${local.account_id}:policy/devcool-*"]
   }
 
   # ECS needs the task and execution roles passed to it; nothing else may receive them.
   statement {
     sid       = "PassDevcoolRolesToEcsTasks"
     actions   = ["iam:PassRole"]
-    resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/devcool-*"]
+    resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
 
     condition {
       test     = "StringEquals"

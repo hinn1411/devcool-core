@@ -39,6 +39,9 @@ COPY --from=build /build/extracted/application/ ./
 # so P7-T06 (OTel agent) must repeat these flags.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 
+# Read-only root on ECS (P2-T04): declaring /tmp keeps its Fargate mount writable (1777).
+VOLUME ["/tmp"]
+
 USER 10001:10001
 EXPOSE 8080
 # Exec form: java is PID 1 and gets SIGTERM, so Spring's graceful shutdown runs (ch18 §3.3).
