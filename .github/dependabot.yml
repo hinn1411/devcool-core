@@ -1,7 +1,6 @@
 version: 2
 updates:
-  # Bumps the digest-pinned base images in the root Dockerfile (P2-T06), so the pins don't go
-  # stale with unpatched CVEs. GitHub Actions updates aren't configured yet.
+  # Bumps the digest-pinned Dockerfile bases (P2-T06). GitHub Actions isn't configured yet.
   - package-ecosystem: docker
     directory: /
     schedule:
@@ -9,9 +8,7 @@ updates:
     commit-message:
       prefix: chore
 
-  # Backend dependencies (P2-T14). One grouped PR a week for minor and patch updates, so the
-  # image's library CVEs (ci-docker.yml gate) don't pile up between bumps. Boot parent majors
-  # are ignored: Boot 4 / Framework 7 needs its own task and ADR.
+  # Backend deps (P2-T14): one grouped minor/patch PR a week. Boot majors need their own ADR.
   - package-ecosystem: maven
     directory: /
     schedule:

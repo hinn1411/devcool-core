@@ -1,15 +1,12 @@
-# Accepted findings for the image gate (ci-docker.yml), passed with `trivyignores`.
-# Each entry needs a statement and an expiry: when it lapses, the gate fails again and the
-# finding is re-checked (P2-T14). Only add CVEs that have no fix on our Boot line.
+# Accepted findings for the ci-docker.yml gate: only CVEs with no fix on our Boot line.
+# Each needs a statement and an expiry; on expiry the gate fails and forces a re-check.
 vulnerabilities:
-  # Fixed only in Spring Framework 7.0.9 (Boot 4); 6.2.x has no patch.
+  # Fixed only in Framework 7 (Boot 4).
   - id: CVE-2026-47884
     statement: >-
-      XsltView RCE/SSRF. Not reachable: the app has no XsltView, no view resolvers or
-      template engine, only @RestController JSON endpoints. Re-check on Boot 4 / Framework 7.
+      XsltView RCE. Not reachable: no XsltView or view resolvers, JSON endpoints only.
     expired_at: 2027-01-18
   - id: CVE-2026-47890
     statement: >-
-      SSE stream corruption with view fragments. Not reachable: no SseEmitter, no
-      text/event-stream endpoints, no view fragments. Re-check on Boot 4 / Framework 7.
+      SSE view-fragment corruption. Not reachable: no SseEmitter or SSE endpoints.
     expired_at: 2027-01-18

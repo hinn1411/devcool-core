@@ -60,10 +60,8 @@ jobs:
               || { echo "::error::Missing the '$layer' layer (layered jar)"; exit 1; }
           done
 
-      # Report first (never fails, no ignores, so accepted findings stay visible), then the gate.
-      # The gate fails on fixable HIGH/CRITICAL in OS packages (the Dockerfile's bases) and in
-      # libraries (pom.xml: the Boot BOM plus its patch overrides). Findings with no fix on our
-      # Boot line are accepted in .trivyignore.yaml, each with a reason and an expiry (P2-T14).
+      # Report first (never fails, no ignores), then the gate: fixable HIGH/CRITICAL in OS and
+      # libraries, minus the accepted findings in .trivyignore.yaml.
       - name: Trivy image (report, HIGH and CRITICAL, OS + libraries)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
