@@ -1,8 +1,7 @@
-# CloudFront → ALB (origin.<domain>, HTTPS only) → api :8080. The SG admits only CloudFront's
-# origin-facing prefix list (network/security_groups.tf), but that list is shared by every
-# distribution, so the listener also requires the X-Origin-Verify header that only ours sends.
+# CloudFront → ALB (origin.<domain>, HTTPS) → api :8080. The SG's CloudFront prefix list admits
+# any distribution, so the listener also requires our X-Origin-Verify header.
 
-# Internet-facing by design: CloudFront has no private path to an ALB in this setup (ADR-0011).
+# Internet-facing: CloudFront has no private path to an ALB here (ADR-0011).
 #trivy:ignore:AWS-0053
 resource "aws_lb" "api" {
   name               = "${local.name}-api"
@@ -26,8 +25,7 @@ resource "aws_lb_target_group" "api" {
   protocol    = "HTTP"
   port        = 8080
 
-  # ECS deregisters the target, waits this long, and only then sends SIGTERM. In-flight HTTP
-  # finishes; open sockets are cut when it ends, before the app can send a close frame.
+  # ECS waits this long after deregistering, then sends SIGTERM; open sockets are cut first.
   deregistration_delay = 30
 
   health_check {
@@ -77,8 +75,7 @@ resource "aws_lb_listener_rule" "from_cloudfront" {
   }
 }
 
-# CloudFront's api-alb origin. Fixed name, so edge never changes when the ALB is re-created
-# (ADR-0013); IPv4 only, like the ALB.
+# CloudFront's origin: a fixed name, so edge survives ALB re-creates (ADR-0013). IPv4 only.
 resource "aws_route53_record" "origin" {
   zone_id = local.input["edge/zone_id"]
   name    = "origin.${local.domain}"

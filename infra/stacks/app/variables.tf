@@ -9,15 +9,13 @@ variable "environment" {
   type        = string
 }
 
-# No default: the pipeline owns the tag after the first apply (ADR-0003), so every plan and
-# apply passes the tag that is running (`-var image_tag=<git sha>`).
+# No default: the pipeline owns the tag (ADR-0003); pass the running one (-var image_tag=…).
 variable "image_tag" {
   description = "ECR tag (git SHA) for the first task definition."
   type        = string
 }
 
-# The defaults live here, not in the shared envs/<env>.tfvars: every stack reads that file,
-# and the others would warn about an undeclared variable.
+# Defaults here, not in the shared tfvars: the other stacks would warn on an unknown var.
 variable "api_min_count" {
   description = "api tasks at minimum (ADR-0013 prices 1). 0 only for the very first apply, before the migrate task has run."
   type        = number

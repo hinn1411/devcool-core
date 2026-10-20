@@ -13,9 +13,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # ---------------------------------------------------------------------------
 # gha-plan: `terraform plan` on pull requests. Read-only, except the state lock.
-# The gha-* roles are deliberately not named devcool-*, so gha-deploy's IAM rights
-# (below) can't touch them directly, and the boundary (boundary.tf) stops it reaching
-# them through a devcool-* role it creates.
+# The gha-* roles aren't devcool-*, so gha-deploy can't touch them, directly or through a
+# role it creates (boundary.tf).
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "gha_plan_trust" {
   statement {
@@ -114,9 +113,8 @@ resource "aws_iam_role_policy_attachment" "gha_deploy_poweruser" {
   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
 }
 
-# The IAM part: only roles and policies the stacks own (named devcool-*), and only roles
-# that carry the workload boundary (bootstrap review #2). Without the boundary condition it
-# could create a devcool-* role, attach AdministratorAccess and assume it.
+# The IAM part: only devcool-* roles and policies, and only roles carrying the boundary;
+# without it, gha-deploy could create a role, attach AdministratorAccess and assume it.
 data "aws_iam_policy_document" "gha_deploy_iam" {
   statement {
     sid = "ReadAndTagDevcoolRoles"
@@ -125,8 +123,7 @@ data "aws_iam_policy_document" "gha_deploy_iam" {
       "iam:DeleteRole",
       "iam:UpdateRole",
       "iam:UpdateRoleDescription",
-      # Unconditioned: a new trust policy could name another account, but the role stays
-      # inside the boundary, so that is sharing, not escalation (accepted, P2-T04 review).
+      # Unconditioned: the role stays bounded, so a new trust policy shares it, not escalates.
       "iam:UpdateAssumeRolePolicy",
       "iam:TagRole",
       "iam:ListRoleTags",
@@ -139,8 +136,7 @@ data "aws_iam_policy_document" "gha_deploy_iam" {
     resources = ["arn:aws:iam::${local.account_id}:role/devcool-*"]
   }
 
-  # iam:PermissionsBoundary is the role's boundary after the call (Create/PutBoundary) or
-  # its current one (the policy edits), so a role without it can't be created or changed.
+  # The boundary after the call (Create/PutBoundary) or the current one (policy edits).
   statement {
     sid = "ChangeBoundedDevcoolRoles"
     actions = [
@@ -160,9 +156,7 @@ data "aws_iam_policy_document" "gha_deploy_iam" {
     }
   }
 
-  # A separate statement narrows attach to the stacks' own policies and the ECS execution
-  # policy; both statements must allow it. The ARN is hard-coded in app, so no GetPolicy on
-  # AWS-managed policies is needed (bootstrap review #3c).
+  # Attach also passes DenyAttachingOtherPolicies: only devcool-* and the ECS execution policy.
   statement {
     sid       = "DenyAttachingOtherPolicies"
     effect    = "Deny"

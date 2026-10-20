@@ -1,5 +1,4 @@
-# Cross-stack values for deploy.yml (P2-T08) and env-power (P2-T09). Plain String, like the
-# other stacks (gha-plan can't decrypt SecureString).
+# For deploy.yml (P2-T08) and env-power (P2-T09). Plain String: gha-plan can't decrypt.
 locals {
   ssm_prefix = "${local.ssm}/app"
 

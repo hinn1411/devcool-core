@@ -1,5 +1,4 @@
-# Inputs from network, data and edge, through their SSM contracts (*/ssm.tf). All plain
-# String/StringList, so insecure_value is safe, except origin_verify, which stays sensitive.
+# Upstream SSM contracts (*/ssm.tf): plain values, except origin_verify (kept sensitive).
 locals {
   ssm = "/devcool/${var.environment}"
 

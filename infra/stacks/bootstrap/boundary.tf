@@ -1,10 +1,7 @@
-# Permission boundary for every devcool-* role (bootstrap review #2). gha-deploy may only
-# create or change a devcool-* role that carries it, so a role it creates can never hold more
-# than this, whatever policies are attached. It's named outside devcool-*, so gha-deploy's
-# policy/devcool-* rights can't edit it. Later phases widen it here, by a hand apply:
-# SQS/SNS (P6), Bedrock (P8), CloudWatch metrics (P4).
+# Boundary for every devcool-* role (review #2): gha-deploy may only create roles carrying it.
+# Named outside devcool-* so gha-deploy can't edit it. Widened by hand in P4, P6 and P8.
 data "aws_iam_policy_document" "workload_boundary" {
-  # ECR's auth token has no resource-level permissions; the pulls below are scoped to the repo.
+  # ECR auth tokens can't be scoped; the pulls below are.
   #trivy:ignore:AWS-0057
   statement {
     sid       = "EcrAuth"
@@ -31,7 +28,7 @@ data "aws_iam_policy_document" "workload_boundary" {
     ]
   }
 
-  # The stacks' own secrets, plus the RDS-managed master secret, whose name RDS picks.
+  # The stacks' secrets plus the RDS-managed master secret.
   statement {
     sid     = "ReadSecrets"
     actions = ["secretsmanager:GetSecretValue"]

@@ -39,9 +39,7 @@ COPY --from=build /build/extracted/application/ ./
 # so P7-T06 (OTel agent) must repeat these flags.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 
-# ECS runs the task with a read-only root (P2-T04). Tomcat and the JVM write to /tmp, and a
-# Fargate scratch mount is root-owned 0755 unless the path is declared here: VOLUME copies
-# /tmp's mode (1777) to the mount.
+# Read-only root on ECS (P2-T04): declaring /tmp keeps its Fargate mount writable (1777).
 VOLUME ["/tmp"]
 
 USER 10001:10001

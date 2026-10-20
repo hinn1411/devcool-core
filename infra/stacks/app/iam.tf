@@ -1,7 +1,5 @@
-# Execution role: the ECS agent pulls the image, writes logs and resolves the task-def secrets
-# before the app starts. Task role: what the app's own AWS calls run as (S3 media only).
-# Both are devcool-* with path "/" (bootstrap review #3d) and carry bootstrap's boundary,
-# which gha-deploy requires on every role it creates (review #2).
+# Execution role: the ECS agent's image pull, logs and task-def secrets. Task role: the app's
+# own AWS calls (S3 media). Both carry bootstrap's boundary, which gha-deploy requires.
 locals {
   account_id   = data.aws_caller_identity.current.account_id
   boundary_arn = "arn:aws:iam::${local.account_id}:policy/workload-boundary" # bootstrap/boundary.tf

@@ -9,8 +9,7 @@ locals {
   api_methods   = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
 }
 
-# Shared secret between this distribution and the ALB listener rule in app, which reads it
-# from SSM. edge survives hibernate, so it stays the same across every app recreate.
+# Shared with app's ALB listener rule via SSM; stable, since edge survives hibernate.
 resource "random_password" "origin_verify" {
   length  = 40
   special = false # sent as a header value; alphanumerics need no escaping
@@ -62,8 +61,7 @@ resource "aws_cloudfront_distribution" "this" {
     origin_id   = local.api_origin_id
     domain_name = "origin.${var.domain_name}"
 
-    # The ALB forwards only requests carrying this; the prefix-list SG alone admits any
-    # distribution, not just this one (P2-T07 carry-over).
+    # The ALB forwards only requests carrying this (the SG admits any distribution).
     custom_header {
       name  = "X-Origin-Verify"
       value = random_password.origin_verify.result

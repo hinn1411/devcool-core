@@ -1,5 +1,4 @@
-# One ECS service on Fargate: task definition, service, CPU target tracking. Used for api now
-# and the worker in P6; sidecars (OTel, P7) join the task through var.sidecars.
+# One Fargate service: task def, service, CPU target tracking (api now, worker in P6).
 locals {
   scratch_volumes = var.readonly_root_filesystem ? {
     for p in var.scratch_paths : "scratch${replace(p, "/", "-")}" => p
@@ -12,7 +11,7 @@ locals {
 
     portMappings = [{ containerPort = var.container_port, protocol = "tcp" }]
 
-    # Sorted name/value lists: the order ECS stores them in, so plans don't drift.
+    # Sorted as ECS stores them, so plans don't drift.
     environment = [for k, v in var.environment : { name = k, value = v }]
     secrets     = [for k, v in var.secrets : { name = k, valueFrom = v }]
 
@@ -43,8 +42,7 @@ resource "aws_ecs_task_definition" "this" {
 
   container_definitions = jsonencode(concat([local.app_container], var.sidecars))
 
-  # Keep revisions on replace and on hibernate's destroy: the service may still run one, and
-  # resume reads the last ACTIVE revision's image to know what to redeploy (P2-T09).
+  # Keep old revisions: resume (P2-T09) redeploys the last ACTIVE one's image.
   skip_destroy = true
 
   runtime_platform {
@@ -68,8 +66,7 @@ resource "aws_ecs_service" "this" {
   launch_type      = "FARGATE"
   platform_version = "LATEST"
 
-  # Rolling, no capacity dip: new tasks pass health checks before old ones drain. The circuit
-  # breaker rolls back a deploy whose tasks keep failing (ADR-0002).
+  # Rolling with no capacity dip; the circuit breaker rolls back failing deploys (ADR-0002).
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
   deployment_circuit_breaker {
@@ -97,15 +94,13 @@ resource "aws_ecs_service" "this" {
   enable_ecs_managed_tags = true
   propagate_tags          = "SERVICE"
 
-  # The deploy pipeline owns the task definition (ADR-0003); autoscaling and env-power own
-  # the count.
+  # deploy.yml owns the task def (ADR-0003); autoscaling and env-power own the count.
   lifecycle {
     ignore_changes = [task_definition, desired_count]
   }
 }
 
-# Registering the target moves the count into [min, max] right away, so env-power's sleep
-# (P2-T09) must lower min_count to 0, not only the desired count.
+# Registering clamps the count into [min, max] at once, so sleep (P2-T09) must set min to 0.
 resource "aws_appautoscaling_target" "this" {
   service_namespace  = "ecs"
   scalable_dimension = "ecs:service:DesiredCount"

@@ -1,7 +1,5 @@
-# Cross-stack values: app (P2-T04) reads zone_id, cert_arn, domain_name and origin_verify
-# for the ALB listener and the origin.<domain> alias; frontend-deploy (P5-T14) reads the
-# bucket and the distribution. Plain String, never SecureString: gha-plan can't decrypt
-# (bootstrap review #4).
+# Cross-stack values for app (P2-T04) and frontend-deploy (P5-T14). Plain String, never
+# SecureString: gha-plan can't decrypt (bootstrap review #4).
 locals {
   ssm_prefix = "/devcool/${var.environment}/edge"
 
@@ -22,8 +20,7 @@ resource "aws_ssm_parameter" "edge" {
   value = each.value
 }
 
-# A String, not a SecureString, like the rest (gha-plan can't decrypt). The value is a
-# defence-in-depth check behind the prefix-list SG, and it's in edge's state either way.
+# String like the rest: defence in depth only, and it's in edge's state either way.
 resource "aws_ssm_parameter" "origin_verify" {
   name  = "${local.ssm_prefix}/origin_verify"
   type  = "String"
