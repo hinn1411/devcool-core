@@ -60,6 +60,7 @@ jobs:
               - 'pom.xml'
               - 'mvnw'
               - '.mvn/**'
+              - '.trivyignore.yaml'
               - '.github/workflows/ci.yml'
               - '.github/workflows/ci-changes.yml'
               - '.github/workflows/ci-docker.yml'
