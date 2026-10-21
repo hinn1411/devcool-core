@@ -113,7 +113,7 @@ Carry-over: `env-power` sleep must set the autoscaling min to 0, not only the de
 | `infra-plan.yml` (in `ci.yml`) | PR touching infra | plan + comment per changed stack | `app` with min 0 | `network` with toggles off; `app` = full create |
 | `infra-apply.yml` | infra merge | apply changed stacks, then roll `api` onto the latest revision | `app` with min 0 | `network`/`data` with toggles off; `app` skipped |
 
-State comes from `.github/scripts/env-state.sh` (run it by hand to check). `app` always gets the running tag: the image of the family's last ACTIVE revision.
+State comes from `.github/scripts/detect-env-state.sh` (run it by hand to check). `app` always gets the running tag: the image of the family's last ACTIVE revision.
 
 ### One-time setup
 1. Apply bootstrap and switch the repo's OIDC `sub` template **back to back**: the trusts now match `…:job_workflow_ref:<repo>/.github/workflows/<file>@<ref>` ([review #7](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#7--low-optional--gha-plan-trust-also-matches-claude-auto-review)), so until both are done every assume fails.

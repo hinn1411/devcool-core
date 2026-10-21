@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stacks a change touches, in apply order, as a JSON array (P2-T08).
-#   usage: changed-stacks.sh <plan|apply> <base-sha> <head-sha>   or   changed-stacks.sh <plan|apply> all
+#   usage: list-changed-stacks.sh <plan|apply> <base-sha> <head-sha>   or   list-changed-stacks.sh <plan|apply> all
 # plan includes bootstrap; apply never does (bootstrap is applied by hand, ADR-0003).
 set -euo pipefail
 

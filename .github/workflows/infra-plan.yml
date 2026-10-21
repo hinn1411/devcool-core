@@ -28,9 +28,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Map changed paths to stacks
-        id: stacks
+        id: stacks 
         run: |
-          stacks=$(.github/scripts/changed-stacks.sh plan \
+          stacks=$(.github/scripts/list-changed-stacks.sh plan \
             "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
           echo "Stacks: $stacks"
           echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
@@ -78,14 +78,14 @@ jobs:
 
       - name: Environment state
         id: env
-        run: .github/scripts/env-state.sh
+        run: .github/scripts/detect-env-state.sh
 
       - name: terraform plan
         id: plan
         env:
           STATE: ${{ steps.env.outputs.state }}
           IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
-        run: .github/scripts/tf-stack.sh plan "${{ matrix.stack }}"
+        run: .github/scripts/plan-or-apply-stack.sh plan "${{ matrix.stack }}"
 
       - name: Comment the plan
         if: always() && steps.env.outcome == 'success'

@@ -38,9 +38,9 @@ jobs:
         id: stacks
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            stacks=$(.github/scripts/changed-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA")
+            stacks=$(.github/scripts/list-changed-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA")
           else
-            stacks=$(.github/scripts/changed-stacks.sh apply all)
+            stacks=$(.github/scripts/list-changed-stacks.sh apply all)
           fi
           echo "Stacks: $stacks"
           echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
@@ -90,7 +90,7 @@ jobs:
       # Read once: the concurrency group keeps env-power from changing it mid-run.
       - name: Environment state
         id: env
-        run: .github/scripts/env-state.sh
+        run: .github/scripts/detect-env-state.sh
 
       - name: Apply the stacks in order
         env:
@@ -105,7 +105,7 @@ jobs:
               echo "::endgroup::"
               continue
             fi
-            .github/scripts/tf-stack.sh apply "$stack"
+            .github/scripts/plan-or-apply-stack.sh apply "$stack"
             echo "- \`$stack\`: applied" >>"$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done
@@ -116,4 +116,4 @@ jobs:
         run: |
           # The app apply may have re-created the SSM values; read them again.
           get() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
-          .github/scripts/ecs-roll-to-latest.sh "$(get cluster_name)" "$(get api_service_name)" "${{ steps.env.outputs.family }}"
+          .github/scripts/roll-service-to-latest.sh "$(get cluster_name)" "$(get api_service_name)" "${{ steps.env.outputs.family }}"

@@ -17,7 +17,7 @@ on:
       - ".dockerignore"
       - ".trivyignore.yaml"
       - ".github/workflows/deploy.yml"
-      - ".github/scripts/env-state.sh"
+      - ".github/scripts/detect-env-state.sh"
   workflow_dispatch: # re-deploy master (the aws-deploy environment allows master only)
 
 permissions: {}
@@ -105,7 +105,7 @@ jobs:
 
       - name: Environment state
         id: env
-        run: .github/scripts/env-state.sh
+        run: .github/scripts/detect-env-state.sh
 
       # The failure step below deregisters anything newer, so the last ACTIVE revision (what
       # infra-apply and resume treat as running) never points at a failed image.

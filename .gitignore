@@ -51,7 +51,7 @@ frontend/test-results/
 *.tfplan
 *.auto.tfvars
 *.local.tfvars
-# Saved plans and their logs (.github/scripts/tf-stack.sh)
+# Saved plans and their logs (.github/scripts/plan-or-apply-stack.sh)
 infra/stacks/*/tfplan
 infra/stacks/*/plan.log
 infra/stacks/*/plan.txt

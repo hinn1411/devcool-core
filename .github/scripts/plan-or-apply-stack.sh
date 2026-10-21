@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # init + plan one stack for the env's power state; `apply` then applies the saved plan (P2-T08).
-#   usage: tf-stack.sh <plan|apply> <stack>
-#   env:   ENVIRONMENT, STATE (env-state.sh), IMAGE_TAG (app only), TF_VAR_* as needed
+#   usage: plan-or-apply-stack.sh <plan|apply> <stack>
+#   env:   ENVIRONMENT, STATE (detect-env-state.sh), IMAGE_TAG (app only), TF_VAR_* as needed
 # plan writes infra/stacks/<stack>/plan.txt and `changes=true|false` to $GITHUB_OUTPUT.
 set -euo pipefail
 

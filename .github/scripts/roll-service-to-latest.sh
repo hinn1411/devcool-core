@@ -2,7 +2,7 @@
 # Point the service at the family's latest ACTIVE revision and wait for the rollout (P2-T08).
 # The service ignores task_definition (ADR-0003), so a Terraform change to the task definition
 # (env, CPU, sidecars) only goes live through this. The image stays the running one.
-#   usage: ecs-roll-to-latest.sh <cluster> <service> <family>
+#   usage: roll-service-to-latest.sh <cluster> <service> <family>
 set -euo pipefail
 
 cluster="$1"
