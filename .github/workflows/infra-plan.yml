@@ -101,6 +101,10 @@ jobs:
           marker="<!-- infra-plan:$STACK -->"
           if [ "$OUTCOME" != "success" ]; then
             headline="❌ **plan failed**"; file="$dir/plan.log"
+          elif [ "$STACK:$STATE" = "app:hibernated" ]; then
+            # A full create, which infra-apply skips: don't headline it as what the merge does.
+            added=$(sed -nE 's/^Plan: ([0-9]+) to add.*/\1/p' "$dir/plan.txt")
+            headline="**not applied: hibernated** (resume creates ${added:-0})"; file="$dir/plan.txt"
           elif [ "$CHANGES" = "true" ]; then
             headline="$(grep -E '^Plan:' "$dir/plan.txt" || echo 'Changes')"; file="$dir/plan.txt"
           else
@@ -109,7 +113,7 @@ jobs:
           note=""
           case "$STACK:$STATE" in
             bootstrap:*)      note="Applied by hand, never by CI (infra/README.md)." ;;
-            app:hibernated)   note="The env is hibernated: this is a full create, and infra-apply skips \`app\` until resume." ;;
+            app:hibernated)   note="\`app\` is destroyed while hibernated, so this plan only checks the config; resume (P2-T09) applies it." ;;
             network:hibernated) note="The env is hibernated: planned with the NAT and interface endpoints off, as infra-apply applies it." ;;
           esac
           # A comment holds 65,536 characters; keep the end of a failure, the start of a plan.
