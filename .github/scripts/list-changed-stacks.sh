@@ -4,45 +4,65 @@
 # plan includes bootstrap; apply never does (bootstrap is applied by hand, ADR-0003).
 set -euo pipefail
 
-mode="$1"
-order=(bootstrap network data edge app)
-declare -A hit=()
+mode="$1"            # plan | apply
+base="${2:-all}"     # base commit, or "all"
+head="${3:-}"        # head commit
 
-if [ "${2:-all}" = "all" ] || [[ "${2:-}" =~ ^0+$ ]]; then
-  for s in "${order[@]}"; do hit[$s]=1; done
+STACKS_IN_APPLY_ORDER=(bootstrap network data edge app)
+STACKS_USING_ENVS=(network data edge app) # the stacks that read infra/envs/*.tfvars
+# github.event.before is all zeros on a branch's first push: there's no base to diff against.
+NULL_SHA_RE='^0+$'
+
+declare -A changed_stacks=() # a set: stack name → 1
+
+mark_changed() {
+  local stack
+  for stack in "$@"; do changed_stacks[$stack]=1; done
+}
+
+# infra/stacks/<stack>/... → <stack>
+stack_from_path() {
+  local rest="${1#infra/stacks/}"
+  echo "${rest%%/*}"
+}
+
+diff_everything=false
+if [ "$base" = "all" ] || [[ "$base" =~ $NULL_SHA_RE ]]; then diff_everything=true; fi
+
+if [ "$diff_everything" = true ]; then
+  mark_changed "${STACKS_IN_APPLY_ORDER[@]}"
 else
-  while read -r path; do
-    case "$path" in
+  while read -r changed_path; do
+    case "$changed_path" in
       infra/stacks/*/*)
-        s="${path#infra/stacks/}"
-        hit[${s%%/*}]=1
+        mark_changed "$(stack_from_path "$changed_path")"
         ;;
       infra/modules/*/*)
         # Every stack that sources the module.
-        m="${path#infra/modules/}"
-        m="${m%%/*}"
-        while read -r f; do
-          s="${f#infra/stacks/}"
-          hit[${s%%/*}]=1
-        done < <(grep -l "modules/$m\"" infra/stacks/*/*.tf)
+        module="${changed_path#infra/modules/}"
+        module="${module%%/*}"
+        while read -r stack_tf_file; do
+          mark_changed "$(stack_from_path "$stack_tf_file")"
+        done < <(grep -l "modules/$module\"" infra/stacks/*/*.tf)
         ;;
       infra/envs/*)
-        for s in network data edge app; do hit[$s]=1; done
+        mark_changed "${STACKS_USING_ENVS[@]}"
         ;;
       .github/scripts/* | .github/workflows/infra-plan.yml | .github/workflows/infra-apply.yml)
-        for s in "${order[@]}"; do hit[$s]=1; done
+        mark_changed "${STACKS_IN_APPLY_ORDER[@]}"
         ;;
     esac
-  done < <(git diff --name-only "$2...$3")
+  done < <(git diff --name-only "$base...$head")
 fi
 
-if [ "$mode" = "apply" ] && [ -n "${hit[bootstrap]:-}" ]; then
-  [ "${2:-all}" = "all" ] || echo "::warning::bootstrap changed: apply it by hand (infra/README.md)" >&2
-  unset 'hit[bootstrap]'
+if [ "$mode" = "apply" ] && [ -n "${changed_stacks[bootstrap]:-}" ]; then
+  # "all" asks for every stack on purpose; a null SHA may hide a real bootstrap change, so warn.
+  [ "$base" = "all" ] || echo "::warning::bootstrap changed: apply it by hand (infra/README.md)" >&2
+  unset 'changed_stacks[bootstrap]'
 fi
 
-stacks=()
-for s in "${order[@]}"; do
-  [ -n "${hit[$s]:-}" ] && [ -d "infra/stacks/$s" ] && stacks+=("$s")
+ordered=()
+for stack in "${STACKS_IN_APPLY_ORDER[@]}"; do
+  [ -n "${changed_stacks[$stack]:-}" ] && [ -d "infra/stacks/$stack" ] && ordered+=("$stack")
 done
-if [ "${#stacks[@]}" -eq 0 ]; then echo '[]'; else printf '%s\n' "${stacks[@]}" | jq -cRn '[inputs]'; fi
+if [ "${#ordered[@]}" -eq 0 ]; then echo '[]'; else printf '%s\n' "${ordered[@]}" | jq -cRn '[inputs]'; fi
