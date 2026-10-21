@@ -103,4 +103,38 @@ If a task stops before it's healthy, check `aws ecs describe-tasks … --query '
   `SPRING_DATASOURCE_URL` allow 60 s, but the first resume after a long pause can take longer (seen 2026-10-20: the migrate
   task failed cold, passed on a re-run). Re-run the task once `ServerlessDatabaseCapacity` is above 0.
 
-Carry-overs: `env-power` sleep must set the autoscaling min to 0, not only the desired count (registering the target moves the count into [min, max]); resume and `infra-apply` must pass the running `image_tag`, read from the family's last ACTIVE revision (`aws ecs describe-task-definition --task-definition devcool-dev-api`), since `skip_destroy` keeps revisions through hibernate (P2-T08, P2-T09).
+Carry-over: `env-power` sleep must set the autoscaling min to 0, not only the desired count (registering the target moves the count into [min, max]) (P2-T09).
+
+## CI: deploy, plan, apply (P2-T08)
+
+| Workflow | Runs on | awake | asleep (count 0) | hibernated |
+|---|---|---|---|---|
+| `deploy.yml` | backend merge | push → migrate → rollout → smoke | same, no smoke | push + register only; resume verifies |
+| `infra-plan.yml` (in `ci.yml`) | PR touching infra | plan + comment per changed stack | `app` with min 0 | `network` with toggles off; `app` = full create |
+| `infra-apply.yml` | infra merge | apply changed stacks, then roll `api` onto the latest revision | `app` with min 0 | `network`/`data` with toggles off; `app` skipped |
+
+State comes from `.github/scripts/env-state.sh` (run it by hand to check). `app` always gets the running tag: the image of the family's last ACTIVE revision.
+
+### One-time setup
+1. Apply bootstrap and switch the repo's OIDC `sub` template **back to back**: the trusts now match `…:job_workflow_ref:<repo>/.github/workflows/<file>@<ref>` ([review #7](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#7--low-optional--gha-plan-trust-also-matches-claude-auto-review)), so until both are done every assume fails.
+   ```bash
+   aws sts get-caller-identity --query Arn   # must equal state_admin_principal_arn (review #5), or you lose the state bucket policy
+   terraform -chdir=infra/stacks/bootstrap apply -var-file=budget.local.tfvars
+   gh api -X PUT repos/hinn1411/devcool-core/actions/oidc/customization/sub -F use_default=false \
+     -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=job_workflow_ref'
+   gh api repos/hinn1411/devcool-core/actions/oidc/customization/sub                # use_default: false
+   terraform -chdir=infra/stacks/bootstrap plan -var-file=budget.local.tfvars       # No changes
+   ```
+   Then mention `@claude` on a PR once: `claude-code-action` also uses an OIDC token.
+2. The bootstrap plan in CI needs the budget emails (never in git): `gh secret set BUDGET_ALERT_EMAILS --body '["you@example.com"]'`.
+3. Master protection ([review #1](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#1--high--master-is-unprotected-so-the-aws-deploy-gate-is-weak)) must stay on: the `master` ruleset is active with a PR required, `ci-gate` the only check, no bypass actors; `aws-deploy` has admin bypass off.
+   ```bash
+   gh api repos/hinn1411/devcool-core/rulesets --jq '.[]|{name,enforcement}'
+   gh api repos/hinn1411/devcool-core/environments/aws-deploy --jq .can_admins_bypass   # false
+   ```
+
+### Gotchas
+- `deploy`, `infra-apply` and `env-power` share the `aws-dev` concurrency group. A newer pending run **cancels** an older pending one, so check for cancelled runs after back-to-back merges: re-run a cancelled deploy, or run `infra-apply` by hand (`workflow_dispatch` applies every stack).
+- A failed migration or rollout deregisters the new revision, so the last ACTIVE revision stays the running one.
+- After a deploy, an `app` apply registers a revision with the same image and rolls the service onto it (a few minutes, no downtime). That's how Terraform changes to the task definition go live; the service itself ignores `task_definition`.
+- A bootstrap change only plans in CI; `infra-apply` warns and skips it. A new workflow that needs `gha-deploy` goes in bootstrap's `deploy_workflows`.

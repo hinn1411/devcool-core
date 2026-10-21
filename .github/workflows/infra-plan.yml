@@ -1,0 +1,132 @@
+name: infra-plan
+
+# Reusable (called by ci.yml on PRs that change infra paths; it's in ci-gate's needs).
+# `terraform plan` per changed stack as gha-plan (read-only; it trusts this file only), with the
+# env's power state applied as infra-apply would. One PR comment per stack, updated in place.
+on:
+  workflow_call:
+    secrets:
+      BUDGET_ALERT_EMAILS:
+        required: false # bootstrap only: its plan fails without it
+
+env:
+  ENVIRONMENT: dev
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  stacks:
+    name: Changed stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      stacks: ${{ steps.stacks.outputs.stacks }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Map changed paths to stacks
+        id: stacks
+        run: |
+          stacks=$(.github/scripts/changed-stacks.sh plan \
+            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
+          echo "Stacks: $stacks"
+          echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
+
+  plan:
+    name: Plan (${{ matrix.stack }})
+    needs: stacks
+    if: needs.stacks.outputs.stacks != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write # the plan comment
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: ${{ fromJSON(needs.stacks.outputs.stacks) }}
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+      TF_VAR_budget_alert_emails: ${{ secrets.BUDGET_ALERT_EMAILS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
+
+      - name: Create the provider cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: AWS credentials (gha-plan, OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Environment state
+        id: env
+        run: .github/scripts/env-state.sh
+
+      - name: terraform plan
+        id: plan
+        env:
+          STATE: ${{ steps.env.outputs.state }}
+          IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
+        run: .github/scripts/tf-stack.sh plan "${{ matrix.stack }}"
+
+      - name: Comment the plan
+        if: always() && steps.env.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STACK: ${{ matrix.stack }}
+          STATE: ${{ steps.env.outputs.state }}
+          OUTCOME: ${{ steps.plan.outcome }}
+          CHANGES: ${{ steps.plan.outputs.changes }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          dir="infra/stacks/$STACK"
+          marker="<!-- infra-plan:$STACK -->"
+          if [ "$OUTCOME" != "success" ]; then
+            headline="❌ **plan failed**"; file="$dir/plan.log"
+          elif [ "$CHANGES" = "true" ]; then
+            headline="$(grep -E '^Plan:' "$dir/plan.txt" || echo 'Changes')"; file="$dir/plan.txt"
+          else
+            headline="No changes"; file="$dir/plan.txt"
+          fi
+          note=""
+          case "$STACK:$STATE" in
+            bootstrap:*)      note="Applied by hand, never by CI (infra/README.md)." ;;
+            app:hibernated)   note="The env is hibernated: this is a full create, and infra-apply skips \`app\` until resume." ;;
+            network:hibernated) note="The env is hibernated: planned with the NAT and interface endpoints off, as infra-apply applies it." ;;
+          esac
+          # A comment holds 65,536 characters; keep the end of a failure, the start of a plan.
+          if [ "$OUTCOME" != "success" ]; then body=$(tail -c 60000 "$file" 2>/dev/null); else body=$(head -c 60000 "$file"); fi
+          {
+            echo "$marker"
+            echo "### \`$STACK\` · $headline"
+            echo "Env \`$ENVIRONMENT\` is **$STATE** · commit ${{ github.event.pull_request.head.sha }} · [run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            [ -n "$note" ] && echo "> $note"
+            echo; echo "<details><summary>Plan output</summary>"; echo
+            echo '```'; echo "$body"; echo '```'
+            echo "</details>"
+          } >comment.md
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@comment.md >/dev/null
+          fi

@@ -1,0 +1,188 @@
+name: deploy
+
+# A backend merge to master → dev (P2-T08). Build once, migrate before the rollout, and never
+# wake the env (ADR-0013):
+#   awake:      push → register → migrate → rollout → smoke
+#   asleep:     push → register → migrate → rollout (0 tasks), no smoke
+#   hibernated: push → register only; resume (P2-T09) migrates, rolls out and smoke-tests it
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "src/**"
+      - "pom.xml"
+      - "mvnw"
+      - ".mvn/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".trivyignore.yaml"
+      - ".github/workflows/deploy.yml"
+      - ".github/scripts/env-state.sh"
+  workflow_dispatch: # re-deploy master (the aws-deploy environment allows master only)
+
+permissions: {}
+
+env:
+  ENVIRONMENT: dev
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: devcool # bootstrap/ecr.tf
+
+jobs:
+  deploy:
+    name: Build, migrate, roll out
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # gha-deploy trusts this environment from this file on master only (bootstrap/oidc.tf).
+    environment: aws-deploy
+    # Shared with infra-apply and env-power: one change to dev at a time. A newer pending run
+    # replaces an older pending one; a cancelled run needs a re-run (infra/README.md).
+    concurrency:
+      group: aws-dev
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: AWS credentials (gha-deploy, OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      # Tags are IMMUTABLE, so a re-run reuses the image pushed (and scanned) the first time.
+      - name: Check for an existing image
+        id: image
+        run: |
+          echo "ref=${{ steps.ecr.outputs.registry }}/$ECR_REPOSITORY:$GITHUB_SHA" >>"$GITHUB_OUTPUT"
+          if aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
+            echo "exists=true" >>"$GITHUB_OUTPUT"
+            echo "::notice:::$GITHUB_SHA is already in ECR; skipping build and push"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.image.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # No attestations: they'd count towards ECR's "keep 20" and can take the immutable tag
+      # (bootstrap review #9, infra/README.md). Same cache as ci-docker.yml.
+      - name: Build the image
+        if: steps.image.outputs.exists != 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.image.outputs.ref }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The same gate as ci-docker.yml: fixable HIGH/CRITICAL in OS and libraries.
+      - name: Trivy image (gate, fixable HIGH and CRITICAL, OS + libraries)
+        if: steps.image.outputs.exists != 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          scan-type: image
+          image-ref: ${{ steps.image.outputs.ref }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
+
+      - name: Push :${{ github.sha }}
+        if: steps.image.outputs.exists != 'true'
+        run: docker push "${{ steps.image.outputs.ref }}"
+
+      - name: Environment state
+        id: env
+        run: .github/scripts/env-state.sh
+
+      # The failure step below deregisters anything newer, so the last ACTIVE revision (what
+      # infra-apply and resume treat as running) never points at a failed image.
+      - name: Remember the latest revision
+        id: before
+        run: |
+          arn=$(aws ecs describe-task-definition --task-definition "${{ steps.env.outputs.family }}" \
+            --query taskDefinition.taskDefinitionArn --output text)
+          echo "arn=$arn" >>"$GITHUB_OUTPUT"
+
+      # The latest revision carries Terraform's config (env, CPU, secrets); only the image changes.
+      - name: Render the task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7 # v1.9.1
+        with:
+          task-definition-family: ${{ steps.env.outputs.family }}
+          container-name: ${{ steps.env.outputs.container }}
+          image: ${{ steps.image.outputs.ref }}
+
+      - name: Register only (hibernated)
+        if: steps.env.outputs.state == 'hibernated'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b # v2.6.4
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+
+      # One step: register → migrate task (ecs,migrate; fails on a non-zero exit, before the
+      # service changes) → update the service → wait, and fail if the circuit breaker rolled back.
+      - name: Register, migrate, roll out
+        if: steps.env.outputs.state != 'hibernated'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b # v2.6.4
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ steps.env.outputs.cluster_name }}
+          service: ${{ steps.env.outputs.api_service_name }}
+          run-task: true
+          run-task-launch-type: FARGATE
+          run-task-subnets: ${{ steps.env.outputs.api_subnet_ids }}
+          run-task-security-groups: ${{ steps.env.outputs.api_security_group_ids }}
+          run-task-assign-public-IP: DISABLED
+          run-task-started-by: deploy-migrate
+          run-task-container-overrides: >-
+            [{"name": "${{ steps.env.outputs.container }}",
+              "environment": [{"name": "SPRING_PROFILES_ACTIVE", "value": "ecs,migrate"}]}]
+          wait-for-task-stopped: true
+          wait-for-service-stability: true
+          wait-for-minutes: 30
+
+      - name: Deregister the failed revision
+        if: failure() && steps.before.outputs.arn != ''
+        run: |
+          latest=$(aws ecs describe-task-definition --task-definition "${{ steps.env.outputs.family }}" \
+            --query taskDefinition.taskDefinitionArn --output text)
+          if [ "$latest" != "${{ steps.before.outputs.arn }}" ]; then
+            aws ecs deregister-task-definition --task-definition "$latest" >/dev/null
+            echo "::warning::Deregistered $latest; the running revision is unchanged"
+          fi
+
+      # Through CloudFront, as users reach it. Retries cover the first request after a deploy.
+      - name: Smoke test /actuator/health
+        if: steps.env.outputs.state == 'awake'
+        run: |
+          url="https://${{ steps.env.outputs.domain }}/actuator/health"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 12 --retry-delay 5 --retry-all-errors --max-time 20 "$url" || true)
+          echo "GET $url → $code"
+          [ "$code" = "200" ] || { echo "::error::Smoke test failed: $code"; exit 1; }
+
+      - name: Summary
+        if: always()
+        run: |
+          case "${{ job.status }}:${{ steps.env.outputs.state }}" in
+            success:awake)      msg="Deployed and smoke-tested." ;;
+            success:asleep)     msg="Migrated and rolled out at 0 tasks. Smoke test skipped: the env is asleep (it runs on wake, P2-T09)." ;;
+            success:hibernated) msg="Image pushed and revision registered. Nothing woke. **Verify on resume** (P2-T09: migrate → rollout → smoke)." ;;
+            *)                  msg="Failed (${{ job.status }}). A new revision is deregistered; the running one is unchanged." ;;
+          esac
+          {
+            echo "### deploy :\`${GITHUB_SHA::7}\` → ${ENVIRONMENT} (${{ steps.env.outputs.state || 'unknown' }})"
+            echo "$msg"
+          } >>"$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.env.outputs.state }}" = "asleep" ]; then echo "::notice::$msg"; fi

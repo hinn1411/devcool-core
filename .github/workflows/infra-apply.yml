@@ -1,0 +1,119 @@
+name: infra-apply
+
+# An infra merge to master → dev (P2-T08): plan and apply the changed stacks in order, for the
+# env's power state, so a merge never wakes it (ADR-0013):
+#   hibernated: network (NAT and interface endpoints off) and data apply; app is skipped
+#   asleep:     app keeps the autoscaling min at 0
+# app always gets the running image tag (ADR-0003). Bootstrap is applied by hand.
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-apply.yml"
+      - ".github/scripts/**"
+  workflow_dispatch: # apply every stack (e.g. to re-run a cancelled apply)
+
+permissions: {}
+
+env:
+  ENVIRONMENT: dev
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  stacks:
+    name: Changed stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      stacks: ${{ steps.stacks.outputs.stacks }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Map changed paths to stacks
+        id: stacks
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            stacks=$(.github/scripts/changed-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA")
+          else
+            stacks=$(.github/scripts/changed-stacks.sh apply all)
+          fi
+          echo "Stacks: $stacks"
+          echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
+
+  apply:
+    name: Apply
+    needs: stacks
+    if: needs.stacks.outputs.stacks != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # gha-deploy trusts this environment from this file on master only (bootstrap/oidc.tf).
+    environment: aws-deploy
+    concurrency:
+      group: aws-dev # shared with deploy and env-power
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+      STACKS: ${{ needs.stacks.outputs.stacks }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
+
+      - name: Create the provider cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: AWS credentials (gha-deploy, OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Read once: the concurrency group keeps env-power from changing it mid-run.
+      - name: Environment state
+        id: env
+        run: .github/scripts/env-state.sh
+
+      - name: Apply the stacks in order
+        env:
+          STATE: ${{ steps.env.outputs.state }}
+          IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
+        run: |
+          for stack in $(jq -r '.[]' <<<"$STACKS"); do
+            echo "::group::$stack ($STATE)"
+            if [ "$stack" = "app" ] && [ "$STATE" = "hibernated" ]; then
+              echo "::notice::app skipped: the env is hibernated; resume (P2-T09) applies it"
+              echo "- \`app\`: skipped (hibernated)" >>"$GITHUB_STEP_SUMMARY"
+              echo "::endgroup::"
+              continue
+            fi
+            .github/scripts/tf-stack.sh apply "$stack"
+            echo "- \`$stack\`: applied" >>"$GITHUB_STEP_SUMMARY"
+            echo "::endgroup::"
+          done
+
+      # A new task-definition revision from the app apply only runs once the service points at it.
+      - name: Roll the api service onto the latest revision
+        if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env.outputs.state != 'hibernated'
+        run: |
+          # The app apply may have re-created the SSM values; read them again.
+          get() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
+          .github/scripts/ecs-roll-to-latest.sh "$(get cluster_name)" "$(get api_service_name)" "${{ steps.env.outputs.family }}"
