@@ -53,8 +53,8 @@ infra/
 - Community modules (`terraform-aws-modules/vpc`, `…/ecs`, `…/rds-aurora`) for undifferentiated parts; own modules where the design matters (the ECS service with its sidecar, a queue with its DLQ).
 
 ## Consequences
-- Stack order matters: bootstrap → network → data → app → edge. The deploy workflow encodes it. *Amended by [0013](0013-dev-cost-envelope-under-20-usd.md): bootstrap → network → data → edge → app, since `app` reads `edge`'s zone and cert from SSM.*
-- "Hibernate" = `destroy` edge + app (+ NAT in network); `data` survives. *Amended by [0013](0013-dev-cost-envelope-under-20-usd.md): only `app` is destroyed; `edge` is kept, and `network` and `data` turn their toggles off.*
+- Stack order matters: bootstrap → network → data → app → edge. The deploy workflow encodes it.
+- "Hibernate" = `destroy` edge + app (+ NAT in network); `data` survives.
 - Task definition image tags are owned by the deploy pipeline, not Terraform (`lifecycle { ignore_changes = [task_definition] }` on the service), to avoid a tug of war.
 
 ## Revisit when
