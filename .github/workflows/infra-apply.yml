@@ -25,14 +25,14 @@ jobs:
     permissions:
       contents: read
     outputs:
-      stacks: ${{ steps.stacks.outputs.stacks }}
+      stacks: ${{ steps.changed_stacks.outputs.stacks }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Map changed paths to stacks
-        id: stacks
+        id: changed_stacks
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             stacks=$(.github/scripts/list-changed-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA")
@@ -85,13 +85,13 @@ jobs:
 
       # Read once: the concurrency group keeps env-power from changing it mid-run.
       - name: Environment state
-        id: env
+        id: env_state
         run: .github/scripts/detect-env-state.sh
 
       - name: Apply the stacks in order
         env:
-          STATE: ${{ steps.env.outputs.state }}
-          IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
+          STATE: ${{ steps.env_state.outputs.state }}
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
         run: |
           for stack in $(jq -r '.[]' <<<"$STACKS"); do
             echo "::group::$stack ($STATE)"
@@ -108,8 +108,8 @@ jobs:
 
       # An app apply's new revision only goes live once the service points at it.
       - name: Roll the api service onto the latest revision
-        if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env.outputs.state != 'hibernated'
+        if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env_state.outputs.state != 'hibernated'
         run: |
           # Re-read: the app apply may have re-created them.
-          get() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
-          .github/scripts/roll-service-to-latest.sh "$(get cluster_name)" "$(get api_service_name)" "${{ steps.env.outputs.family }}"
+          read_app_param() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
+          .github/scripts/roll-service-to-latest.sh "$(read_app_param cluster_name)" "$(read_app_param api_service_name)" "${{ steps.env_state.outputs.family }}"

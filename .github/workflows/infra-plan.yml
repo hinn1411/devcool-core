@@ -20,14 +20,14 @@ jobs:
     permissions:
       contents: read
     outputs:
-      stacks: ${{ steps.stacks.outputs.stacks }}
+      stacks: ${{ steps.changed_stacks.outputs.stacks }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Map changed paths to stacks
-        id: stacks 
+        id: changed_stacks
         run: |
           stacks=$(.github/scripts/list-changed-stacks.sh plan \
             "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
@@ -76,21 +76,21 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Environment state
-        id: env
+        id: env_state
         run: .github/scripts/detect-env-state.sh
 
       - name: terraform plan
         id: plan
         env:
-          STATE: ${{ steps.env.outputs.state }}
-          IMAGE_TAG: ${{ steps.env.outputs.image_tag }}
+          STATE: ${{ steps.env_state.outputs.state }}
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
         run: .github/scripts/plan-or-apply-stack.sh plan "${{ matrix.stack }}"
 
-      - name: Comment the plan
-        if: always() && steps.env.outcome == 'success'
+      - name: Post the plan comment
+        if: always() && steps.env_state.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-          STATE: ${{ steps.env.outputs.state }}
+          STATE: ${{ steps.env_state.outputs.state }}
           OUTCOME: ${{ steps.plan.outcome }}
           CHANGES: ${{ steps.plan.outputs.changes }}
           PR: ${{ github.event.pull_request.number }}
