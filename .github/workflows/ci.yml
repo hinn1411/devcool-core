@@ -41,11 +41,25 @@ jobs:
     permissions:
       contents: read
 
+  # PRs only; fork PRs get no OIDC token.
+  infra-plan:
+    needs: changes
+    if: |
+      github.event_name == 'pull_request' && needs.changes.outputs.infra == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/infra-plan.yml
+    permissions:
+      contents: read
+      id-token: write # gha-plan via OIDC
+      pull-requests: write # the plan comments
+    secrets:
+      BUDGET_ALERT_EMAILS: ${{ secrets.BUDGET_ALERT_EMAILS }}
+
   # The one required check: always runs, always has this name. Skipped areas pass; a failed or
   # cancelled job (including `changes`, which would skip everything) fails it.
   # Add every new router job to `needs`.
   ci-gate:
-    needs: [changes, backend, infra, docker]
+    needs: [changes, backend, infra, docker, infra-plan]
     if: always() # otherwise a skipped `needs` job skips the gate too
     runs-on: ubuntu-latest
     permissions: {}

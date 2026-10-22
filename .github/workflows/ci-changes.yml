@@ -54,6 +54,8 @@ jobs:
               - '.github/workflows/ci.yml'
               - '.github/workflows/ci-changes.yml'
               - '.github/workflows/ci-infra.yml'
+              - '.github/workflows/infra-plan.yml'
+              - '.github/scripts/**'
             docker:
               - 'Dockerfile'
               - '.dockerignore'

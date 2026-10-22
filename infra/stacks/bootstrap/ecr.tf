@@ -19,16 +19,32 @@ resource "aws_ecr_repository" "app" {
 resource "aws_ecr_lifecycle_policy" "app" {
   repository = aws_ecr_repository.app.name
 
+  # Tagged images only (review #9): untagged attestation manifests would count towards the 20.
+  # deploy.yml pushes without attestations; AWS never expires a manifest an index still references.
   policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep the last 20 images (enough to roll back; storage is billed)."
-      selection = {
-        tagStatus   = "any"
-        countType   = "imageCountMoreThan"
-        countNumber = 20
-      }
-      action = { type = "expire" }
-    }]
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Untagged leftovers (failed or attested pushes) after a day."
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 1
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        description  = "Keep the last 20 tagged images (enough to roll back; storage is billed)."
+        selection = {
+          tagStatus      = "tagged"
+          tagPatternList = ["*"]
+          countType      = "imageCountMoreThan"
+          countNumber    = 20
+        }
+        action = { type = "expire" }
+      },
+    ]
   })
 }

@@ -112,6 +112,8 @@ condition {
 ## P2-T08 — `deploy.yml`, `infra-plan.yml`, `infra-apply.yml`
 
 ### #1 · High · `master` is unprotected, so the `aws-deploy` gate is weak
+**Resolved before P2-T08:** the ruleset is active (PR, `ci-gate` only, no bypass actors) and `aws-deploy` has admin bypass off; `infra-plan` is a router job in `ci-gate`'s `needs`.
+
 **Where:** GitHub settings (not Terraform). Related: `oidc.tf:73-96`
 
 What the reviewer found:
@@ -130,6 +132,8 @@ The environment's rule "master only" therefore means "anything that reaches mast
 - Set admin bypass off on `aws-deploy`.
 
 ### #5 · Medium · `gha-deploy` can destroy state history
+**Resolved in P2-T08:** `ProtectStateHistory` in `state.tf`, exempting `state_admin_principal_arn` (`user/admin`).
+
 **File:** `infra/stacks/bootstrap/state.tf:66-91`
 
 PowerUserAccess gives `gha-deploy` `s3:*` on the state bucket. It can delete object versions, suspend versioning, rewrite the lifecycle rule or remove the bucket policy.
@@ -155,6 +159,8 @@ statement {
 **Careful:** with a wrong admin ARN, you lock yourself out of changing the bucket policy. Check the ARN first, and keep the root user as the break-glass.
 
 ### #6 · Low · `.tflock` delete markers pile up
+**Resolved in P2-T08.**
+
 **File:** `infra/stacks/bootstrap/state.tf:51-63`
 
 The lock permissions themselves are correct: `PutObject`/`DeleteObject` on `*.tflock`, `GetObject` through `ReadOnlyAccess`.
@@ -166,6 +172,8 @@ The lock permissions themselves are correct: `PutObject`/`DeleteObject` on `*.tf
 **Side note:** `gha-plan` can delete a running apply's lock (a break-lock). That's acceptable; just know it.
 
 ### #7 · Low (optional) · `gha-plan` trust also matches `claude-auto-review`
+**Resolved in P2-T08:** sub template `repo,context,job_workflow_ref`; `gha-plan` trusts `infra-plan.yml`, `gha-deploy` the files in `deploy_workflows` ([`infra/README.md`](../../infra/README.md)).
+
 **File:** `infra/stacks/bootstrap/oidc.tf:34-39`
 
 `claude.yml`'s `claude-auto-review` runs on `pull_request` with `id-token: write`, so it can assume `gha-plan` and read state. Its tool allowlist limits this today.
@@ -173,6 +181,8 @@ The lock permissions themselves are correct: `PutObject`/`DeleteObject` on `*.tf
 **Fix (optional):** switch the repo's OIDC `sub` template (currently `use_default: true`) to include `job_workflow_ref`. Then pin `gha-plan` to `infra-plan.yml` and `gha-deploy` to `deploy.yml`/`infra-apply.yml`. Change both trusts in the same step as the template, or every assume breaks.
 
 ### #9 · Low · ECR "keep 20" counts attestation manifests
+**Resolved in P2-T08:** both fixes (tagged-only rule, `provenance: false`).
+
 **File:** `infra/stacks/bootstrap/ecr.tf:21-30`
 
 With buildx's default provenance, one push stores an index plus 2 manifests, so "keep 20" means about 7 deploys of rollback. AWS won't expire referenced children, so nothing breaks; the number is just misleading.

@@ -39,3 +39,15 @@ variable "deploy_environment" {
   type        = string
   default     = "aws-deploy"
 }
+
+variable "deploy_workflows" {
+  description = "Workflow files (on master, in deploy_environment) that may assume gha-deploy. P2-T09 adds env-power.yml."
+  type        = list(string)
+  default     = ["deploy.yml", "infra-apply.yml"]
+}
+
+variable "state_admin_principal_arn" {
+  description = "The only principal that may delete state versions or change the state bucket's versioning, lifecycle and policy (review #5). The root user stays the break-glass."
+  type        = string
+  default     = "arn:aws:iam::725069913301:user/admin"
+}

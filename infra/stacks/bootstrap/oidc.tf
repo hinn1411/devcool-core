@@ -3,6 +3,10 @@
 locals {
   github_oidc_host = "token.actions.githubusercontent.com"
   tfstate_lockfile = "${aws_s3_bucket.tfstate.arn}/*.tflock"
+
+  # The repo's sub template includes job_workflow_ref (review #7; infra/README.md), so each
+  # role trusts named workflow files only, not every job with the same event or environment.
+  workflow_ref = "${var.github_repo}/.github/workflows"
 }
 
 # No thumbprint_list: for GitHub, IAM validates the certificate against its own trusted CAs.
@@ -31,11 +35,12 @@ data "aws_iam_policy_document" "gha_plan_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Any PR in this repo. Fork PRs never get an id-token, so they can't reach this.
+    # infra-plan.yml on any PR in this repo, not claude.yml's PR jobs. Fork PRs never get an
+    # id-token. The only wildcard is the PR number.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${local.github_oidc_host}:sub"
-      values   = ["repo:${var.github_repo}:pull_request"]
+      values   = ["repo:${var.github_repo}:pull_request:job_workflow_ref:${local.workflow_ref}/infra-plan.yml@refs/pull/*/merge"]
     }
   }
 }
@@ -70,7 +75,7 @@ resource "aws_iam_role_policy" "gha_plan_state_lock" {
 }
 
 # ---------------------------------------------------------------------------
-# gha-deploy: infra-apply, deploy and env-power, only from jobs in the deploy environment.
+# gha-deploy: deploy and infra-apply (env-power in P2-T09), only from jobs in the deploy environment.
 # Not `ref:refs/heads/master`: every master-context job gets that subject (issue_comment,
 # schedule, workflow_dispatch…), including claude.yml's @claude job. A job only gets
 # `environment:<name>` by declaring it, and GitHub limits that environment to master.
@@ -93,7 +98,9 @@ data "aws_iam_policy_document" "gha_deploy_trust" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_host}:sub"
-      values   = ["repo:${var.github_repo}:environment:${var.deploy_environment}"]
+      values = [for wf in var.deploy_workflows :
+        "repo:${var.github_repo}:environment:${var.deploy_environment}:job_workflow_ref:${local.workflow_ref}/${wf}@refs/heads/master"
+      ]
     }
   }
 }
