@@ -1,8 +1,7 @@
 name: infra-plan
 
-# Reusable (called by ci.yml on PRs that change infra paths; it's in ci-gate's needs).
-# `terraform plan` per changed stack as gha-plan (read-only; it trusts this file only), with the
-# env's power state applied as infra-apply would. One PR comment per stack, updated in place.
+# Reusable, called by ci.yml on infra PRs. Plans each changed stack as gha-plan (read-only) for the
+# env's power state, like infra-apply, and keeps one PR comment per stack.
 on:
   workflow_call:
     secrets:

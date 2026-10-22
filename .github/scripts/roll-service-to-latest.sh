@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Point the service at the family's latest ACTIVE revision and wait for the rollout (P2-T08).
-# The service ignores task_definition (ADR-0003), so a Terraform change to the task definition
-# (env, CPU, sidecars) only goes live through this. The image stays the running one.
+# Roll the service onto the family's latest ACTIVE revision and wait (P2-T08). The service ignores
+# task_definition (ADR-0003), so Terraform's task-def changes only go live through this.
 #   usage: roll-service-to-latest.sh <cluster> <service> <family>
 set -euo pipefail
 
@@ -9,7 +8,7 @@ cluster="$1"
 service="$2"
 family="$3"
 
-# 30 min covers 3 failed tasks with the 120 s grace period before the circuit breaker trips.
+# Room for 3 failed tasks (120 s grace each) before the circuit breaker trips.
 TIMEOUT_MINUTES=30
 POLL_SECONDS=15
 POLL_ATTEMPTS=$((TIMEOUT_MINUTES * 60 / POLL_SECONDS))
@@ -27,8 +26,7 @@ echo "Rolling $service: $running_revision -> $latest_revision"
 deployment_id=$(aws ecs update-service --cluster "$cluster" --service "$service" --task-definition "$latest_revision" \
   --query "service.deployments[?status=='PRIMARY'].id | [0]" --output text)
 
-# rolloutState, not services-stable: after a circuit-breaker rollback the service is stable
-# again on the old revision.
+# rolloutState, not services-stable: a rolled-back service is stable on the old revision.
 for ((attempt = 1; attempt <= POLL_ATTEMPTS; attempt++)); do
   rollout_state=$(aws ecs describe-services --cluster "$cluster" --services "$service" \
     --query "services[0].deployments[?id=='$deployment_id'].rolloutState | [0]" --output text)

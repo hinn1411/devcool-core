@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: read
 
-  # PRs only (infra-apply plans again on master). Fork PRs get no OIDC token, so they skip it.
+  # PRs only; fork PRs get no OIDC token.
   infra-plan:
     needs: changes
     if: |

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Stacks a change touches, in apply order, as a JSON array (P2-T08).
-#   usage: list-changed-stacks.sh <plan|apply> <base-sha> <head-sha>   or   list-changed-stacks.sh <plan|apply> all
-# plan includes bootstrap; apply never does (bootstrap is applied by hand, ADR-0003).
+# Changed stacks in apply order, as a JSON array (P2-T08). apply never lists bootstrap (ADR-0003).
+#   usage: list-changed-stacks.sh <plan|apply> <base-sha> <head-sha> | <plan|apply> all
 set -euo pipefail
 
 mode="$1"            # plan | apply
@@ -10,7 +9,7 @@ head="${3:-}"        # head commit
 
 STACKS_IN_APPLY_ORDER=(bootstrap network data edge app)
 STACKS_USING_ENVS=(network data edge app) # the stacks that read infra/envs/*.tfvars
-# github.event.before is all zeros on a branch's first push: there's no base to diff against.
+# A branch's first push has an all-zero github.event.before: nothing to diff against.
 NULL_SHA_RE='^0+$'
 
 declare -A changed_stacks=() # a set: stack name → 1
@@ -56,7 +55,7 @@ else
 fi
 
 if [ "$mode" = "apply" ] && [ -n "${changed_stacks[bootstrap]:-}" ]; then
-  # "all" asks for every stack on purpose; a null SHA may hide a real bootstrap change, so warn.
+  # Warn unless "all": a diff or a null SHA may hold a real bootstrap change.
   [ "$base" = "all" ] || echo "::warning::bootstrap changed: apply it by hand (infra/README.md)" >&2
   unset 'changed_stacks[bootstrap]'
 fi

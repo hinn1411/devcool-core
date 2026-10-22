@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# init + plan one stack for the env's power state; `apply` then applies the saved plan (P2-T08).
+# init + plan one stack for the env's power state; apply then applies the saved plan (P2-T08).
 #   usage: plan-or-apply-stack.sh <plan|apply> <stack>
-#   env:   ENVIRONMENT, STATE (detect-env-state.sh), IMAGE_TAG (app only), TF_VAR_* as needed
-# plan writes infra/stacks/<stack>/plan.txt and `changes=true|false` to $GITHUB_OUTPUT.
+#   env:   ENVIRONMENT, STATE, IMAGE_TAG (app), TF_VAR_*
+# plan writes plan.txt and changes=true|false to $GITHUB_OUTPUT.
 set -euo pipefail
 
 mode="$1"   # plan | apply

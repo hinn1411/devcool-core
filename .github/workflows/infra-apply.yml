@@ -1,10 +1,7 @@
 name: infra-apply
 
-# An infra merge to master → dev (P2-T08): plan and apply the changed stacks in order, for the
-# env's power state, so a merge never wakes it (ADR-0013):
-#   hibernated: network (NAT and interface endpoints off) and data apply; app is skipped
-#   asleep:     app keeps the autoscaling min at 0
-# app always gets the running image tag (ADR-0003). Bootstrap is applied by hand.
+# Infra merge → dev (P2-T08): apply the changed stacks in order without waking the env (ADR-0013).
+# Bootstrap is applied by hand.
 on:
   push:
     branches: ["master"]
@@ -12,7 +9,7 @@ on:
       - "infra/**"
       - ".github/workflows/infra-apply.yml"
       - ".github/scripts/**"
-  workflow_dispatch: # apply every stack (e.g. to re-run a cancelled apply)
+  workflow_dispatch: # apply every stack (e.g. after a cancelled run)
 
 permissions: {}
 
@@ -51,8 +48,7 @@ jobs:
     if: needs.stacks.outputs.stacks != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # gha-deploy trusts this environment from this file on master only (bootstrap/oidc.tf).
-    environment: aws-deploy
+    environment: aws-deploy # gha-deploy trusts it from this file on master only (bootstrap/oidc.tf)
     concurrency:
       group: aws-dev # shared with deploy and env-power
       cancel-in-progress: false
@@ -110,10 +106,10 @@ jobs:
             echo "::endgroup::"
           done
 
-      # A new task-definition revision from the app apply only runs once the service points at it.
+      # An app apply's new revision only goes live once the service points at it.
       - name: Roll the api service onto the latest revision
         if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env.outputs.state != 'hibernated'
         run: |
-          # The app apply may have re-created the SSM values; read them again.
+          # Re-read: the app apply may have re-created them.
           get() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
           .github/scripts/roll-service-to-latest.sh "$(get cluster_name)" "$(get api_service_name)" "${{ steps.env.outputs.family }}"

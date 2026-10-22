@@ -1,10 +1,7 @@
 name: deploy
 
-# A backend merge to master → dev (P2-T08). Build once, migrate before the rollout, and never
-# wake the env (ADR-0013):
-#   awake:      push → register → migrate → rollout → smoke
-#   asleep:     push → register → migrate → rollout (0 tasks), no smoke
-#   hibernated: push → register only; resume (P2-T09) migrates, rolls out and smoke-tests it
+# Backend merge → dev (P2-T08); never wakes the env (ADR-0013). awake: migrate, roll out, smoke;
+# asleep: the same without smoke; hibernated: push and register only (resume verifies, P2-T09).
 on:
   push:
     branches: ["master"]
@@ -18,7 +15,7 @@ on:
       - ".trivyignore.yaml"
       - ".github/workflows/deploy.yml"
       - ".github/scripts/detect-env-state.sh"
-  workflow_dispatch: # re-deploy master (the aws-deploy environment allows master only)
+  workflow_dispatch: # re-deploy (aws-deploy allows master only)
 
 permissions: {}
 
@@ -32,10 +29,8 @@ jobs:
     name: Build, migrate, roll out
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # gha-deploy trusts this environment from this file on master only (bootstrap/oidc.tf).
-    environment: aws-deploy
-    # Shared with infra-apply and env-power: one change to dev at a time. A newer pending run
-    # replaces an older pending one; a cancelled run needs a re-run (infra/README.md).
+    environment: aws-deploy # gha-deploy trusts it from this file on master only (bootstrap/oidc.tf)
+    # One change to dev at a time (shared with infra-apply, env-power); re-run cancelled runs.
     concurrency:
       group: aws-dev
       cancel-in-progress: false
@@ -56,7 +51,7 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
 
-      # Tags are IMMUTABLE, so a re-run reuses the image pushed (and scanned) the first time.
+      # Tags are immutable: a re-run reuses the image already pushed and scanned.
       - name: Check for an existing image
         id: image
         run: |
@@ -70,8 +65,7 @@ jobs:
         if: steps.image.outputs.exists != 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # No attestations: they'd count towards ECR's "keep 20" and can take the immutable tag
-      # (bootstrap review #9, infra/README.md). Same cache as ci-docker.yml.
+      # No attestations: they eat ECR's "keep 20" and can take the tag (bootstrap review #9).
       - name: Build the image
         if: steps.image.outputs.exists != 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -85,7 +79,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The same gate as ci-docker.yml: fixable HIGH/CRITICAL in OS and libraries.
+      # Same gate as ci-docker.yml.
       - name: Trivy image (gate, fixable HIGH and CRITICAL, OS + libraries)
         if: steps.image.outputs.exists != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -107,8 +101,7 @@ jobs:
         id: env
         run: .github/scripts/detect-env-state.sh
 
-      # The failure step below deregisters anything newer, so the last ACTIVE revision (what
-      # infra-apply and resume treat as running) never points at a failed image.
+      # On failure, newer revisions are deregistered, so the last ACTIVE one stays the running one.
       - name: Remember the latest revision
         id: before
         run: |
@@ -116,7 +109,7 @@ jobs:
             --query taskDefinition.taskDefinitionArn --output text)
           echo "arn=$arn" >>"$GITHUB_OUTPUT"
 
-      # The latest revision carries Terraform's config (env, CPU, secrets); only the image changes.
+      # Keeps Terraform's config from the latest revision; only the image changes.
       - name: Render the task definition
         id: render
         uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7 # v1.9.1
@@ -131,8 +124,7 @@ jobs:
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
 
-      # One step: register → migrate task (ecs,migrate; fails on a non-zero exit, before the
-      # service changes) → update the service → wait, and fail if the circuit breaker rolled back.
+      # Register → migrate task (a failure stops before the service changes) → roll out → wait.
       - name: Register, migrate, roll out
         if: steps.env.outputs.state != 'hibernated'
         uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b # v2.6.4
@@ -163,7 +155,7 @@ jobs:
             echo "::warning::Deregistered $latest; the running revision is unchanged"
           fi
 
-      # Through CloudFront, as users reach it. Retries cover the first request after a deploy.
+      # Through CloudFront, like users; retries cover the first request after a rollout.
       - name: Smoke test /actuator/health
         if: steps.env.outputs.state == 'awake'
         run: |
