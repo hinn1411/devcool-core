@@ -20,9 +20,6 @@ module "api" {
     AWS_S3_BUCKET         = local.input["data/media_bucket_name"]
     # Host is origin.<domain> behind CloudFront, so allow the public origin (read in P4-T06).
     WS_ALLOWED_ORIGINS = "https://${local.domain}"
-    # TEMPORARY (P2-T09, revert next PR): the app listens on 8081 while the target group checks 8080,
-    # so new tasks fail health checks and the circuit breaker rolls the deployment back.
-    SERVER_PORT = "8081"
   }
 
   # Resolved by the execution role at task start.
