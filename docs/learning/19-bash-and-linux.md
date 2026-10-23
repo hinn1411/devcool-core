@@ -4,9 +4,9 @@ The theme: **how do you read, and safely change, a Bash script?** Every example 
 
 | Script | What it does |
 |---|---|
-| `list-changed-stacks.sh` | Maps the files a change touched to the Terraform stacks to plan, printed as a JSON array |
-| `plan-or-apply-stack.sh` | `terraform init` + `plan` (and optionally `apply`) for one stack |
-| `detect-env-state.sh` | Reports whether an environment is `awake`, `asleep` or `hibernated` |
+| `list-stacks.sh` | Maps the files a change touched (or `all`) to the Terraform stacks, in apply order, printed as a JSON array |
+| `terraform-stack.sh` | `terraform init` + `plan`, then optionally `apply` or `destroy`, for one stack |
+| `describe-env.sh` | Reports whether an environment is `awake`, `asleep` or `hibernated`, plus the values the workflows need |
 | `roll-service-to-latest.sh` | Points an ECS service at the newest task definition and waits for the rollout |
 
 The one sentence that carries the chapter: **a shell script is a list of programs to run, glued together by text, exit codes and three standard streams.** Bash does not have types, return values or exceptions the way Java does. It has strings and numbers from 0 to 255, and most surprises come from forgetting that.
@@ -23,18 +23,18 @@ The one sentence that carries the chapter: **a shell script is a list of program
 
 `#!` (the *shebang*) tells the kernel which interpreter runs the file. `/usr/bin/env bash` means "the first `bash` on my `PATH`", not a fixed location. That matters on macOS, where `/bin/bash` is Bash 3.2 and has no `declare -A` (§2.6). Homebrew's Bash 5 is found on `PATH` instead.
 
-`ls -l` shows `-rwxrwxr-x` for these files. Read it as three groups of `r`ead / `w`rite / e`x`ecute: **owner** `rwx`, **group** `rwx`, **others** `r-x` (octal `775`). Without the `x` bit, `./plan-or-apply-stack.sh` fails with `Permission denied`, but `bash plan-or-apply-stack.sh` still works because then `bash` is the program and the script is only its input. Git stores only that one bit (mode `100755` vs `100644`). After `chmod +x`, commit the file so CI gets the bit too.
+`ls -l` shows `-rwxrwxr-x` for these files. Read it as three groups of `r`ead / `w`rite / e`x`ecute: **owner** `rwx`, **group** `rwx`, **others** `r-x` (octal `775`). Without the `x` bit, `./terraform-stack.sh` fails with `Permission denied`, but `bash terraform-stack.sh` still works because then `bash` is the program and the script is only its input. Git stores only that one bit (mode `100755` vs `100644`). After `chmod +x`, commit the file so CI gets the bit too.
 
 ### 1.2 Environment variables and `PATH`
 
 Every process gets a copy of its parent's **environment**: `KEY=value` strings. Changing a variable in a child never changes it in the parent. The scripts read their inputs this way:
 
 ```bash
-environment="${ENVIRONMENT:-dev}"         # plan-or-apply-stack.sh:10  — use $ENVIRONMENT, or "dev" if unset/empty
-output_file="${GITHUB_OUTPUT:-/dev/null}" # plan-or-apply-stack.sh:12  — GitHub Actions sets this; by hand it isn't
+environment="${ENVIRONMENT:-dev}"         # terraform-stack.sh:10  — use $ENVIRONMENT, or "dev" if unset/empty
+output_file="${GITHUB_OUTPUT:-/dev/null}" # terraform-stack.sh:12  — GitHub Actions sets this; by hand it isn't
 ```
 
-`PATH` is just another variable: a `:`-separated list of directories searched for commands (`echo "$PATH"`, `command -v jq`). Running a script with one-off variables: `ENVIRONMENT=dev STATE=asleep .github/scripts/plan-or-apply-stack.sh plan app`.
+`PATH` is just another variable: a `:`-separated list of directories searched for commands (`echo "$PATH"`, `command -v jq`). Running a script with one-off variables: `ENVIRONMENT=dev STATE=asleep .github/scripts/terraform-stack.sh plan app`.
 
 ### 1.3 Three streams, redirection and pipes
 
@@ -42,19 +42,19 @@ Every process starts with **stdin (0)**, **stdout (1)** and **stderr (2)**. Rule
 
 | Syntax | Meaning | Real use |
 |---|---|---|
-| `cmd > f` | stdout to file (overwrite) | `plan-or-apply-stack.sh:52` writes `plan.txt` |
-| `cmd >> f` | stdout to file (append) | `plan-or-apply-stack.sh:53` appends `changes=…` to `$GITHUB_OUTPUT` |
-| `cmd >&2` | stdout to stderr | `list-changed-stacks.sh:59` warns on stderr so stdout stays valid JSON |
-| `cmd 2>&1` | stderr to wherever stdout goes | `plan-or-apply-stack.sh:46` so `tee` captures Terraform's errors too |
-| `cmd 2>/dev/null` | throw stderr away | `detect-env-state.sh:19` |
-| `a \| b` | `a`'s stdout becomes `b`'s stdin | `plan-or-apply-stack.sh:45-46` |
-| `{ …; } >> f` | redirect a whole group once | `detect-env-state.sh:40-47` |
+| `cmd > f` | stdout to file (overwrite) | `terraform-stack.sh:69` writes `plan.txt` |
+| `cmd >> f` | stdout to file (append) | `terraform-stack.sh:70` appends `changes=…` to `$GITHUB_OUTPUT` |
+| `cmd >&2` | stdout to stderr | `list-stacks.sh:59` warns on stderr so stdout stays valid JSON |
+| `cmd 2>&1` | stderr to wherever stdout goes | `terraform-stack.sh:63` so `tee` captures Terraform's errors too |
+| `cmd 2>/dev/null` | throw stderr away | `describe-env.sh:19` |
+| `a \| b` | `a`'s stdout becomes `b`'s stdin | `terraform-stack.sh:62-63` |
+| `{ …; } >> f` | redirect a whole group once | `describe-env.sh:40-47` |
 
-`/dev/null` swallows everything you write to it; `/dev/stdout` is "my own stdout". That is why `detect-env-state.sh:8` defaults `output_file` to `/dev/stdout` (show me the values when I run it by hand) while `plan-or-apply-stack.sh:12` defaults to `/dev/null` (the value only matters to CI).
+`/dev/null` swallows everything you write to it; `/dev/stdout` is "my own stdout". That is why `describe-env.sh:8` defaults `output_file` to `/dev/stdout` (show me the values when I run it by hand) while `terraform-stack.sh:12` defaults to `/dev/null` (the value only matters to CI).
 
 ### 1.4 Exit codes
 
-Every command ends with a number from 0 to 255: **0 means success, anything else means failure.** `$?` holds the last one. `if`, `&&` and `||` test exit codes, not true/false values. Some tools give extra meaning to non-zero codes. `terraform plan -detailed-exitcode` returns **0** for no changes, **1** for an error and **2** when there are changes, and `plan-or-apply-stack.sh` depends on that (§2.2). An exit code above 128 means the process was killed by a signal: 128 + the signal number. 137 = 128 + 9 (`SIGKILL`, e.g. the OOM killer, see [18](18-docker-and-ecs.md) §1.1), and 130 = 128 + 2 (`SIGINT`, Ctrl-C).
+Every command ends with a number from 0 to 255: **0 means success, anything else means failure.** `$?` holds the last one. `if`, `&&` and `||` test exit codes, not true/false values. Some tools give extra meaning to non-zero codes. `terraform plan -detailed-exitcode` returns **0** for no changes, **1** for an error and **2** when there are changes, and `terraform-stack.sh` depends on that (§2.2). An exit code above 128 means the process was killed by a signal: 128 + the signal number. 137 = 128 + 9 (`SIGKILL`, e.g. the OOM killer, see [18](18-docker-and-ecs.md) §1.1), and 130 = 128 + 2 (`SIGINT`, Ctrl-C).
 
 ---
 
@@ -70,12 +70,12 @@ Line 5 or 6 of every script. Without it, Bash just carries on after a failure.
 | `-u` | Using an unset variable is an error | A missing argument fails loudly (`$2: unbound variable`) instead of acting as `""` |
 | `-o pipefail` | A pipeline fails if *any* part fails | Without it, `terraform plan … \| tee` reports `tee`'s exit code, which is always 0 |
 
-`-u` is why you see `${2:-all}`, `${STATE:-awake}` and `${changed_stacks[bootstrap]:-}`: `:-` supplies a default (even an empty one), so reading an optional value is not an error. `-e` does **not** fire for a failing command inside an `if` condition or on the left of `&&`/`||`. That is how `cmd 2>/dev/null || true` (`detect-env-state.sh:19`) says "this may fail, and that's fine".
+`-u` is why you see `${2:-all}`, `${STATE:-awake}` and `${changed_stacks[bootstrap]:-}`: `:-` supplies a default (even an empty one), so reading an optional value is not an error. `-e` does **not** fire for a failing command inside an `if` condition or on the left of `&&`/`||`. That is how `cmd 2>/dev/null || true` (`describe-env.sh:19`) says "this may fail, and that's fine".
 
 ### 2.2 When an exit code is data: `set +e` and `PIPESTATUS`
 
 ```bash
-set +e                                                        # plan-or-apply-stack.sh:44-49
+set +e                                                        # terraform-stack.sh:61-66
 terraform -chdir="$stack_dir" plan … -detailed-exitcode \
   -out="$PLAN_FILE" "${tf_args[@]}" 2>&1 | tee "$stack_dir/plan.log"
 plan_exit_code=${PIPESTATUS[0]}
@@ -95,7 +95,7 @@ Exit code 2 means "changes found", not failure, but `-e` would end the script on
 
 ```bash
 running_revision=$(aws ecs describe-services … --output text)   # roll-service-to-latest.sh:18
-echo "changes=$([ "$plan_exit_code" -eq "$PLAN_HAS_CHANGES" ] && echo true || echo false)"   # plan-or-apply-stack.sh:53
+echo "changes=$([ "$plan_exit_code" -eq "$PLAN_HAS_CHANGES" ] && echo true || echo false)"   # terraform-stack.sh:70
 ```
 
 ### 2.4 Cutting strings without `sed`: parameter expansion
@@ -115,33 +115,33 @@ Mnemonic: on a US keyboard `#` is left of `$` (the start) and `%` is right of it
 `[ … ]` is a command (named `test`), so it needs spaces inside the brackets, and every variable in it must be quoted. `[[ … ]]` is Bash syntax and adds glob matching and regexes:
 
 ```bash
-[[ "$running_image" == *:* && "$running_image" != "None" ]]  # detect-env-state.sh:21    — glob: contains a colon
-[[ "$base" =~ $NULL_SHA_RE ]]                                # list-changed-stacks.sh:29 — regex: all zeros ('^0+$')
+[[ "$running_image" == *:* && "$running_image" != "None" ]]  # describe-env.sh:21    — glob: contains a colon
+[[ "$base" =~ $NULL_SHA_RE ]]                                # list-stacks.sh:29 — regex: all zeros ('^0+$')
 ```
 
 Keep the regex in a variable and leave it **unquoted** after `=~`: a quoted right-hand side is matched as a literal string, not a regex.
 
-The all-zeros SHA is what GitHub sends as the "before" commit when a branch is first pushed, so there is nothing to diff against and every stack is planned. Compare strings with `=` / `!=` and numbers with `-eq -ne -lt -gt`. `-n "$x"` is "not empty", `-z` is "empty" and `-d path` is "is a directory" (`list-changed-stacks.sh:65`).
+The all-zeros SHA is what GitHub sends as the "before" commit when a branch is first pushed, so there is nothing to diff against and every stack is planned. Compare strings with `=` / `!=` and numbers with `-eq -ne -lt -gt`. `-n "$x"` is "not empty", `-z` is "empty" and `-d path` is "is a directory" (`list-stacks.sh:65`).
 
 `case` matches one string against glob patterns. `|` separates alternatives and `;;` ends a branch. Joining two values with `:` gives a two-key switch:
 
 ```bash
-case "$stack:$power_state" in                                          # plan-or-apply-stack.sh:33-37
+case "$stack:$power_state" in                                          # terraform-stack.sh:33-37
   network:hibernated) tf_args+=(-var enable_nat=false …) ;;
   app:asleep) tf_args+=(-var api_min_count=0) ;;
 esac
 ```
 
-`{ …; }` groups commands in the current shell, so an `exit` inside it ends the script (`plan-or-apply-stack.sh:40`). `( … )` would run them in a **subshell**, and `exit` there only ends the subshell.
+`{ …; }` groups commands in the current shell, so an `exit` inside it ends the script (`terraform-stack.sh:40`). `( … )` would run them in a **subshell**, and `exit` there only ends the subshell.
 
 ### 2.6 Loops and arrays
 
 ```bash
-STACKS_IN_APPLY_ORDER=(bootstrap network data edge app)   # list-changed-stacks.sh:10 — indexed array
+STACKS_IN_APPLY_ORDER=(bootstrap network data edge app)   # list-stacks.sh:10 — indexed array
 for stack in "${STACKS_IN_APPLY_ORDER[@]}"; do …; done    # "${arr[@]}" = each element as its own word
-tf_args+=(-var "image_tag=$IMAGE_TAG")                    # plan-or-apply-stack.sh:41 — append two elements
-terraform … "${tf_args[@]}"                               # plan-or-apply-stack.sh:46 — pass them as separate args
-declare -A changed_stacks=()                              # list-changed-stacks.sh:15 — associative (string keys)
+tf_args+=(-var "image_tag=$IMAGE_TAG")                    # terraform-stack.sh:41 — append two elements
+terraform … "${tf_args[@]}"                               # terraform-stack.sh:63 — pass them as separate args
+declare -A changed_stacks=()                              # list-stacks.sh:15 — associative (string keys)
 changed_stacks[app]=1;  "${!app_params[@]}"  "${#ordered[@]}"  # set a key; all keys; element count
 for ((attempt = 1; attempt <= POLL_ATTEMPTS; attempt++)); do …; done  # roll-service-to-latest.sh:30 — 30 min / 15 s = 120
 ```
@@ -154,19 +154,19 @@ Build argument lists in **arrays, never in one string**. `"${tf_args[@]}"` keeps
 
 | Tool | Real use | What the flags do |
 |---|---|---|
-| `git diff --name-only A...B` | `list-changed-stacks.sh:54` | One changed path per line; `...` = changes on `B` since it branched from `A` |
-| `grep -l pat files` | `list-changed-stacks.sh:45` | Print only the **names** of matching files. The `\"` in `"modules/$module\""` matches the closing quote, so `modules/app` can't match `modules/app-x` |
-| `read -r a b` | `list-changed-stacks.sh:34`, `detect-env-state.sh:25` | Read one line into variables; `-r` keeps `\` literal. `IFS=$'\t'` splits on tabs, for this one `read` only |
-| `tee f` | `plan-or-apply-stack.sh:46` | Copy stdin to a file **and** to stdout, so the log shows on screen and is also saved |
-| `jq -cRn '[inputs]'` | `list-changed-stacks.sh:67` | `-R` reads raw text lines, `-n` + `inputs` collects all of them, `[…]` makes an array, `-c` prints it on one line: `["network","app"]` |
-| `printf '%s\n' "${a[@]}"` | `list-changed-stacks.sh:67` | One element per line. Prefer `printf` to `echo` for data |
-| `aws … --query … --output text` | all AWS calls | `--query` is a JMESPath filter. `text` gives a plain string, and `None` when nothing matched (`detect-env-state.sh:21`, `roll-service-to-latest.sh:35`) |
+| `git diff --name-only A...B` | `list-stacks.sh:54` | One changed path per line; `...` = changes on `B` since it branched from `A` |
+| `grep -l pat files` | `list-stacks.sh:45` | Print only the **names** of matching files. The `\"` in `"modules/$module\""` matches the closing quote, so `modules/app` can't match `modules/app-x` |
+| `read -r a b` | `list-stacks.sh:34`, `describe-env.sh:25` | Read one line into variables; `-r` keeps `\` literal. `IFS=$'\t'` splits on tabs, for this one `read` only |
+| `tee f` | `terraform-stack.sh:63` | Copy stdin to a file **and** to stdout, so the log shows on screen and is also saved |
+| `jq -cRn '[inputs]'` | `list-stacks.sh:67` | `-R` reads raw text lines, `-n` + `inputs` collects all of them, `[…]` makes an array, `-c` prints it on one line: `["network","app"]` |
+| `printf '%s\n' "${a[@]}"` | `list-stacks.sh:67` | One element per line. Prefer `printf` to `echo` for data |
+| `aws … --query … --output text` | all AWS calls | `--query` is a JMESPath filter. `text` gives a plain string, and `None` when nothing matched (`describe-env.sh:21`, `roll-service-to-latest.sh:35`) |
 
 **Reading command output line by line:** `while read …; done < <(cmd)`. The `<(cmd)` (process substitution) looks like a file containing `cmd`'s output. Why not `cmd | while read …`? In a pipeline, the loop runs in a **subshell**, so every `changed_stacks[...]=1` it sets would be thrown away when the loop ends.
 
 ---
 
-## 4. One script end to end: `list-changed-stacks.sh`
+## 4. One script end to end: `list-stacks.sh`
 
 1. **Lines 7–16:** `mode`, `base` and `head` name the three arguments. `STACKS_IN_APPLY_ORDER` fixes the apply order, `STACKS_USING_ENVS` lists the stacks that read `infra/envs`, and `changed_stacks` is the set of stacks touched.
 2. **Lines 18–27:** two helpers. `mark_changed` adds stacks to the set (`local stack` keeps its loop variable out of the rest of the script), and `stack_from_path` turns `infra/stacks/X/…` into X.
@@ -175,7 +175,7 @@ Build argument lists in **arrays, never in one string**. `"${tf_args[@]}"` keeps
 5. **Lines 58–62:** `apply` never touches `bootstrap` (ADR-0003). It warns on **stderr** and removes the key (`unset 'changed_stacks[bootstrap]'`, quoted so the shell doesn't treat `[…]` as a glob).
 6. **Lines 64–68:** walk `STACKS_IN_APPLY_ORDER` (not `changed_stacks`, whose key order is random), keep stacks that were marked **and** still exist as directories, then print JSON on **stdout**. The workflow reads that output.
 
-Try it without AWS: `.github/scripts/list-changed-stacks.sh plan all` → `["bootstrap","network","data","edge","app"]`, and `.github/scripts/list-changed-stacks.sh apply origin/master HEAD` for this branch. That second command compares commits, so uncommitted edits don't count, and it prints `[]` until you commit.
+Try it without AWS: `.github/scripts/list-stacks.sh plan all` → `["bootstrap","network","data","edge","app"]`, and `.github/scripts/list-stacks.sh apply origin/master HEAD` for this branch. That second command compares commits, so uncommitted edits don't count, and it prints `[]` until you commit.
 
 ---
 
@@ -190,4 +190,4 @@ Try it without AWS: `.github/scripts/list-changed-stacks.sh plan all` → `["boo
 
 ---
 
-**Next (planned): Scripts in GitHub Actions.** How `deploy.yml`, `infra-plan.yml` and `infra-apply.yml` call these scripts: `$GITHUB_OUTPUT` and step outputs, `env:`, `::error::`/`::warning::` annotations, matrix jobs fed by `list-changed-stacks.sh`'s JSON, and OIDC AWS credentials.
+**Next (planned): Scripts in GitHub Actions.** How `deploy.yml`, `infra-plan.yml` and `infra-apply.yml` call these scripts: `$GITHUB_OUTPUT` and step outputs, `env:`, `::error::`/`::warning::` annotations, matrix jobs fed by `list-stacks.sh`'s JSON, and OIDC AWS credentials.

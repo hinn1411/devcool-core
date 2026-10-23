@@ -41,9 +41,9 @@ variable "deploy_environment" {
 }
 
 variable "deploy_workflows" {
-  description = "Workflow files (on master, in deploy_environment) that may assume gha-deploy. P2-T09 adds env-power.yml."
+  description = "Workflow files (on master, in deploy_environment) that may assume gha-deploy."
   type        = list(string)
-  default     = ["deploy.yml", "infra-apply.yml"]
+  default     = ["deploy.yml", "infra-apply.yml", "env-power.yml"]
 }
 
 variable "state_admin_principal_arn" {

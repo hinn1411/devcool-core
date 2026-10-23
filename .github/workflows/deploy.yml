@@ -14,7 +14,8 @@ on:
       - ".dockerignore"
       - ".trivyignore.yaml"
       - ".github/workflows/deploy.yml"
-      - ".github/scripts/detect-env-state.sh"
+      - ".github/scripts/describe-env.sh"
+      - ".github/scripts/wait-for-health.sh"
   workflow_dispatch: # re-deploy (aws-deploy allows master only)
 
 permissions: {}
@@ -99,7 +100,7 @@ jobs:
 
       - name: Environment state
         id: env_state
-        run: .github/scripts/detect-env-state.sh
+        run: .github/scripts/describe-env.sh
 
       # On failure, newer revisions are deregistered, so the last ACTIVE one stays the running one.
       - name: Remember the latest revision
@@ -157,14 +158,9 @@ jobs:
             echo "::warning::Deregistered $latest_revision; the running revision is unchanged"
           fi
 
-      # Through CloudFront, like users; retries cover the first request after a rollout.
       - name: Smoke test /actuator/health
         if: steps.env_state.outputs.state == 'awake'
-        run: |
-          health_url="https://${{ steps.env_state.outputs.domain }}/actuator/health"
-          status_code=$(curl -s -o /dev/null -w '%{http_code}' --retry 12 --retry-delay 5 --retry-all-errors --max-time 20 "$health_url" || true)
-          echo "GET $health_url → $status_code"
-          [ "$status_code" = "200" ] || { echo "::error::Smoke test failed: $status_code"; exit 1; }
+        run: .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 200
 
       - name: Summary
         if: always()

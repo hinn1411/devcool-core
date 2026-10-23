@@ -29,7 +29,7 @@ jobs:
       - name: Map changed paths to stacks
         id: changed_stacks
         run: |
-          stacks=$(.github/scripts/list-changed-stacks.sh plan \
+          stacks=$(.github/scripts/list-stacks.sh plan \
             "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
           echo "Stacks: $stacks"
           echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
@@ -77,14 +77,14 @@ jobs:
 
       - name: Environment state
         id: env_state
-        run: .github/scripts/detect-env-state.sh
+        run: .github/scripts/describe-env.sh
 
       - name: terraform plan
         id: plan
         env:
           STATE: ${{ steps.env_state.outputs.state }}
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
-        run: .github/scripts/plan-or-apply-stack.sh plan "${{ matrix.stack }}"
+        run: .github/scripts/terraform-stack.sh plan "${{ matrix.stack }}"
 
       - name: Post the plan comment
         if: always() && steps.env_state.outcome == 'success'
@@ -95,4 +95,4 @@ jobs:
           CHANGES: ${{ steps.plan.outputs.changes }}
           PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: .github/scripts/post-plan-comment.sh "${{ matrix.stack }}"
+        run: .github/scripts/upsert-plan-comment.sh "${{ matrix.stack }}"

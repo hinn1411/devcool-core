@@ -3,7 +3,7 @@
 Layout, commands and conventions: [`CLAUDE.md`](CLAUDE.md). Design: [phase 2](../docs/plans/phases/phase-2-infra-cicd-walking-skeleton.md), ADR-0003, ADR-0013.
 
 ## Apply order
-bootstrap (by hand) → network → data → edge → app. Hibernate and resume: P2-T09 (`env-power.yml`).
+bootstrap (by hand) → network → data → edge → app. Sleep, wake, hibernate and resume: [`env-power`](#env-power-sleep-wake-hibernate-resume-p2-t09).
 
 ## `data`: set the JWT secrets (once per environment)
 Terraform creates `devcool/<env>/jwt-access` and `devcool/<env>/jwt-refresh` **without a value**, so the value never lands in state and `gha-plan` never needs `GetSecretValue` ([bootstrap review #4](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)). After the first `data` apply, set each one. The `$(…)` keeps the value out of your shell history; the app needs at least 32 characters.
@@ -103,17 +103,15 @@ If a task stops before it's healthy, check `aws ecs describe-tasks … --query '
   `SPRING_DATASOURCE_URL` allow 60 s, but the first resume after a long pause can take longer (seen 2026-10-20: the migrate
   task failed cold, passed on a re-run). Re-run the task once `ServerlessDatabaseCapacity` is above 0.
 
-Carry-over: `env-power` sleep must set the autoscaling min to 0, not only the desired count (registering the target moves the count into [min, max]) (P2-T09).
-
 ## CI: deploy, plan, apply (P2-T08)
 
 | Workflow | Runs on | awake | asleep (count 0) | hibernated |
 |---|---|---|---|---|
 | `deploy.yml` | backend merge | push → migrate → rollout → smoke | same, no smoke | push + register only; resume verifies |
 | `infra-plan.yml` (in `ci.yml`) | PR touching infra | plan + comment per changed stack | `app` with min 0 | `network` with toggles off; `app` = full create |
-| `infra-apply.yml` | infra merge | apply changed stacks, then roll `api` onto the latest revision | `app` with min 0 | `network`/`data` with toggles off; `app` skipped |
+| `infra-apply.yml` | infra merge | apply every stack (converges; P2-T09), then roll `api` onto the latest revision | `app` with min 0 | `network`/`data` with toggles off; `app` skipped |
 
-State comes from `.github/scripts/detect-env-state.sh` (run it by hand to check). `app` always gets the running tag: the image of the family's last ACTIVE revision.
+State comes from `.github/scripts/describe-env.sh` (run it by hand to check). `app` always gets the running tag: the image of the family's last ACTIVE revision.
 
 ### One-time setup
 1. Apply bootstrap and switch the repo's OIDC `sub` template **back to back**: the trusts now match `…:job_workflow_ref:<repo>/.github/workflows/<file>@<ref>` ([review #7](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#7--low-optional--gha-plan-trust-also-matches-claude-auto-review)), so until both are done every assume fails.
@@ -134,7 +132,41 @@ State comes from `.github/scripts/detect-env-state.sh` (run it by hand to check)
    ```
 
 ### Gotchas
-- `deploy`, `infra-apply` and `env-power` share the `aws-dev` concurrency group. A newer pending run **cancels** an older pending one, so check for cancelled runs after back-to-back merges: re-run a cancelled deploy, or run `infra-apply` by hand (`workflow_dispatch` applies every stack).
+- `deploy`, `infra-apply` and `env-power` share the `aws-dev` concurrency group. It stops overlap, not loss: a newer pending run **cancels** an older pending one, from any of the three workflows (the nightly hibernate too).
+  - A cancelled `infra-apply` loses nothing: every run applies every stack.
+  - A cancelled `deploy` replaced by a newer deploy loses nothing either (the newer image contains it). Replaced by `infra-apply` or `env-power`, it's lost: re-run it, but **only if no newer deploy has succeeded**, or it rolls the service back to older code.
 - A failed migration or rollout deregisters the new revision, so the last ACTIVE revision stays the running one.
 - After a deploy, an `app` apply registers a revision with the same image and rolls the service onto it (a few minutes, no downtime). That's how Terraform changes to the task definition go live; the service itself ignores `task_definition`.
 - A bootstrap change only plans in CI; `infra-apply` warns and skips it. A new workflow that needs `gha-deploy` goes in bootstrap's `deploy_workflows`.
+
+## `env-power`: sleep, wake, hibernate, resume (P2-T09)
+
+**Hibernated is the default state** (ADR-0013). Run a mode from Actions → `env-power` → Run workflow, or `gh workflow run env-power.yml -f mode=resume`. A schedule hibernates every night at 17:00 UTC, whatever the state.
+
+| Mode | What it does | Takes | Health via CloudFront after |
+|---|---|---|---|
+| `sleep` | `app` with the autoscaling min at 0 (so the count follows); Aurora pauses on its own | ~2 min | 503 (no targets) |
+| `wake` | `app` with the min back at 1; no migrate (a deploy while asleep already ran it) | ~5 min | 200 |
+| `hibernate` | destroy `app` → `data` (guarded) → `network` with the NAT and interface endpoints off; `edge` untouched | ~10 min | 502 (no origin) |
+| `resume` | `network` → `data` (guarded) → `app` at 0 tasks → migrate (1 retry) → `app` at min → roll out → smoke | ~20 min | 200 |
+
+- `sleep`/`wake` fail on a hibernated env: run `resume`. `resume` works from any state, and an awake env keeps its tasks while it migrates.
+- Every mode is safe to re-run; re-running `hibernate` finishes a half-done one (it always runs `destroy app`).
+- **The `data` guard:** env-power applies `data` from a saved plan and fails, with nothing applied, if the plan changes any resource outside `DATA_ALLOWED_CHANGES` in `env-power.yml` (empty until P4-T05 adds Valkey). A failure means an unapplied `data` change is pending: apply it through a PR (`infra-apply`), then re-run.
+- `resume` also verifies what a merge registered while hibernated (`deploy.yml`): the schema is migrated before any task starts.
+
+### Costs (us-east-1)
+| State | Still billed | ≈ \$/h | ≈ \$/month if left |
+|---|---|---|---|
+| awake | 1 api task (0.5 vCPU/1 GB), Aurora 0.5 ACU, ALB, NAT, 4 endpoints × 2 AZ, 3 public IPv4 | 0.26 | 190 |
+| asleep | ALB, NAT, endpoints, public IPv4 (Aurora auto-pauses, 0 tasks) | 0.16 | 115 |
+| hibernated | Aurora storage, S3, ECR, secrets, Route 53 zone | — | 2.5 |
+| awake, measured | fill in after the M1 window (Cost Explorer, tag `Project=devcool`, 24 h lag) | | |
+
+Basis: NAT \$0.045/h, interface endpoint \$0.01/h per AZ, Aurora \$0.12/ACU-h (ADR-0013, checked 2026-10-15). ALB (\$0.0225/h + LCU), Fargate and public IPv4 (\$0.005/h each) are list prices. Sleep only saves the task and Aurora (~\$0.09/h), so use it for pauses inside a window and hibernate at the end. The budget alerts at \$10 and \$18 (`bootstrap/budget.tf`).
+
+### One-time setup
+Apply bootstrap by hand before the first run: it adds `env-power.yml` to `deploy_workflows` and raises both roles' sessions to 2 h (bootstrap review #8). Until then, the workflow's assume fails.
+```bash
+terraform -chdir=infra/stacks/bootstrap apply -var-file=budget.local.tfvars
+```

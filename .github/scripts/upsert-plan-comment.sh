@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post one stack's plan to the PR, updating its earlier comment in place (P2-T08).
-#   usage: post-plan-comment.sh <stack>
+#   usage: upsert-plan-comment.sh <stack>
 #   env:   STATE, OUTCOME (the plan step's), CHANGES, PR, HEAD_SHA, ENVIRONMENT, GH_TOKEN
 set -euo pipefail
 
