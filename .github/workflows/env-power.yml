@@ -139,7 +139,7 @@ jobs:
           .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 200
 
       - name: Summary
-        if: always()0
+        if: always()
         run: |
           {
             echo "### env-power \`$MODE\` → ${ENVIRONMENT}: ${{ job.status }}"
