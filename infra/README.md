@@ -152,7 +152,7 @@ State comes from `.github/scripts/describe-env.sh` (run it by hand to check). `a
 
 - `sleep`/`wake` fail on a hibernated env: run `resume`. `resume` works from any state, and an awake env keeps its tasks while it migrates.
 - Every mode is safe to re-run; re-running `hibernate` finishes a half-done one (it always runs `destroy app`).
-- **The `data` guard:** env-power applies `data` from a saved plan and fails, with nothing applied, if the plan changes any resource outside `DATA_ALLOWED_CHANGES` in `env-power.yml` (empty until P4-T05 adds Valkey). A failure means an unapplied `data` change is pending: apply it through a PR (`infra-apply`), then re-run.
+- **The `data` guard:** env-power applies `data` from a saved plan and fails, with nothing applied, if the plan changes any resource outside `DATA_ALLOWED_CHANGES` in `env-power.yml` (empty until P4-T05 adds Valkey). On a hibernate, the NAT and endpoints still go off before the run fails. A failure means an unapplied `data` change is pending: apply it through a PR (`infra-apply`), then re-run.
 - `resume` also verifies what a merge registered while hibernated (`deploy.yml`): the schema is migrated before any task starts.
 
 ### Costs (us-east-1)

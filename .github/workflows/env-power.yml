@@ -106,9 +106,15 @@ jobs:
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
         run: |
           .github/scripts/terraform-stack.sh destroy app
-          STATE=hibernated ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data
+          # app is gone, so a data failure (e.g. the guard) mustn't keep the NAT and endpoints billing.
+          data_failed=false
+          STATE=hibernated ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data || data_failed=true
           STATE=hibernated .github/scripts/terraform-stack.sh apply network
           .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 502
+          if [ "$data_failed" = true ]; then
+            echo "::error::data not applied (see above); network is off and app is gone"
+            exit 1
+          fi
 
       # Migrates before any task starts.
       - name: Resume (network, data, app, migrate, roll out)
