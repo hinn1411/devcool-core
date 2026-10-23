@@ -81,10 +81,13 @@ jobs:
         env:
           STATE: asleep
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+          CLUSTER: ${{ steps.env_state.outputs.cluster_name }}
+          SERVICE: ${{ steps.env_state.outputs.api_service_name }}
         run: |
           .github/scripts/terraform-stack.sh apply app
-          aws ecs wait services-stable --cluster "${{ steps.env_state.outputs.cluster_name }}" \
-            --services "${{ steps.env_state.outputs.api_service_name }}"
+          # min 0 alone keeps a count of 1 (inside [0, max]); set the count too.
+          aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 0 >/dev/null
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
           .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 503
 
       # No migrate: an asleep deploy already ran it.
@@ -93,10 +96,19 @@ jobs:
         env:
           STATE: awake
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+          CLUSTER: ${{ steps.env_state.outputs.cluster_name }}
+          SERVICE: ${{ steps.env_state.outputs.api_service_name }}
         run: |
           .github/scripts/terraform-stack.sh apply app
-          aws ecs wait services-stable --cluster "${{ steps.env_state.outputs.cluster_name }}" \
-            --services "${{ steps.env_state.outputs.api_service_name }}"
+          # Raise the count to the min without relying on the clamp (no-op apply, count set by hand).
+          min_count=$(aws application-autoscaling describe-scalable-targets --service-namespace ecs \
+            --resource-ids "service/$CLUSTER/$SERVICE" --query 'ScalableTargets[0].MinCapacity' --output text)
+          desired_count=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].desiredCount' --output text)
+          if [ "$desired_count" -lt "$min_count" ]; then
+            aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count "$min_count" >/dev/null
+          fi
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
           .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 200
 
       # Every step runs, so a re-run finishes a half-done hibernate.

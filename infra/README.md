@@ -145,8 +145,8 @@ State comes from `.github/scripts/describe-env.sh` (run it by hand to check). `a
 
 | Mode | What it does | Takes | Health via CloudFront after |
 |---|---|---|---|
-| `sleep` | `app` with the autoscaling min at 0 (so the count follows); Aurora pauses on its own | ~2 min | 503 (no targets) |
-| `wake` | `app` with the min back at 1; no migrate (a deploy while asleep already ran it) | ~5 min | 200 |
+| `sleep` | `app` with the autoscaling min at 0, then the desired count to 0; Aurora pauses on its own | ~2 min | 503 (no targets) |
+| `wake` | `app` with the min back at 1 and the count raised to it; no migrate (a deploy while asleep already ran it) | ~5 min | 200 |
 | `hibernate` | destroy `app` → `data` (guarded) → `network` with the NAT and interface endpoints off; `edge` untouched | ~10 min | 502 (no origin) |
 | `resume` | `network` → `data` (guarded) → `app` at 0 tasks → migrate (1 retry) → `app` at min → roll out → smoke | ~20 min | 200 |
 
