@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# init + plan one stack for the env's power state; apply then applies the saved plan (P2-T08).
-#   usage: plan-or-apply-stack.sh <plan|apply> <stack>
-#   env:   ENVIRONMENT, STATE, IMAGE_TAG (app), TF_VAR_*
+# init + plan one stack for the env's power state; apply/destroy apply the saved plan (P2-T08).
+#   usage: terraform-stack.sh <plan|apply|destroy> <stack>
+#   env:   ENVIRONMENT, STATE, IMAGE_TAG (app), TF_VAR_*, ALLOWED_CHANGES (optional address regex)
 # plan writes plan.txt and changes=true|false to $GITHUB_OUTPUT.
 set -euo pipefail
 
-mode="$1"   # plan | apply
+mode="$1"   # plan | apply | destroy
 stack="$2"
 environment="${ENVIRONMENT:-dev}"
 power_state="${STATE:-awake}"
@@ -41,6 +41,23 @@ if [ "$stack" = "app" ]; then
   tf_args+=(-var "image_tag=$IMAGE_TAG")
 fi
 
+[ "$mode" = "destroy" ] && tf_args+=(-destroy)
+
+# env-power: fail on changes outside ALLOWED_CHANGES (ADR-0013).
+assert_only_allowed_changes() {
+  local unexpected
+  unexpected=$(terraform -chdir="$stack_dir" show -json "$PLAN_FILE" | jq -r --arg allowed "$ALLOWED_CHANGES" '
+    .resource_changes[]?
+    | select(.change.actions != ["no-op"] and .change.actions != ["read"])
+    | select(.address | test($allowed) | not)
+    | "\(.change.actions | join("+")) \(.address)"')
+  if [ -n "$unexpected" ]; then
+    echo "::error::$stack: changes outside the allowlist ($ALLOWED_CHANGES); nothing applied"
+    echo "$unexpected"
+    exit 1
+  fi
+}
+
 set +e
 terraform -chdir="$stack_dir" plan -input=false -lock-timeout="$LOCK_TIMEOUT" -detailed-exitcode \
   -out="$PLAN_FILE" "${tf_args[@]}" 2>&1 | tee "$stack_dir/plan.log"
@@ -52,6 +69,7 @@ if [ "$mode" = "plan" ]; then
   terraform -chdir="$stack_dir" show -no-color "$PLAN_FILE" >"$stack_dir/plan.txt"
   echo "changes=$([ "$plan_exit_code" -eq "$PLAN_HAS_CHANGES" ] && echo true || echo false)" >>"$output_file"
 elif [ "$plan_exit_code" -eq "$PLAN_HAS_CHANGES" ]; then
+  if [ -n "${ALLOWED_CHANGES+set}" ]; then assert_only_allowed_changes; fi
   terraform -chdir="$stack_dir" apply -input=false -lock-timeout="$LOCK_TIMEOUT" "$PLAN_FILE"
 else
   echo "$stack: no changes"

@@ -1,0 +1,150 @@
+name: env-power
+
+# dev power state (P2-T09, ADR-0013). sleep/wake: api to 0 and back.
+# hibernate: destroy app, NAT/endpoints off; resume reverses it. edge untouched.
+on:
+  schedule:
+    - cron: "0 17 * * *" # mandatory (ADR-0013)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "sleep / wake (minutes) · hibernate / resume (~10–20 min)"
+        type: choice
+        required: true
+        default: hibernate
+        options: [sleep, wake, hibernate, resume]
+
+permissions: {}
+
+env:
+  ENVIRONMENT: dev
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+  MODE: ${{ inputs.mode || 'hibernate' }} # schedule has no inputs
+  # data changes env-power may apply; empty until P4-T05 (Valkey).
+  DATA_ALLOWED_CHANGES: "^$"
+
+jobs:
+  power:
+    name: ${{ inputs.mode || 'hibernate' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 110 # within the 2 h session
+    environment: aws-deploy # trusted by gha-deploy (oidc.tf)
+    concurrency:
+      group: aws-dev # shared with deploy, infra-apply
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
+
+      - name: Create the provider cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      # resume can outlast 1 h (review #8)
+      - name: AWS credentials (gha-deploy, OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-duration-seconds: 7200
+
+      - name: Environment state
+        id: env_state
+        run: .github/scripts/describe-env.sh
+
+      - name: Refuse sleep/wake while hibernated
+        if: (env.MODE == 'sleep' || env.MODE == 'wake') && steps.env_state.outputs.state == 'hibernated'
+        run: |
+          echo "::error::The env is hibernated: run resume (app, NAT and endpoints are gone)"
+          exit 1
+
+      # Sets the autoscaling min too: no drift.
+      - name: Sleep (api to 0 tasks)
+        if: env.MODE == 'sleep'
+        env:
+          STATE: asleep
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+        run: |
+          .github/scripts/terraform-stack.sh apply app
+          aws ecs wait services-stable --cluster "${{ steps.env_state.outputs.cluster_name }}" \
+            --services "${{ steps.env_state.outputs.api_service_name }}"
+          .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 503
+
+      # No migrate: an asleep deploy already ran it.
+      - name: Wake (api back to its min)
+        if: env.MODE == 'wake'
+        env:
+          STATE: awake
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+        run: |
+          .github/scripts/terraform-stack.sh apply app
+          aws ecs wait services-stable --cluster "${{ steps.env_state.outputs.cluster_name }}" \
+            --services "${{ steps.env_state.outputs.api_service_name }}"
+          .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 200
+
+      # Every step runs, so a re-run finishes a half-done hibernate.
+      - name: Hibernate (destroy app, data, network toggles off)
+        if: env.MODE == 'hibernate'
+        env:
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+        run: |
+          .github/scripts/terraform-stack.sh destroy app
+          STATE=hibernated ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data
+          STATE=hibernated .github/scripts/terraform-stack.sh apply network
+          .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 502
+
+      # Migrates before any task starts.
+      - name: Resume (network, data, app, migrate, roll out)
+        if: env.MODE == 'resume'
+        env:
+          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+          FAMILY: ${{ steps.env_state.outputs.family }}
+          CONTAINER: ${{ steps.env_state.outputs.container }}
+          PREVIOUS_STATE: ${{ steps.env_state.outputs.state }}
+        run: |
+          STATE=awake .github/scripts/terraform-stack.sh apply network
+          STATE=awake ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data
+          # 0 tasks until migrated; awake keeps its tasks.
+          first_app_state=asleep
+          [ "$PREVIOUS_STATE" = "awake" ] && first_app_state=awake
+          STATE=$first_app_state .github/scripts/terraform-stack.sh apply app
+
+          # Re-read: the apply re-created them.
+          read_app_param() { aws ssm get-parameter --name "/devcool/$ENVIRONMENT/app/$1" --query Parameter.Value --output text; }
+          cluster=$(read_app_param cluster_name)
+          service=$(read_app_param api_service_name)
+          .github/scripts/run-migrate-task.sh "$cluster" "$FAMILY" "$CONTAINER" \
+            "$(read_app_param api_subnet_ids)" "$(read_app_param api_security_group_ids)"
+
+          STATE=awake .github/scripts/terraform-stack.sh apply app
+          .github/scripts/roll-service-to-latest.sh "$cluster" "$service" "$FAMILY"
+          aws ecs wait services-stable --cluster "$cluster" --services "$service"
+          .github/scripts/wait-for-health.sh "${{ steps.env_state.outputs.domain }}" 200
+
+      - name: Summary
+        if: always()0
+        run: |
+          {
+            echo "### env-power \`$MODE\` → ${ENVIRONMENT}: ${{ job.status }}"
+            echo "Before: **${{ steps.env_state.outputs.state || 'unknown' }}** · running tag: \`${{ steps.env_state.outputs.image_tag || 'none' }}\`"
+            if [ "${{ job.status }}" != "success" ]; then
+              echo "Re-run the same mode: every step is idempotent. A failed hibernate still bills; check the NAT and ALB."
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"

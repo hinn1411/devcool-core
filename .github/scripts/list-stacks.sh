@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Changed stacks in apply order, as a JSON array (P2-T08). apply never lists bootstrap (ADR-0003).
-#   usage: list-changed-stacks.sh <plan|apply> <base-sha> <head-sha> | <plan|apply> all
+#   usage: list-stacks.sh <plan|apply> <base-sha> <head-sha> | <plan|apply> all
 set -euo pipefail
 
 mode="$1"            # plan | apply

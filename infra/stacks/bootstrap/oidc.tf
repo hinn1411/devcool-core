@@ -49,7 +49,7 @@ resource "aws_iam_role" "gha_plan" {
   name                 = "gha-plan"
   description          = "GitHub Actions: terraform plan on PRs (read-only)."
   assume_role_policy   = data.aws_iam_policy_document.gha_plan_trust.json
-  max_session_duration = 3600
+  max_session_duration = 7200 # review #8
 }
 
 # Plan refreshes every resource type the stacks manage, so a curated list would break
@@ -109,7 +109,7 @@ resource "aws_iam_role" "gha_deploy" {
   name                 = "gha-deploy"
   description          = "GitHub Actions: terraform apply and ECS deploys (environment ${var.deploy_environment})."
   assume_role_policy   = data.aws_iam_policy_document.gha_deploy_trust.json
-  max_session_duration = 3600
+  max_session_duration = 7200 # resume can outlast 1 h (review #8)
 }
 
 # PowerUserAccess covers every service the stacks use; its only IAM rights are the

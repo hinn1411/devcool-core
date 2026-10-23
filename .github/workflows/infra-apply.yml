@@ -1,7 +1,7 @@
 name: infra-apply
 
-# Infra merge → dev (P2-T08): apply the changed stacks in order without waking the env (ADR-0013).
-# Bootstrap is applied by hand.
+# Infra merge → dev: apply every stack, never waking the env (P2-T08, ADR-0013).
+# All stacks, so a cancelled run loses nothing (P2-T09). Bootstrap: by hand.
 on:
   push:
     branches: ["master"]
@@ -9,7 +9,7 @@ on:
       - "infra/**"
       - ".github/workflows/infra-apply.yml"
       - ".github/scripts/**"
-  workflow_dispatch: # apply every stack (e.g. after a cancelled run)
+  workflow_dispatch: # e.g. after a cancelled run
 
 permissions: {}
 
@@ -20,25 +20,25 @@ env:
 
 jobs:
   stacks:
-    name: Changed stacks
+    name: Stacks
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      stacks: ${{ steps.changed_stacks.outputs.stacks }}
+      stacks: ${{ steps.stack_list.outputs.stacks }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Map changed paths to stacks
-        id: changed_stacks
+      - name: List the stacks in apply order
+        id: stack_list
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            stacks=$(.github/scripts/list-changed-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA")
-          else
-            stacks=$(.github/scripts/list-changed-stacks.sh apply all)
+            # Only for its bootstrap warning.
+            .github/scripts/list-stacks.sh apply "${{ github.event.before }}" "$GITHUB_SHA" >/dev/null
           fi
+          stacks=$(.github/scripts/list-stacks.sh apply all)
           echo "Stacks: $stacks"
           echo "stacks=$stacks" >>"$GITHUB_OUTPUT"
 
@@ -86,7 +86,7 @@ jobs:
       # Read once: the concurrency group keeps env-power from changing it mid-run.
       - name: Environment state
         id: env_state
-        run: .github/scripts/detect-env-state.sh
+        run: .github/scripts/describe-env.sh
 
       - name: Apply the stacks in order
         env:
@@ -101,7 +101,7 @@ jobs:
               echo "::endgroup::"
               continue
             fi
-            .github/scripts/plan-or-apply-stack.sh apply "$stack"
+            .github/scripts/terraform-stack.sh apply "$stack"
             echo "- \`$stack\`: applied" >>"$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done
