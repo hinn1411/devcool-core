@@ -187,10 +187,12 @@ Built-in agents worth knowing:
   - `/mcp` shows status and handles authentication.
 - **This repo:**
   - `aws-knowledge` (AWS documentation, HTTP, no credentials).
-  - Later phases enable the `terraform` (HashiCorp MCP) plugin in P2, `playwright` and `frontend-design` in P5, and `grafana-cloud-mcp` in P7.
+  - The `terraform` plugin (HashiCorp MCP in Docker: registry provider/module docs and latest versions; P2-T11), used by `aws-architect` for plan reviews.
+  - Later phases enable `playwright` and `frontend-design` in P5, and `grafana-cloud-mcp` in P7.
   - context7 is already configured at user level for library docs.
 - **Plugins** bundle skills, agents, hooks, MCP servers and LSP servers, installed from marketplaces (`/plugin`).
   - Enabling them in the project's `enabledPlugins` makes every contributor get them.
+  - `enabledPlugins` only switches on a plugin that is already installed. In an existing checkout, run `/plugin install <name>@claude-plugins-official` once (project scope), then restart. Until you do, `/mcp` doesn't list it (P2-T11).
   - **Code-intelligence plugins** (`jdtls-lsp`, `typescript-lsp`) let Claude jump to definitions and find references via a language server instead of grepping. They need the server binaries installed locally (P0-T10).
 
 ## 9. Daily workflow on DevCool
