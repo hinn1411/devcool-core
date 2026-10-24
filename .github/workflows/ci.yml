@@ -41,6 +41,13 @@ jobs:
     permissions:
       contents: read
 
+  workflows:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    uses: ./.github/workflows/ci-workflows.yml
+    permissions:
+      contents: read
+
   # PRs only; fork PRs get no OIDC token.
   infra-plan:
     needs: changes
@@ -59,7 +66,7 @@ jobs:
   # cancelled job (including `changes`, which would skip everything) fails it.
   # Add every new router job to `needs`.
   ci-gate:
-    needs: [changes, backend, infra, docker, infra-plan]
+    needs: [changes, backend, infra, docker, workflows, infra-plan]
     if: always() # otherwise a skipped `needs` job skips the gate too
     runs-on: ubuntu-latest
     permissions: {}

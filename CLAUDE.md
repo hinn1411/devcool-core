@@ -141,4 +141,6 @@ Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` jo
 
 **`infra`** → `ci-infra.yml` (`infra/**` changed; no AWS credentials): `terraform fmt -check`, `init -backend=false` + `validate` per stack/module, `tflint --recursive` (`infra/.tflint.hcl`: recommended preset + AWS ruleset), Trivy config (fails on HIGH/CRITICAL; accepted findings use an inline `#trivy:ignore:<id>` with a reason).
 
+**`workflows`** → `ci-workflows.yml` (`.github/workflows/**` or `.github/scripts/**` changed): `actionlint` (it also runs shellcheck on every `run:` block) and `shellcheck .github/scripts/*.sh`, both from one pinned `rhysd/actionlint` image. No baseline: an accepted finding gets an inline `# shellcheck disable=SCxxxx` with a reason.
+
 SpotBugs findings that existed at P1-T14 are baselined in `spotbugs-exclude.xml`. Only remove entries; fix new findings instead of adding them.

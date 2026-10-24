@@ -20,6 +20,7 @@ Run only the groups whose paths changed. Run them in the order shown and stop a 
 | Backend static analysis (SpotBugs) | `src/main/**`, `pom.xml`, `spotbugs-exclude.xml` | `./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify` |
 | Frontend | `frontend/**` | from `frontend/`: `npm run lint`, `npm run typecheck`, `npm run test -- --run`, `npm run build` |
 | Infra | `infra/**` | `terraform fmt -check -recursive infra`; for each changed stack: `terraform -chdir=infra/stacks/<s> init -backend=false` then `validate`; `tflint --chdir infra` if installed |
+| Workflows & scripts | `.github/workflows/**`, `.github/scripts/**` | with the image pinned in `ci-workflows.yml` (`$IMG`; needs Docker): `docker run --rm -v "$PWD:/repo" -w /repo $IMG`, then the same with `--entrypoint shellcheck $IMG .github/scripts/*.sh` |
 | Docs | `docs/**` | Check that relative links in changed markdown files resolve |
 
 Report as a table: group · result · the key error lines (≤ 5 each). Finish with one line saying whether the branch is ready for a PR. Never mark a skipped group as passing; say it was skipped and why (e.g. Docker not running).
