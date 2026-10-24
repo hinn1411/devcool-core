@@ -86,7 +86,7 @@ jobs:
           SERVICE: ${{ steps.env_state.outputs.api_service_name }}
         run: |
           .github/scripts/terraform-stack.sh apply app
-          # Raise the count to the min without relying on the clamp (no-op apply, count set by hand).
+          # Don't rely on the clamp: the apply may be a no-op.
           min_count=$(aws application-autoscaling describe-scalable-targets --service-namespace ecs \
             --resource-ids "service/$CLUSTER/$SERVICE" --query 'ScalableTargets[0].MinCapacity' --output text)
           desired_count=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
@@ -104,7 +104,7 @@ jobs:
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
         run: |
           .github/scripts/terraform-stack.sh destroy app
-          # app is gone, so a data failure (e.g. the guard) mustn't keep the NAT and endpoints billing.
+          # A data failure (e.g. the guard) mustn't leave NAT and endpoints billing.
           data_failed=false
           STATE=hibernated ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data || data_failed=true
           STATE=hibernated .github/scripts/terraform-stack.sh apply network

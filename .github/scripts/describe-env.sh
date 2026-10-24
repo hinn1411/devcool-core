@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The env's power state and the values the AWS workflows need, as key=value lines in $GITHUB_OUTPUT
-# (stdout by hand; read-only AWS access is enough). P2-T08.
+# The env's power state and the values the AWS workflows need, as key=value in $GITHUB_OUTPUT
+# (stdout by hand). Read-only AWS access is enough (P2-T08).
 #   hibernated: no /devcool/<env>/app/* (ADR-0013) · asleep: api runs 0 tasks · awake: otherwise
 set -euo pipefail
 

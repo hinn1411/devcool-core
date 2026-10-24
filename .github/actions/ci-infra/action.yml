@@ -1,7 +1,6 @@
 name: ci-infra
-description: Terraform fmt, validate, tflint, Trivy config. Called by ci.yml when infra paths changed.
-# Static checks only: no AWS credentials and no backend (`init -backend=false`).
-# `terraform plan` needs OIDC and comes with infra-plan.yml (P2-T08).
+description: Terraform fmt, validate, tflint, Trivy config.
+# Static only: no AWS credentials, no backend. Plans run in infra-plan.yml.
 
 runs:
   using: composite
@@ -27,13 +26,12 @@ runs:
     - name: tflint
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ github.token }} # plugin downloads hit the GitHub API rate limit without it
+        GITHUB_TOKEN: ${{ github.token }} # plugin downloads hit the API rate limit without it
       run: |
         tflint --chdir infra --init
         tflint --chdir infra --recursive --config "$GITHUB_WORKSPACE/infra/.tflint.hcl" --format compact
 
-    # Full report first (never fails), then the gate. Accepted findings are suppressed
-    # inline with `#trivy:ignore:<id>` and a reason next to the resource.
+    # Report (never fails), then the gate. Accepted: inline `#trivy:ignore:<id>` with a reason.
     - name: Trivy config (report, all severities)
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:

@@ -2,9 +2,9 @@ name: Claude Code
 
 on:
   pull_request:
-    # Opt-in: a review runs only when the `claude-review` label is added (saves subscription usage)
+    # Opt-in via the `claude-review` label (saves usage)
     types: [labeled]
-    # Plan/journal-only PRs don't need a code review; @claude still works on them
+    # No review for docs-only PRs; @claude still works
     paths-ignore: ['docs/**']
   issue_comment:
     types: [created]
@@ -16,7 +16,6 @@ on:
     types: [submitted]
 
 jobs:
-  # Review a PR when it gets the `claude-review` label
   claude-auto-review:
     if: |
       github.event_name == 'pull_request' && github.event.label.name == 'claude-review' &&
@@ -37,7 +36,7 @@ jobs:
         uses: anthropics/claude-code-action@v1.0.70
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Headless run: anything not listed here is denied, so posting needs explicit tools
+          # Headless: unlisted tools are denied, so posting needs explicit tools
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*)"
           prompt: |
@@ -65,7 +64,6 @@ jobs:
             Post inline comments only; no summary comment. Skip style nits that Spotless or
             Checkstyle already enforce.
 
-  # Respond to @claude mentions in comments, issues, and reviews
   claude-on-demand:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||

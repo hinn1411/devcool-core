@@ -5,7 +5,7 @@
 # plan writes plan.txt and changes=true|false to $GITHUB_OUTPUT.
 set -euo pipefail
 
-mode="$1"   # plan | apply | destroy
+mode="$1"
 stack="$2"
 environment="${ENVIRONMENT:-dev}"
 power_state="${STATE:-awake}"

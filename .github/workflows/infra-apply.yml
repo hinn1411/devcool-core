@@ -1,7 +1,7 @@
 name: infra-apply
 
-# Infra merge → dev: apply every stack, never waking the env (P2-T08, ADR-0013).
-# All stacks, so a cancelled run loses nothing (P2-T09). Bootstrap: by hand.
+# Infra merge → dev: apply all stacks (a cancelled run loses nothing), never waking it (ADR-0013).
+# Bootstrap: by hand.
 on:
   push:
     branches: ["master"]
@@ -49,7 +49,7 @@ jobs:
     if: needs.stacks.outputs.stacks != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: aws-deploy # gha-deploy trusts it from this file on master only (bootstrap/oidc.tf)
+    environment: aws-deploy # gha-deploy trusts this file on master (oidc.tf)
     concurrency:
       group: aws-dev # shared with deploy and env-power
       cancel-in-progress: false
@@ -71,7 +71,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Read once: the concurrency group keeps env-power from changing it mid-run.
+      # Read once: aws-dev keeps env-power out mid-run.
       - name: Environment state
         id: env_state
         run: .github/scripts/describe-env.sh
@@ -94,7 +94,7 @@ jobs:
             echo "::endgroup::"
           done
 
-      # An app apply's new revision only goes live once the service points at it.
+      # A new app revision goes live only when the service points at it.
       - name: Roll the api service onto the latest revision
         if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env_state.outputs.state != 'hibernated'
         run: |

@@ -1,5 +1,5 @@
 name: Set up Terraform
-description: Terraform CLI (no wrapper) plus a provider cache keyed on the lock files. Exports TF_PLUGIN_CACHE_DIR.
+description: Terraform CLI (no wrapper) and a provider cache; exports TF_PLUGIN_CACHE_DIR.
 
 inputs:
   terraform-version:
@@ -15,8 +15,7 @@ runs:
         terraform_version: ${{ inputs.terraform-version }}
         terraform_wrapper: false
 
-    # Every terraform command (fmt included) errors if TF_PLUGIN_CACHE_DIR is set but missing,
-    # which is the case on a cache miss. Create it before the first command.
+    # terraform errors if TF_PLUGIN_CACHE_DIR is missing (a cache miss): create it first.
     - name: Create the provider cache dir
       shell: bash
       run: |

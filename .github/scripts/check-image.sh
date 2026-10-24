@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check what the Dockerfile promises: non-root user, heap sized from the container limit, Boot layers (P2-T06).
+# Check the Dockerfile's promises: non-root, heap sized from the limit, Boot layers (P2-T06).
 #   usage: check-image.sh <image>
 set -euo pipefail
 

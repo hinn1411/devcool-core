@@ -1,7 +1,6 @@
 name: ci-backend
-description: Format check, one Maven build with every gate, Sonar, reports. Called by ci.yml when backend paths changed.
-# The calling job checks out with fetch-depth 0 (Sonar blame) and sets MAVEN_OPTS and SONAR_TOKEN:
-# a composite action can't read secrets.
+description: Format check, one Maven build with every gate, Sonar, reports.
+# The job checks out (fetch-depth 0) and sets SONAR_TOKEN: actions can't read secrets.
 
 runs:
   using: composite
@@ -28,14 +27,12 @@ runs:
       shell: bash
       run: ./mvnw -B spotless:check
 
-    # One build, every gate: unit tests, ITs (Testcontainers, fails on 0 ITs),
-    # JaCoCo line-coverage floor, SpotBugs (EI baseline in spotbugs-exclude.xml).
+    # One build, every gate: unit tests, ITs (fail on 0), JaCoCo floor, SpotBugs.
     - name: Build + unit tests + ITs + coverage + SpotBugs
       shell: bash
       run: ./mvnw -B -U -Dit -Pstatic-analysis verify
 
-    # Reuses target/ from the step above: no second compile or test run.
-    # Fork and Dependabot PRs get no SONAR_TOKEN, so this fails there.
+    # Reuses target/. Fails without SONAR_TOKEN (fork and Dependabot PRs).
     - name: Sonar analysis
       shell: bash
       run: ./mvnw -B sonar:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.projectKey=hinn1411_devcool-core

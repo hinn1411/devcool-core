@@ -12,7 +12,7 @@ STACKS_USING_ENVS=(network data edge app) # the stacks that read infra/envs/*.tf
 # A branch's first push has an all-zero github.event.before: nothing to diff against.
 NULL_SHA_RE='^0+$'
 
-declare -A changed_stacks=() # a set: stack name → 1
+declare -A changed_stacks=() # a set
 
 mark_changed() {
   local stack
