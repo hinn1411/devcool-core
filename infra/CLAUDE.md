@@ -36,4 +36,4 @@ Claude may run `init`, `fmt`, `validate` and `plan`. `apply` always needs the us
 - The ECS service ignores `task_definition` changes; the deploy pipeline owns the image tag.
 - Cross-stack values go through SSM parameters written by the producer stack.
 - Keep scale-to-zero working: anything billed hourly must be in `app` or behind a hibernate toggle in `network` or `data` (ADR-0013), unless it holds state. `edge` survives hibernate, so nothing billed hourly goes there.
-- Use the `aws-architect` agent to review plans; check provider arguments with the Terraform MCP/AWS Knowledge MCP rather than from memory.
+- Delegate every plan review (local `plan` or an infra PR's plan comments) to the `aws-architect` agent. Check provider arguments with the Terraform MCP (the `terraform` plugin; needs Docker running) or the AWS Knowledge MCP, not from memory.

@@ -45,13 +45,27 @@
       "Read(./frontend/dist/**/*)",
       "Bash(terraform destroy *)",
       "Bash(git push --force *)",
-      "Bash(git push -f *)"
+      "Bash(git push -f *)",
+      "mcp__plugin_terraform_terraform__attach_policy_set_to_workspaces",
+      "mcp__plugin_terraform_terraform__attach_variable_set_to_workspaces",
+      "mcp__plugin_terraform_terraform__create_no_code_workspace",
+      "mcp__plugin_terraform_terraform__create_run",
+      "mcp__plugin_terraform_terraform__create_variable_in_variable_set",
+      "mcp__plugin_terraform_terraform__create_variable_set",
+      "mcp__plugin_terraform_terraform__create_workspace",
+      "mcp__plugin_terraform_terraform__create_workspace_tags",
+      "mcp__plugin_terraform_terraform__create_workspace_variable",
+      "mcp__plugin_terraform_terraform__delete_variable_in_variable_set",
+      "mcp__plugin_terraform_terraform__detach_variable_set_from_workspaces",
+      "mcp__plugin_terraform_terraform__update_workspace",
+      "mcp__plugin_terraform_terraform__update_workspace_variable"
     ]
   },
   "enabledPlugins": {
     "jdtls-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": false,
     "commit-commands@claude-plugins-official": true,
+    "terraform@claude-plugins-official": true,
     "pr-review-toolkit@claude-plugins-official": false
   },
   "worktree": {

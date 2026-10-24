@@ -126,7 +126,7 @@ Run Flyway as a **one-off ECS task** (same image, `SPRING_PROFILES_ACTIVE=ecs,mi
   - Carry-over (P2-T08, not yet run): right after the first successful `resume`, before testing the rest of `env-power`: a backend merge while awake (`:<sha>` in ECR, migrate exits 0, service stable, health 200); a failing migration stops before the service update; a merge while asleep (migrate + rollout, smoke skipped with a notice); an infra merge touching `app` while awake (applies with the running tag, `api` rolled, re-plan "No changes"); one circuit-breaker rollback ([brief](../../journal/briefs/P2-T08.md))
   - Review carry-over (P2-T01): #8 → [bootstrap review](../../improvements/2026-10-14-bootstrap-review-improvements.md#p2-t09--env-poweryml)
 - [x] **P2-T10** CI infra job: `terraform fmt -check`, `validate`, `tflint`, `trivy config infra/`
-- [ ] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent
+- [x] **P2-T11** Enable the `terraform` plugin (HashiCorp MCP) in `.claude/settings.json`; delegate plan reviews to the `aws-architect` agent
 - [ ] **P2-T12** Update `README.md` "Deployment" (replace the manual steps) and fill in `docker/ecs/README.md`
 - [x] **P2-T13** Budget alarm (AWS Budgets, email) at the monthly limit you set
 - [x] **P2-T14** Patch the backend dependencies before the first deploy (found by P2-T06's Trivy image scan: 50 fixable HIGH/CRITICAL in the Boot 3.5.6 BOM and `nimbus-jose-jwt` 9.37)
