@@ -1,0 +1,25 @@
+name: ci-workflows
+description: actionlint and shellcheck from one pinned image (issue #155). Called by ci.yml when workflows, actions or scripts changed.
+# actionlint runs shellcheck on every workflow `run:` block, but not on the ones inside action.yml
+# files: keep those to one-liners and put longer shell in .github/scripts/.
+# Accepted findings use an inline `# shellcheck disable=SCxxxx` with a one-line reason.
+
+inputs:
+  image:
+    description: Pinned actionlint image (bundles shellcheck 0.11.0)
+    default: rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+
+runs:
+  using: composite
+  steps:
+    - name: actionlint (workflows and their run blocks)
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo "$IMAGE" -color
+
+    - name: shellcheck (.github/scripts)
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo --entrypoint shellcheck "$IMAGE" .github/scripts/*.sh

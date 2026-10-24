@@ -129,18 +129,22 @@ When reviewing a pull request, check for:
 
 ### CI Pipeline (`.github/workflows/ci.yml`)
 
-Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` job (`ci-changes.yml`, dorny/paths-filter) decides which areas changed, and each area runs a reusable workflow. An area that runs reports as `<router job> / <job>` (e.g. `backend / Build, Test, Coverage, Sonar`); a skipped one reports as just `<router job>`. Every step is blocking.
+Runs on every PR and on push to `master`. `ci.yml` is a router: its `changes` job (dorny/paths-filter) decides which areas changed, and each area job runs a composite action in `.github/actions/ci-<area>/`. The job holds `runs-on`, `permissions`, `env`, secrets and the checkout; the action holds the steps. Shared steps are actions too (`setup-terraform`, also used by `infra-plan`, `infra-apply` and `env-power`). Every step is blocking.
+
+Keep `infra-plan.yml`, `infra-apply.yml`, `deploy.yml` and `env-power.yml` as workflow files with those names: the OIDC roles trust them by file name (`infra/stacks/bootstrap/oidc.tf`).
 
 **`ci-gate`** is the only check to make required. It always runs, passes when every job passed or was skipped, and fails if any failed or was cancelled. Add each new router job to its `needs`.
 
-**`backend`** → `ci-backend.yml` (backend paths changed; gets only `SONAR_TOKEN`):
+**`backend`** → `.github/actions/ci-backend` (backend paths changed; gets only `SONAR_TOKEN`):
 1. Spotless format check
 2. One build: `./mvnw -B -U -Dit -Pstatic-analysis verify`. It runs unit tests, ITs (fails if 0 run), the JaCoCo line-coverage floor (`jacoco.line.minimum` in `pom.xml`; raise it, never lower it), and SpotBugs.
 3. SonarCloud (`sonar:sonar`, reusing `target/`). Needs the `SONAR_TOKEN` repo secret
 4. Upload test and JaCoCo reports
 
-**`infra`** → `ci-infra.yml` (`infra/**` changed; no AWS credentials): `terraform fmt -check`, `init -backend=false` + `validate` per stack/module, `tflint --recursive` (`infra/.tflint.hcl`: recommended preset + AWS ruleset), Trivy config (fails on HIGH/CRITICAL; accepted findings use an inline `#trivy:ignore:<id>` with a reason).
+**`infra`** → `.github/actions/ci-infra` (`infra/**` changed; no AWS credentials): `terraform fmt -check`, `init -backend=false` + `validate` per stack/module, `tflint --recursive` (`infra/.tflint.hcl`: recommended preset + AWS ruleset), Trivy config (fails on HIGH/CRITICAL; accepted findings use an inline `#trivy:ignore:<id>` with a reason).
 
-**`workflows`** → `ci-workflows.yml` (`.github/workflows/**` or `.github/scripts/**` changed): `actionlint` (it also runs shellcheck on every `run:` block) and `shellcheck .github/scripts/*.sh`, both from one pinned `rhysd/actionlint` image. No baseline: an accepted finding gets an inline `# shellcheck disable=SCxxxx` with a reason.
+**`docker`** → `.github/actions/ci-docker` (the image's build inputs changed): hadolint, a no-push build, `.github/scripts/check-image.sh`, Trivy image (fails on fixable HIGH/CRITICAL).
+
+**`workflows`** → `.github/actions/ci-workflows` (`.github/{workflows,actions,scripts}/**` changed): `actionlint` (it also runs shellcheck on every workflow `run:` block) and `shellcheck .github/scripts/*.sh`, both from one pinned `rhysd/actionlint` image. actionlint doesn't shellcheck the `run:` blocks inside `action.yml`, so keep those to one-liners and put longer shell in `.github/scripts/`. No baseline: an accepted finding gets an inline `# shellcheck disable=SCxxxx` with a reason.
 
 SpotBugs findings that existed at P1-T14 are baselined in `spotbugs-exclude.xml`. Only remove entries; fix new findings instead of adding them.

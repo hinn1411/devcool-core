@@ -5,50 +5,128 @@ on:
   push:
     branches: [ "master" ]
 
-# Router: `changes` decides which areas changed, and each area's checks live in a reusable
-# workflow (ci-*.yml). Check names look like `<job here> / <job name in the called workflow>`
-# when the area runs, but just `<job here>` when its `if:` skips it (PR #130). Requiring either
-# name would block some PRs forever ("Expected"), so `ci-gate` is the only required check.
+# Router: `changes` decides which areas changed, and each area job runs its composite action
+# (.github/actions/ci-<area>). The job keeps runs-on, permissions, env and the checkout; the action
+# holds the steps. A skipped area never reports its check, so requiring one would block some PRs
+# forever ("Expected", PR #130): `ci-gate` is the only required check.
 permissions: {}
 
 jobs:
   changes:
-    uses: ./.github/workflows/ci-changes.yml
+    name: Detect changed areas
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read # paths-filter lists PR files through the API
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      infra: ${{ steps.filter.outputs.infra }}
+      docker: ${{ steps.filter.outputs.docker }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      # Pushes are diffed with git (against the previous commit), so they need the repo.
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          # `docker` covers the image's build inputs (the .dockerignore allow-list) except src/**:
+          # `backend` already compiles and packages src, so a src-only change rarely breaks the
+          # image, and the rare break shows up at deploy. docker/** stays out: the image doesn't
+          # use it, and the Testcontainers ITs don't read docker/local.
+          # Each list includes the files that run it, so editing ci.yml or an action runs it.
+          filters: |
+            backend:
+              - 'src/**'
+              - 'pom.xml'
+              - 'mvnw*'
+              - '.mvn/**'
+              - 'spotbugs-exclude.xml'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/ci-backend/**'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/infra-plan.yml'
+              - '.github/actions/ci-infra/**'
+              - '.github/actions/setup-terraform/**'
+              - '.github/scripts/**'
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'pom.xml'
+              - 'mvnw'
+              - '.mvn/**'
+              - '.trivyignore.yaml'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/ci-docker/**'
+              - '.github/scripts/check-image.sh'
+            workflows:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+              - '.github/scripts/**'
 
   backend:
+    name: Build, Test, Coverage, Sonar
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    uses: ./.github/workflows/ci-backend.yml
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} # only this one, not `secrets: inherit`
+    env:
+      # Keep outputs consistent
+      MAVEN_OPTS: -Duser.language=en -Duser.region=US -Dfile.encoding=UTF-8
+      # Only this secret. Fork and Dependabot PRs get none, so the Sonar step fails there.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/ci-backend
 
   infra:
+    name: Terraform fmt, validate, tflint, Trivy
     needs: changes
     if: needs.changes.outputs.infra == 'true'
-    uses: ./.github/workflows/ci-infra.yml
+    runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/ci-infra
 
   docker:
+    name: Build, lint and scan image
     needs: changes
     if: needs.changes.outputs.docker == 'true'
-    uses: ./.github/workflows/ci-docker.yml
+    runs-on: ubuntu-latest
     permissions:
       contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/ci-docker
 
   workflows:
+    name: actionlint, shellcheck
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    uses: ./.github/workflows/ci-workflows.yml
+    runs-on: ubuntu-latest
     permissions:
       contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/ci-workflows
 
-  # PRs only; fork PRs get no OIDC token.
+  # PRs only; fork PRs get no OIDC token. A reusable workflow, not an action: gha-plan trusts
+  # infra-plan.yml by name (bootstrap/oidc.tf), and it needs a matrix.
   infra-plan:
     needs: changes
     if: |

@@ -80,7 +80,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Same gate as ci-docker.yml.
+      # Same gate as .github/actions/ci-docker.
       - name: Trivy image (gate, fixable HIGH and CRITICAL, OS + libraries)
         if: steps.image_check.outputs.exists != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

@@ -1,0 +1,30 @@
+name: Set up Terraform
+description: Terraform CLI (no wrapper) plus a provider cache keyed on the lock files. Exports TF_PLUGIN_CACHE_DIR.
+
+inputs:
+  terraform-version:
+    description: Terraform CLI version
+    default: 1.16.6
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+
+    # Every terraform command (fmt included) errors if TF_PLUGIN_CACHE_DIR is set but missing,
+    # which is the case on a cache miss. Create it before the first command.
+    - name: Create the provider cache dir
+      shell: bash
+      run: |
+        echo "TF_PLUGIN_CACHE_DIR=$GITHUB_WORKSPACE/.terraform-plugin-cache" >>"$GITHUB_ENV"
+        mkdir -p "$GITHUB_WORKSPACE/.terraform-plugin-cache"
+
+    - name: Cache Terraform providers
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ github.workspace }}/.terraform-plugin-cache
+        key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
