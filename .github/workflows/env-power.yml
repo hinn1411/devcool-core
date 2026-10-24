@@ -80,7 +80,7 @@ jobs:
         if: env.MODE == 'sleep'
         env:
           STATE: asleep
-          IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
+          IMAGE_TAG: ${{ steps.env_stat.outputs.image_tag }}
           CLUSTER: ${{ steps.env_state.outputs.cluster_name }}
           SERVICE: ${{ steps.env_state.outputs.api_service_name }}
         run: |
