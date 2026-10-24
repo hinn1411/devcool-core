@@ -1,7 +1,7 @@
 name: deploy
 
-# Backend merge → dev (P2-T08); never wakes the env (ADR-0013). awake: migrate, roll out, smoke;
-# asleep: the same without smoke; hibernated: push and register only (resume verifies, P2-T09).
+# Backend merge → dev, never waking it (ADR-0013). awake: migrate, roll out, smoke;
+# asleep: no smoke; hibernated: push and register only (resume verifies).
 on:
   push:
     branches: ["master"]
@@ -30,8 +30,8 @@ jobs:
     name: Build, migrate, roll out
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: aws-deploy # gha-deploy trusts it from this file on master only (bootstrap/oidc.tf)
-    # One change to dev at a time (shared with infra-apply, env-power); re-run cancelled runs.
+    environment: aws-deploy # gha-deploy trusts this file on master (oidc.tf)
+    # One change to dev at a time; re-run a cancelled run.
     concurrency:
       group: aws-dev
       cancel-in-progress: false
@@ -52,7 +52,7 @@ jobs:
         id: ecr_login
         uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
 
-      # Tags are immutable: a re-run reuses the image already pushed and scanned.
+      # Immutable tags: a re-run reuses the pushed, scanned image.
       - name: Check for an existing image
         id: image_check
         run: |
@@ -66,7 +66,7 @@ jobs:
         if: steps.image_check.outputs.exists != 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # No attestations: they eat ECR's "keep 20" and can take the tag (bootstrap review #9).
+      # No attestations: they count toward ECR's "keep 20" (bootstrap review #9).
       - name: Build the image
         if: steps.image_check.outputs.exists != 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -80,7 +80,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Same gate as ci-docker.yml.
+      # Same gate as .github/actions/ci-docker.
       - name: Trivy image (gate, fixable HIGH and CRITICAL, OS + libraries)
         if: steps.image_check.outputs.exists != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -102,7 +102,7 @@ jobs:
         id: env_state
         run: .github/scripts/describe-env.sh
 
-      # On failure, newer revisions are deregistered, so the last ACTIVE one stays the running one.
+      # Failures deregister newer revisions: the last ACTIVE one is the running one.
       - name: Remember the latest revision
         id: previous_revision
         run: |
@@ -111,7 +111,7 @@ jobs:
             --query taskDefinition.taskDefinitionArn --output text)
           echo "arn=$revision_arn" >>"$GITHUB_OUTPUT"
 
-      # Keeps Terraform's config from the latest revision; only the image changes.
+      # Terraform's config from the latest revision; only the image changes.
       - name: Render the task definition
         id: task_def
         uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7 # v1.9.1
@@ -126,7 +126,7 @@ jobs:
         with:
           task-definition: ${{ steps.task_def.outputs.task-definition }}
 
-      # Register → migrate task (a failure stops before the service changes) → roll out → wait.
+      # Register → migrate (a failure stops here) → roll out → wait.
       - name: Register, migrate, roll out
         if: steps.env_state.outputs.state != 'hibernated'
         uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b # v2.6.4

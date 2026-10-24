@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Roll the service onto the family's latest ACTIVE revision and wait (P2-T08). The service ignores
-# task_definition (ADR-0003), so Terraform's task-def changes only go live through this.
+# Roll the service onto the family's latest ACTIVE revision and wait (P2-T08). The service
+# ignores task_definition (ADR-0003): Terraform's task-def changes go live only through this.
 #   usage: roll-service-to-latest.sh <cluster> <service> <family>
 set -euo pipefail
 

@@ -1,7 +1,7 @@
 name: infra-apply
 
-# Infra merge → dev: apply every stack, never waking the env (P2-T08, ADR-0013).
-# All stacks, so a cancelled run loses nothing (P2-T09). Bootstrap: by hand.
+# Infra merge → dev: apply all stacks (a cancelled run loses nothing), never waking it (ADR-0013).
+# Bootstrap: by hand.
 on:
   push:
     branches: ["master"]
@@ -9,6 +9,7 @@ on:
       - "infra/**"
       - ".github/workflows/infra-apply.yml"
       - ".github/scripts/**"
+      - ".github/actions/setup-terraform/**"
   workflow_dispatch: # e.g. after a cancelled run
 
 permissions: {}
@@ -48,7 +49,7 @@ jobs:
     if: needs.stacks.outputs.stacks != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: aws-deploy # gha-deploy trusts it from this file on master only (bootstrap/oidc.tf)
+    environment: aws-deploy # gha-deploy trusts this file on master (oidc.tf)
     concurrency:
       group: aws-dev # shared with deploy and env-power
       cancel-in-progress: false
@@ -56,26 +57,13 @@ jobs:
       contents: read
       id-token: write
     env:
-      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
       STACKS: ${{ needs.stacks.outputs.stacks }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.16.6
-          terraform_wrapper: false
-
-      - name: Cache Terraform providers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
-
-      - name: Create the provider cache dir
-        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+        uses: ./.github/actions/setup-terraform
 
       - name: AWS credentials (gha-deploy, OIDC)
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -83,7 +71,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Read once: the concurrency group keeps env-power from changing it mid-run.
+      # Read once: aws-dev keeps env-power out mid-run.
       - name: Environment state
         id: env_state
         run: .github/scripts/describe-env.sh
@@ -106,7 +94,7 @@ jobs:
             echo "::endgroup::"
           done
 
-      # An app apply's new revision only goes live once the service points at it.
+      # A new app revision goes live only when the service points at it.
       - name: Roll the api service onto the latest revision
         if: contains(fromJSON(needs.stacks.outputs.stacks), 'app') && steps.env_state.outputs.state != 'hibernated'
         run: |

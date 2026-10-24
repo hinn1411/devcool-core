@@ -36,26 +36,12 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    env:
-      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.16.6
-          terraform_wrapper: false
-
-      - name: Cache Terraform providers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: ${{ runner.os }}-tf-providers-${{ hashFiles('infra/**/.terraform.lock.hcl') }}
-
-      - name: Create the provider cache dir
-        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+        uses: ./.github/actions/setup-terraform
 
       # resume can outlast 1 h (review #8)
       - name: AWS credentials (gha-deploy, OIDC)
@@ -100,7 +86,7 @@ jobs:
           SERVICE: ${{ steps.env_state.outputs.api_service_name }}
         run: |
           .github/scripts/terraform-stack.sh apply app
-          # Raise the count to the min without relying on the clamp (no-op apply, count set by hand).
+          # Don't rely on the clamp: the apply may be a no-op.
           min_count=$(aws application-autoscaling describe-scalable-targets --service-namespace ecs \
             --resource-ids "service/$CLUSTER/$SERVICE" --query 'ScalableTargets[0].MinCapacity' --output text)
           desired_count=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
@@ -118,7 +104,7 @@ jobs:
           IMAGE_TAG: ${{ steps.env_state.outputs.image_tag }}
         run: |
           .github/scripts/terraform-stack.sh destroy app
-          # app is gone, so a data failure (e.g. the guard) mustn't keep the NAT and endpoints billing.
+          # A data failure (e.g. the guard) mustn't leave NAT and endpoints billing.
           data_failed=false
           STATE=hibernated ALLOWED_CHANGES="$DATA_ALLOWED_CHANGES" .github/scripts/terraform-stack.sh apply data || data_failed=true
           STATE=hibernated .github/scripts/terraform-stack.sh apply network
