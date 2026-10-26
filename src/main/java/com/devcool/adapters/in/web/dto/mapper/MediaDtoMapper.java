@@ -13,5 +13,5 @@ public interface MediaDtoMapper {
   @Mapping(target = "contentType", source = "file.contentType")
   @Mapping(target = "size", source = "file.size")
   @Mapping(target = "content", expression = "java(file::getInputStream)")
-  UploadMediaCommand toUploadMediaCommand(MultipartFile file, Integer userId, Integer channelId);
+  UploadMediaCommand toUploadMediaCommand(MultipartFile file, Long userId, Long channelId);
 }

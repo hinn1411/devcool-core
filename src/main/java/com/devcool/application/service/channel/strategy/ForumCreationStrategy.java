@@ -35,7 +35,7 @@ public class ForumCreationStrategy extends AbstractChannelCreationStrategy
   }
 
   @Override
-  public Integer createChannel(CreateChannelCommand command) {
+  public Long createChannel(CreateChannelCommand command) {
     validate(command);
     rejectPersonListedTwice(command);
 
@@ -64,7 +64,7 @@ public class ForumCreationStrategy extends AbstractChannelCreationStrategy
    * (they already get their own row).
    */
   private void rejectPersonListedTwice(CreateChannelCommand command) {
-    Set<Integer> distinctMemberIds = new HashSet<>(command.memberIds());
+    Set<Long> distinctMemberIds = new HashSet<>(command.memberIds());
 
     if (distinctMemberIds.size() < command.memberIds().size()) {
       log.info("Member ids are duplicate");
@@ -85,7 +85,7 @@ public class ForumCreationStrategy extends AbstractChannelCreationStrategy
   private void validate(CreateChannelCommand command) {
     ChannelType channelType = command.channelType();
     int totalOfMembers = command.memberIds().size();
-    Integer leaderId = command.leaderId();
+    Long leaderId = command.leaderId();
     Instant expiredTime = command.expiredTime();
 
     if (!Objects.equals(channelType, ChannelType.FORUM)) {

@@ -40,7 +40,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
 
   @Override
   @Transactional
-  public Integer save(CreateMessageCommand command) {
+  public Long save(CreateMessageCommand command) {
     MessageCreationStrategy strategy = creationStrategies.get(command.contentType());
     if (Objects.isNull(strategy)) {
       log.warn(

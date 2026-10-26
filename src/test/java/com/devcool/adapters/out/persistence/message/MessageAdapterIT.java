@@ -48,11 +48,11 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void nullCursor_returnsNewestSizeMessages_descending() {
-    Integer m1 = text(channelA, "m1");
-    Integer m2 = text(channelA, "m2");
-    Integer m3 = text(channelA, "m3");
-    Integer m4 = text(channelA, "m4");
-    Integer m5 = text(channelA, "m5");
+    Long m1 = text(channelA, "m1");
+    Long m2 = text(channelA, "m2");
+    Long m3 = text(channelA, "m3");
+    Long m4 = text(channelA, "m4");
+    Long m5 = text(channelA, "m5");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 3);
@@ -62,11 +62,11 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void cursor_returnsOnlyOlderMessages_excludingTheCursor() {
-    Integer m1 = text(channelA, "m1");
-    Integer m2 = text(channelA, "m2");
-    Integer m3 = text(channelA, "m3");
-    Integer m4 = text(channelA, "m4");
-    Integer m5 = text(channelA, "m5");
+    Long m1 = text(channelA, "m1");
+    Long m2 = text(channelA, "m2");
+    Long m3 = text(channelA, "m3");
+    Long m4 = text(channelA, "m4");
+    Long m5 = text(channelA, "m5");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), m4, 2);
@@ -76,9 +76,9 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void cursorAtOldestMessage_returnsEmpty() {
-    Integer m1 = text(channelA, "m1");
-    Integer m2 = text(channelA, "m2");
-    Integer m3 = text(channelA, "m3");
+    Long m1 = text(channelA, "m1");
+    Long m2 = text(channelA, "m2");
+    Long m3 = text(channelA, "m3");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), m1, 3);
@@ -97,10 +97,10 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void sizeEqualToRemainingRows_returnsAllOfThem() {
-    Integer m1 = text(channelA, "m1");
-    Integer m2 = text(channelA, "m2");
-    Integer m3 = text(channelA, "m3");
-    Integer m4 = text(channelA, "m4");
+    Long m1 = text(channelA, "m1");
+    Long m2 = text(channelA, "m2");
+    Long m3 = text(channelA, "m3");
+    Long m4 = text(channelA, "m4");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), m4, 3);
@@ -111,11 +111,11 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void softDeletedMessage_isExcluded_andPageStillFillsToSize() {
-    Integer m1 = text(channelA, "m1");
-    Integer m2 = text(channelA, "m2");
-    Integer m3 = deletedText(channelA, "m3 (deleted)");
-    Integer m4 = text(channelA, "m4");
-    Integer m5 = text(channelA, "m5");
+    Long m1 = text(channelA, "m1");
+    Long m2 = text(channelA, "m2");
+    Long m3 = deletedText(channelA, "m3 (deleted)");
+    Long m4 = text(channelA, "m4");
+    Long m5 = text(channelA, "m5");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 3);
@@ -125,10 +125,10 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void messageOfAnotherChannel_isExcluded_evenBetweenOwnIds() {
-    Integer a1 = text(channelA, "a1");
-    Integer a2 = text(channelA, "a2");
-    Integer b1 = text(channelB, "b1");
-    Integer a3 = text(channelA, "a3");
+    Long a1 = text(channelA, "a1");
+    Long a2 = text(channelA, "a2");
+    Long b1 = text(channelB, "b1");
+    Long a3 = text(channelA, "a3");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 5);
@@ -138,7 +138,7 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void textMessage_mapsEveryField() {
-    Integer id = text(channelA, "hello");
+    Long id = text(channelA, "hello");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 1);
@@ -159,7 +159,7 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   @Test
   void imageMessage_contentIsTheMediaPath_andSenderIsMapped() {
-    Integer id = image(channelA, "channel/1/2026/10/01/abc.jpg");
+    Long id = image(channelA, "channel/1/2026/10/01/abc.jpg");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 1);
@@ -222,17 +222,17 @@ class MessageAdapterIT extends AbstractJpaIT {
     return message;
   }
 
-  private Integer text(ChannelEntity channel, String content) {
+  private Long text(ChannelEntity channel, String content) {
     return em.persist(message(channel, ContentType.TEXT, content)).getId();
   }
 
-  private Integer deletedText(ChannelEntity channel, String content) {
+  private Long deletedText(ChannelEntity channel, String content) {
     MessageEntity message = message(channel, ContentType.TEXT, content);
     message.setDeletedTime(message.getCreatedTime().plusSeconds(30));
     return em.persist(message).getId();
   }
 
-  private Integer image(ChannelEntity channel, String path) {
+  private Long image(ChannelEntity channel, String path) {
     MessageEntity message = message(channel, ContentType.IMAGE, null);
     MediaEntity media = new MediaEntity();
     media.setPath(path);

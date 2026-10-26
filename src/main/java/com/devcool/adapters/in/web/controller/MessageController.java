@@ -29,11 +29,11 @@ public class MessageController {
 
   @GetMapping("/channels/{channelId}/messages")
   public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> getMessages(
-      @PathVariable Integer channelId,
-      @RequestParam(required = false) Integer cursorId,
+      @PathVariable Long channelId,
+      @RequestParam(required = false) Long cursorId,
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit,
       Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     GetMessageCommand command = mapper.toGetCommand(userId, channelId, cursorId, limit);
     MessageList messageList = messageQuerier.getMessages(command);
     GetMessagesResponse response = mapper.toGetResponse(messageList);

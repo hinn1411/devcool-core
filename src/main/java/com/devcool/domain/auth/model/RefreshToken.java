@@ -15,12 +15,12 @@ public class RefreshToken {
   public static final Duration TTL = Duration.ofDays(7);
 
   private String jti;
-  private Integer userId;
+  private Long userId;
   private Instant issuedTime;
   private Instant expiredTime;
   private Instant consumedTime;
 
-  public static RefreshToken issue(Integer userId, String jtiHash, Instant now) {
+  public static RefreshToken issue(Long userId, String jtiHash, Instant now) {
     return RefreshToken.builder()
         .jti(jtiHash)
         .userId(userId)

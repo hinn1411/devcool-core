@@ -43,7 +43,7 @@ class UserControllerTest {
 
   @Test
   void getProfile_exposesOnlyPublicFields() throws Exception {
-    when(getUser.byId(101)).thenReturn(userWithEveryFieldSet());
+    when(getUser.byId(101L)).thenReturn(userWithEveryFieldSet());
 
     mockMvc
         .perform(get("/api/v1/users/101"))
@@ -64,7 +64,7 @@ class UserControllerTest {
   // Allowlist: fails when any field is added to the response, including ones not named above.
   @Test
   void getProfile_returnsExactlyTheFourPublicFieldsWithTheirValues() throws Exception {
-    when(getUser.byId(101)).thenReturn(userWithEveryFieldSet());
+    when(getUser.byId(101L)).thenReturn(userWithEveryFieldSet());
 
     mockMvc
         .perform(get("/api/v1/users/101"))
@@ -78,7 +78,7 @@ class UserControllerTest {
 
   @Test
   void getProfile_unknownUser_returns404WithUserNotFoundCode() throws Exception {
-    when(getUser.byId(999)).thenThrow(new UserNotFoundException(999));
+    when(getUser.byId(999L)).thenThrow(new UserNotFoundException(999L));
 
     mockMvc
         .perform(get("/api/v1/users/999"))
@@ -88,7 +88,7 @@ class UserControllerTest {
 
   private static User userWithEveryFieldSet() {
     return User.builder()
-        .id(101)
+        .id(101L)
         .username("hien_giang")
         .password("$2a$12$abcdefghijklmnopqrstuuJ9wq1Yb0mQ0m0m0m0m0m0m0m0m0m0m")
         .email("hien@example.com")

@@ -5,7 +5,7 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import java.time.Instant;
 
 public record UpdateChannelCommand(
-    Integer callerId,
+    Long callerId,
     String name,
     BoundaryType boundaryType,
     Instant expiredTime,

@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class Media {
-  private Integer id;
+  private Long id;
   private String path;
   private Instant createdTime;
 }

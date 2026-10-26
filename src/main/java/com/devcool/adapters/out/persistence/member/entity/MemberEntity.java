@@ -23,7 +23,7 @@ public class MemberEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "ID", nullable = false)
-  private Integer id;
+  private Long id;
 
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
   @JoinColumn(

@@ -24,24 +24,24 @@ public class MemberAdapter implements MemberPort {
   private final EntityManager em;
 
   @Override
-  public List<Member> findMembersOfChannelByUserIds(Integer channelId, Set<Integer> userIds) {
+  public List<Member> findMembersOfChannelByUserIds(Long channelId, Set<Long> userIds) {
     return repo.findByChannel_IdAndUser_IdIn(channelId, userIds).stream()
         .map(mapper::toDomain)
         .toList();
   }
 
   @Override
-  public boolean existMemberOfChannelByUserId(Integer channelId, Integer userId) {
+  public boolean existMemberOfChannelByUserId(Long channelId, Long userId) {
     return repo.existsByChannel_IdAndUser_Id(channelId, userId);
   }
 
   @Override
-  public Optional<MemberType> findRoleOfMember(Integer channelId, Integer userId) {
+  public Optional<MemberType> findRoleOfMember(Long channelId, Long userId) {
     return repo.findRoleByChannelIdAndUserId(channelId, userId);
   }
 
   @Override
-  public boolean addMembers(Integer channelId, Set<Integer> memberIds) {
+  public boolean addMembers(Long channelId, Set<Long> memberIds) {
     ChannelEntity channelRef = em.getReference(ChannelEntity.class, channelId);
     List<MemberEntity> memberEntities =
         memberIds.stream()

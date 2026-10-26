@@ -1,7 +1,7 @@
 package com.devcool.domain.user.port.in.command;
 
 public record ChangePasswordCommand(
-    Integer userId, String currentPassword, String newPassword, String confirmedPassword) {
+    Long userId, String currentPassword, String newPassword, String confirmedPassword) {
 
   // The generated toString would print the passwords; keep them out of logs.
   @Override

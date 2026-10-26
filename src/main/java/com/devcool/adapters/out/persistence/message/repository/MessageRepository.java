@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface MessageRepository extends JpaRepository<MessageEntity, Integer> {
+public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
 
   @Query(
       """
@@ -21,7 +21,5 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Integer>
       ORDER BY ms.id DESC
       """)
   List<MessageEntity> findByChannelId(
-      @Param("channelId") Integer channelId,
-      @Param("cursorId") Integer cursorId,
-      Pageable pageable);
+      @Param("channelId") Long channelId, @Param("cursorId") Long cursorId, Pageable pageable);
 }

@@ -37,12 +37,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class PrivateChatCreationStrategyTest {
 
-  private static final int CREATOR_ID = 1;
-  private static final int OTHER_ID = 2;
-  private static final int THIRD_ID = 3;
-  private static final int LEADER_ID = 4;
-  private static final List<Integer> VALID_MEMBER_IDS = List.of(OTHER_ID);
-  private static final List<Integer> TWO_MEMBER_IDS = List.of(OTHER_ID, THIRD_ID);
+  private static final long CREATOR_ID = 1L;
+  private static final long OTHER_ID = 2L;
+  private static final long THIRD_ID = 3L;
+  private static final long LEADER_ID = 4L;
+  private static final List<Long> VALID_MEMBER_IDS = List.of(OTHER_ID);
+  private static final List<Long> TWO_MEMBER_IDS = List.of(OTHER_ID, THIRD_ID);
   private static final Instant SOME_EXPIRY = Instant.parse("2030-01-01T00:00:00Z");
 
   @Mock UserPort userPort;
@@ -114,7 +114,7 @@ class PrivateChatCreationStrategyTest {
 
   @Test
   void createChannel_validCommand_savesChannelWithBothParticipants() {
-    Integer savedChannelId = 555;
+    Long savedChannelId = 555L;
     User other = user(OTHER_ID);
     User creator = user(CREATOR_ID);
     when(userPort.findByIds(VALID_MEMBER_IDS)).thenReturn(List.of(other));
@@ -123,7 +123,7 @@ class PrivateChatCreationStrategyTest {
     CreateChannelCommand command =
         privateChat(ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE, null, VALID_MEMBER_IDS, null);
 
-    Integer actual = strategy.createChannel(command);
+    Long actual = strategy.createChannel(command);
     assertThat(actual).isEqualTo(savedChannelId);
     verify(channelPort).save(channelCaptor.capture());
     Channel saved = channelCaptor.getValue();
@@ -137,8 +137,8 @@ class PrivateChatCreationStrategyTest {
   private static CreateChannelCommand privateChat(
       ChannelType channelType,
       BoundaryType boundaryType,
-      Integer leaderId,
-      List<Integer> memberIds,
+      Long leaderId,
+      List<Long> memberIds,
       Instant expiredTime) {
     return new CreateChannelCommand(
         "dev-private-chat",
@@ -150,7 +150,7 @@ class PrivateChatCreationStrategyTest {
         memberIds);
   }
 
-  private static User user(int id) {
+  private static User user(long id) {
     return User.builder().id(id).build();
   }
 }

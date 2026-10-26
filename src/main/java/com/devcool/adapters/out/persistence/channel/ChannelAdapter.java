@@ -26,19 +26,19 @@ public class ChannelAdapter implements ChannelPort {
   private final ChannelMapper mapper;
 
   @Override
-  public Optional<Channel> findById(Integer id) {
+  public Optional<Channel> findById(Long id) {
     return repo.findById(id).map(mapper::toDomain);
   }
 
   @Override
-  public ChannelListPage loadChannels(Integer memberId, Integer currentCursor, Integer limit) {
+  public ChannelListPage loadChannels(Long memberId, Long currentCursor, Integer limit) {
     // Use limit + 1 trick to check next data block
     Pageable pagination = PageRequest.of(0, limit + 1);
     List<ChannelListRow> channelRows =
         repo.findChannelPageByMemberId(memberId, currentCursor, pagination);
     boolean hasMore = channelRows.size() > limit;
     List<ChannelListRow> page = hasMore ? channelRows.subList(0, limit) : channelRows;
-    Integer nextCursor =
+    Long nextCursor =
         Optional.of(page)
             .filter(rows -> !rows.isEmpty())
             .map(rows -> rows.getLast().id())
@@ -56,18 +56,18 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
-  public boolean existById(Integer id) {
+  public boolean existById(Long id) {
     return repo.existsById(id);
   }
 
   @Override
-  public Optional<ChannelAccessInfo> findAccessInfo(Integer id) {
+  public Optional<ChannelAccessInfo> findAccessInfo(Long id) {
     return repo.findAccessRowById(id)
         .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers()));
   }
 
   @Override
-  public Integer save(Channel channel) {
+  public Long save(Channel channel) {
     ChannelEntity entity = mapper.toEntity(channel);
     entity.getMembers().forEach(m -> m.setChannel(entity));
     ChannelEntity saved = repo.save(entity);
@@ -86,7 +86,7 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
-  public boolean increaseTotalMembers(Integer channelId, Integer newMembers) {
+  public boolean increaseTotalMembers(Long channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
   }
 }

@@ -43,11 +43,11 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
 
     User user =
         userPort
-            .findById(Integer.valueOf(sub.userId()))
+            .findById(Long.valueOf(sub.userId()))
             .orElseThrow(
                 () -> {
                   log.warn("User: {} not found!", sub.userId());
-                  return new UserNotFoundException(Integer.valueOf(sub.userId()));
+                  return new UserNotFoundException(Long.valueOf(sub.userId()));
                 });
 
     TokenPair tokenPair = tokenIssuerPort.rotate(user, sub.jti());
@@ -60,7 +60,7 @@ public class RefreshTokenService implements RefreshTokenUseCase, LogoutUseCase {
 
   @Override
   @Transactional
-  public void logout(String refreshToken, Integer userId) {
+  public void logout(String refreshToken, Long userId) {
     Objects.requireNonNull(userId, "userId must not be null");
     TokenSubject sub = requireValid(refreshToken);
 

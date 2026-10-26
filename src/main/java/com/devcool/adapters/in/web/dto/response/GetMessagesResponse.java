@@ -16,6 +16,6 @@ import lombok.Setter;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class GetMessagesResponse {
   private List<MessageItemResponse> items;
-  private Integer cursorId;
+  private Long cursorId;
   private boolean hasMore;
 }

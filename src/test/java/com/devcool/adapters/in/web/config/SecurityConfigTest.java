@@ -57,7 +57,7 @@ import org.springframework.test.web.servlet.ResultActions;
 })
 class SecurityConfigTest {
 
-  private static final Integer USER_ID = 7;
+  private static final Long USER_ID = 7L;
   private static final Integer TOKEN_VERSION = 1;
   private static final String REJECTED_TOKEN = "rejected-access-token";
   private static final String LOGIN_BODY =

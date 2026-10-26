@@ -15,5 +15,5 @@ import lombok.*;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RegisterUserResponse {
   @Schema(description = "User id of the authenticated user", example = "123")
-  private Integer userId;
+  private Long userId;
 }

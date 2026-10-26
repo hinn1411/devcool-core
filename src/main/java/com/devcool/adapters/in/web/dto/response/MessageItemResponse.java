@@ -3,10 +3,10 @@ package com.devcool.adapters.in.web.dto.response;
 import java.time.Instant;
 
 public record MessageItemResponse(
-    Integer id,
+    Long id,
     String content,
     String contentType,
     Instant createdTime,
-    Integer userId,
+    Long userId,
     String senderName,
     String senderAvatar) {}

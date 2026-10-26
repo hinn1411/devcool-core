@@ -174,14 +174,14 @@ class AuthControllerTest {
                     HttpHeaders.SET_COOKIE,
                     allOf(containsString("rt=;"), containsString("Max-Age=0"), SCOPED_TO_AUTH)));
 
-    verify(tokenRevoker).logout(PRESENTED_REFRESH_TOKEN, 7);
+    verify(tokenRevoker).logout(PRESENTED_REFRESH_TOKEN, 7L);
   }
 
   @Test
   void logout_noCookie_returns401() throws Exception {
     doThrow(new RefreshTokenInvalidException("Refresh token invalid"))
         .when(tokenRevoker)
-        .logout(null, 7);
+        .logout(null, 7L);
 
     mockMvc
         .perform(post("/api/v1/auth/logout").principal(CALLER))

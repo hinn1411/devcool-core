@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -43,8 +44,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ChannelServiceTest {
 
-  private static final int CHANNEL_ID = 42;
-  private static final int CALLER_ID = 7;
+  private static final long CHANNEL_ID = 42L;
+  private static final long CALLER_ID = 7L;
   private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
   private static final Duration SEVEN_DAYS = Duration.ofDays(7);
 
@@ -112,7 +113,7 @@ class ChannelServiceTest {
 
       assertThat(result).isTrue();
       verify(channelPort).update(any());
-      verify(channelPort, never()).findById(anyInt());
+      verify(channelPort, never()).findById(anyLong());
     }
 
     @ParameterizedTest(name = "{0} → {1} is rejected")
@@ -261,10 +262,10 @@ class ChannelServiceTest {
   @Nested
   class AddMember {
 
-    private static final Set<Integer> NEW_USER_IDS = Set.of(8, 9);
+    private static final Set<Long> NEW_USER_IDS = Set.of(8L, 9L);
 
     private AddMembersCommand command() {
-      return new AddMembersCommand(CALLER_ID, List.of(8, 9));
+      return new AddMembersCommand(CALLER_ID, List.of(8L, 9L));
     }
 
     private void newUsersExistAndAreNotMembers() {
@@ -313,8 +314,8 @@ class ChannelServiceTest {
           .isInstanceOf(MemberNotFoundException.class);
 
       verifyNoInteractions(userPort);
-      verify(memberPort, never()).addMembers(anyInt(), any());
-      verify(channelPort, never()).increaseTotalMembers(anyInt(), anyInt());
+      verify(memberPort, never()).addMembers(anyLong(), any());
+      verify(channelPort, never()).increaseTotalMembers(anyLong(), anyInt());
     }
 
     @Test
@@ -326,7 +327,7 @@ class ChannelServiceTest {
           .isInstanceOf(ForbiddenException.class);
 
       verifyNoInteractions(userPort);
-      verify(memberPort, never()).addMembers(anyInt(), any());
+      verify(memberPort, never()).addMembers(anyLong(), any());
     }
 
     @ParameterizedTest
@@ -339,7 +340,7 @@ class ChannelServiceTest {
           .isInstanceOf(InvalidChannelConfigException.class);
 
       verifyNoInteractions(userPort);
-      verify(memberPort, never()).addMembers(anyInt(), any());
+      verify(memberPort, never()).addMembers(anyLong(), any());
     }
 
     @Test
@@ -361,8 +362,8 @@ class ChannelServiceTest {
       assertThatThrownBy(() -> newService().addMember(CHANNEL_ID, command()))
           .isInstanceOf(InvalidChannelConfigException.class);
 
-      verify(memberPort, never()).addMembers(anyInt(), any());
-      verify(channelPort, never()).increaseTotalMembers(anyInt(), anyInt());
+      verify(memberPort, never()).addMembers(anyLong(), any());
+      verify(channelPort, never()).increaseTotalMembers(anyLong(), anyInt());
     }
 
     @Test

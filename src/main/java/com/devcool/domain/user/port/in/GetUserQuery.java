@@ -4,7 +4,7 @@ import com.devcool.domain.user.model.User;
 import java.util.Optional;
 
 public interface GetUserQuery {
-  User byId(Integer id);
+  User byId(Long id);
 
   Optional<User> byEmail(String email);
 }

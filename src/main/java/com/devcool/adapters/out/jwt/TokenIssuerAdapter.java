@@ -89,7 +89,7 @@ public final class TokenIssuerAdapter implements TokenIssuerPort {
       JWTClaimsSet claims = jwt.getJWTClaimsSet();
       return Optional.of(
           new AccessClaims(
-              Integer.valueOf(claims.getSubject()),
+              Long.valueOf(claims.getSubject()),
               claims.getIntegerClaim("version"),
               claims.getStringClaim(ROLE)));
     } catch (ParseException | NumberFormatException e) {

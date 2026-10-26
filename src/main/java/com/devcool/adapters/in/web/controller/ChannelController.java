@@ -39,9 +39,9 @@ public class ChannelController {
   @PostMapping
   ResponseEntity<ApiSuccessResponse<CreateChannelResponse>> createChannel(
       @Valid @RequestBody CreateChannelRequest request, Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     CreateChannelCommand command = mapper.toCreateChannelCommand(request, userId);
-    Integer channelId = channelCreator.createChannel(command);
+    Long channelId = channelCreator.createChannel(command);
     CreateChannelResponse response = mapper.toCreateChannelResponse(channelId);
     return ResponseEntity.created(URI.create("/api/v1/channels"))
         .body(
@@ -55,9 +55,9 @@ public class ChannelController {
   @PatchMapping("/{channelId}")
   ResponseEntity<ApiSuccessResponse<UpdateChannelResponse>> updateChannel(
       @Valid @RequestBody UpdateChannelRequest request,
-      @PathVariable Integer channelId,
+      @PathVariable Long channelId,
       Authentication auth) {
-    Integer callerId = Integer.valueOf(auth.getName());
+    Long callerId = Long.valueOf(auth.getName());
     UpdateChannelCommand command = mapper.toUpdateChannelCommand(request, callerId);
     boolean isChannelUpdated = channelUpdater.updateChannel(channelId, command);
     UpdateChannelResponse response = mapper.toUpdateChannelResponse(isChannelUpdated);
@@ -69,9 +69,9 @@ public class ChannelController {
   @PostMapping("/{channelId}/members")
   ResponseEntity<ApiSuccessResponse<AddMembersResponse>> addMembers(
       @Valid @RequestBody AddMembersRequest request,
-      @PathVariable Integer channelId,
+      @PathVariable Long channelId,
       Authentication auth) {
-    Integer callerId = Integer.valueOf(auth.getName());
+    Long callerId = Long.valueOf(auth.getName());
     AddMembersCommand command = mapper.toAddMembersCommand(request, callerId);
     boolean isMemberAdded = channelUpdater.addMember(channelId, command);
     AddMembersResponse response = mapper.toAddMembersResponse(isMemberAdded);
@@ -82,10 +82,10 @@ public class ChannelController {
 
   @GetMapping
   ResponseEntity<ApiSuccessResponse<GetChannelResponse>> getChannels(
-      @RequestParam(required = false) Integer cursorId,
+      @RequestParam(required = false) Long cursorId,
       @RequestParam(defaultValue = "20") int limit,
       Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     GetChannelCommand command = mapper.toGetChannelCommand(userId, cursorId, limit);
     ChannelListPage channels = channelQuerier.getChannels(command);
     GetChannelResponse response = mapper.toGetChannelResponse(channels);

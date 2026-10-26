@@ -10,11 +10,11 @@ import lombok.Setter;
 @Setter
 @Builder
 public class MessageItem {
-  private Integer id;
+  private Long id;
   private String content;
   private ContentType contentType;
   private Instant createdTime;
-  private Integer userId;
+  private Long userId;
   private String senderAvatar;
   private String senderName;
 }

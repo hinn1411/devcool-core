@@ -13,5 +13,5 @@ public record CreateChannelRequest(
     @NotNull BoundaryType boundaryType,
     @FutureOrPresent Instant expiredTime,
     @NotNull ChannelType channelType,
-    Integer leaderId,
-    @Size(min = 1, max = 10) List<Integer> memberIds) {}
+    Long leaderId,
+    @Size(min = 1, max = 10) List<Long> memberIds) {}

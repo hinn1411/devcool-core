@@ -9,11 +9,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface MemberRepository extends JpaRepository<MemberEntity, Integer> {
+public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
-  List<MemberEntity> findByChannel_IdAndUser_IdIn(Integer channelId, Collection<Integer> userIds);
+  List<MemberEntity> findByChannel_IdAndUser_IdIn(Long channelId, Collection<Long> userIds);
 
-  boolean existsByChannel_IdAndUser_Id(Integer channelId, Integer userId);
+  boolean existsByChannel_IdAndUser_Id(Long channelId, Long userId);
 
   @Query(
       """
@@ -22,5 +22,5 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Integer> {
       WHERE m.channel.id = :channelId AND m.user.id = :userId
       """)
   Optional<MemberType> findRoleByChannelIdAndUserId(
-      @Param("channelId") Integer channelId, @Param("userId") Integer userId);
+      @Param("channelId") Long channelId, @Param("userId") Long userId);
 }

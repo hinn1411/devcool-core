@@ -16,7 +16,7 @@ public class AuthProviderEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "ID", nullable = false)
-  private Integer id;
+  private Long id;
 
   @Column(name = "PROVIDER", nullable = false)
   @Enumerated(EnumType.STRING)

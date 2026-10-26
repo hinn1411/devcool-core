@@ -26,8 +26,7 @@ public class UserController {
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<ApiSuccessResponse<UserProfileResponse>> getProfile(
-      @PathVariable Integer id) {
+  public ResponseEntity<ApiSuccessResponse<UserProfileResponse>> getProfile(@PathVariable Long id) {
 
     User user = getUser.byId(id);
     UserProfileResponse dto = mapper.toProfileResponse(user);

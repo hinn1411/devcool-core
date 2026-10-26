@@ -20,7 +20,7 @@ public class ChannelEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "ID", nullable = false)
-  private Integer id;
+  private Long id;
 
   @Column(name = "NAME", nullable = false)
   private String name;

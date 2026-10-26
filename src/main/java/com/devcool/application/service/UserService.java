@@ -78,7 +78,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
 
   @Override
   @Transactional(readOnly = true)
-  public User byId(Integer id) {
+  public User byId(Long id) {
     return userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
@@ -90,7 +90,7 @@ public class UserService implements GetUserQuery, RegisterUserUseCase, ChangePas
 
   @Override
   @Transactional
-  public Integer register(RegisterUserCommand command) {
+  public Long register(RegisterUserCommand command) {
     if (userPort.existsByUsername(command.username())) {
       throw new UsernameAlreadyUsedException(command.username());
     }

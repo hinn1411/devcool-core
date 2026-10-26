@@ -19,15 +19,15 @@ public abstract class AbstractChannelCreationStrategy {
   protected final UserPort userPort;
   protected final ChannelPort channelPort;
 
-  protected User loadUser(Integer id) {
+  protected User loadUser(Long id) {
     return userPort.findById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
-  protected List<User> loadUsers(List<Integer> memberIds) {
+  protected List<User> loadUsers(List<Long> memberIds) {
     return userPort.findByIds(memberIds);
   }
 
-  protected List<Member> getMembers(List<Integer> ids) {
+  protected List<Member> getMembers(List<Long> ids) {
     List<User> users = loadUsers(ids);
 
     Instant joinedTime = Instant.now();

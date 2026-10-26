@@ -8,12 +8,7 @@ import java.io.InputStream;
  * batch import or a queue consumer can drive it as well as HTTP multipart.
  */
 public record UploadMediaCommand(
-    String filename,
-    String contentType,
-    long size,
-    Content content,
-    Integer userId,
-    Integer channelId) {
+    String filename, String contentType, long size, Content content, Long userId, Long channelId) {
 
   /** Opens the upload's bytes. Called once, after validation, by the service. */
   @FunctionalInterface

@@ -83,7 +83,7 @@ class WsVirtualThreadsIT {
   private final Queue<Thread> handlerThreads = new ConcurrentLinkedQueue<>();
   private final List<WebSocketSession> openSessions = new ArrayList<>();
 
-  record Account(Integer id, String accessToken) {}
+  record Account(Long id, String accessToken) {}
 
   /** A test-side WS connection; every text frame the server sends lands in {@code inbox}. */
   record Client(WebSocketSession session, BlockingQueue<String> inbox) {}
@@ -112,7 +112,7 @@ class WsVirtualThreadsIT {
   void handlesSendMessageFramesOnVirtualThreads() throws Exception {
     Account sender = signUp("vs");
     Account receiver = signUp("vr");
-    Integer channelId = createLounge(sender, receiver);
+    Long channelId = createLounge(sender, receiver);
 
     Client listening = connect(receiver);
     subscribe(listening, channelId);
@@ -139,7 +139,7 @@ class WsVirtualThreadsIT {
     Account first = signUp("p1");
     Account second = signUp("p2");
     Account receiver = signUp("pr");
-    Integer channelId = createLounge(first, second, receiver);
+    Long channelId = createLounge(first, second, receiver);
 
     Client listening = connect(receiver);
     subscribe(listening, channelId);
@@ -167,7 +167,7 @@ class WsVirtualThreadsIT {
     assertThat(pinned).as("pinned virtual threads:%n%s", describe(pinned)).isEmpty();
   }
 
-  private void sendConcurrently(List<Client> senders, Integer channelId) throws Exception {
+  private void sendConcurrently(List<Client> senders, Long channelId) throws Exception {
     CountDownLatch start = new CountDownLatch(1);
     try (ExecutorService pool = Executors.newFixedThreadPool(senders.size())) {
       List<Future<?>> done = new ArrayList<>();
@@ -217,12 +217,12 @@ class WsVirtualThreadsIT {
     return new Client(session, inbox);
   }
 
-  private void subscribe(Client client, Integer channelId) throws Exception {
+  private void subscribe(Client client, Long channelId) throws Exception {
     sendFrame(client, new WsClientFrame(WsMessageType.SUBSCRIBE, channelId, null, null, uuid()));
     assertThat(awaitFrame(client)).contains("Subscribe successfully");
   }
 
-  private void send(Client client, Integer channelId, String content) throws Exception {
+  private void send(Client client, Long channelId, String content) throws Exception {
     sendFrame(
         client,
         new WsClientFrame(
@@ -252,12 +252,14 @@ class WsVirtualThreadsIT {
                     .content(json.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andReturn();
-    Integer id = JsonPath.read(registered.getResponse().getContentAsString(), "$.data.userId");
+    Long id =
+        ((Number) JsonPath.read(registered.getResponse().getContentAsString(), "$.data.userId"))
+            .longValue();
     String accessToken = tokenIssuer.issue(userPort.findById(id).orElseThrow()).accessToken();
     return new Account(id, accessToken);
   }
 
-  private Integer createLounge(Account owner, Account... members) throws Exception {
+  private Long createLounge(Account owner, Account... members) throws Exception {
     var request =
         new CreateChannelRequest(
             "lounge_" + uuid().substring(0, 10),
@@ -274,7 +276,8 @@ class WsVirtualThreadsIT {
                     .content(json.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andReturn();
-    return JsonPath.read(created.getResponse().getContentAsString(), "$.data.channelId");
+    return ((Number) JsonPath.read(created.getResponse().getContentAsString(), "$.data.channelId"))
+        .longValue();
   }
 
   private static String uuid() {

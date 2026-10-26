@@ -22,7 +22,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,11 +40,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class LoungeCreationStrategyTest {
   private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
-  private static final int CREATOR_ID = 1;
-  private static final int LEADER_ID = 2;
-  private static final List<Integer> MEMBER_IDS = List.of(3, 4);
-  private static final List<Integer> ELEVEN_MEMBER_IDS =
-      IntStream.rangeClosed(100, 110).boxed().toList();
+  private static final long CREATOR_ID = 1L;
+  private static final long LEADER_ID = 2L;
+  private static final List<Long> MEMBER_IDS = List.of(3L, 4L);
+  private static final List<Long> ELEVEN_MEMBER_IDS =
+      LongStream.rangeClosed(100, 110).boxed().toList();
 
   @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
@@ -69,14 +69,14 @@ class LoungeCreationStrategyTest {
   @ParameterizedTest(name = "{0} members")
   @ValueSource(ints = {1, 10})
   void createChannel_validMemberCount_returnsSavedChannelId(int memberCount) {
-    Integer savedChannelId = 999;
-    List<Integer> memberIds = IntStream.range(100, 100 + memberCount).boxed().toList();
+    Long savedChannelId = 999L;
+    List<Long> memberIds = LongStream.range(100, 100 + memberCount).boxed().toList();
     List<User> members = memberIds.stream().map(id -> user(id)).toList();
     when(userPort.findByIds(memberIds)).thenReturn(members);
     when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
     when(channelPort.save(any())).thenReturn(savedChannelId);
 
-    Integer actual = strategy.createChannel(lounge(ChannelType.LOUNGE, null, memberIds));
+    Long actual = strategy.createChannel(lounge(ChannelType.LOUNGE, null, memberIds));
 
     assertThat(actual).isEqualTo(savedChannelId);
   }
@@ -104,7 +104,7 @@ class LoungeCreationStrategyTest {
 
   @Test
   void createChannel_duplicateMemberIds_throwsAndTouchNoPort() {
-    List<Integer> duplicateMemberIds = List.of(3, 4, 3);
+    List<Long> duplicateMemberIds = List.of(3L, 4L, 3L);
     CreateChannelCommand command = lounge(ChannelType.LOUNGE, null, duplicateMemberIds);
 
     assertThatThrownBy(() -> strategy.createChannel(command))
@@ -115,7 +115,7 @@ class LoungeCreationStrategyTest {
 
   @Test
   void createChannel_unknownMembers_throwsUserNotFoundAndSavesNothing() {
-    List<Integer> requestedIds = List.of(3, 4, 5);
+    List<Long> requestedIds = List.of(3L, 4L, 5L);
     when(userPort.findByIds(requestedIds)).thenReturn(List.of(user(4)));
     CreateChannelCommand command = lounge(ChannelType.LOUNGE, null, requestedIds);
 
@@ -125,7 +125,7 @@ class LoungeCreationStrategyTest {
             ex ->
                 assertThat(ex.getDetails())
                     .extractingByKey("userIds", as(InstanceOfAssertFactories.LIST))
-                    .containsExactlyInAnyOrder(3, 5));
+                    .containsExactlyInAnyOrder(3L, 5L));
 
     verifyNoInteractions(channelPort);
   }
@@ -155,7 +155,7 @@ class LoungeCreationStrategyTest {
 
   @Test
   void createChannel_creatorInMemberIds_throwsUserDuplicate() {
-    List<Integer> memberIdsWithCreator = List.of(CREATOR_ID, 3, 4);
+    List<Long> memberIdsWithCreator = List.of(CREATOR_ID, 3L, 4L);
     CreateChannelCommand command = lounge(ChannelType.LOUNGE, null, memberIdsWithCreator);
 
     assertThatThrownBy(() -> strategy.createChannel(command))
@@ -184,8 +184,7 @@ class LoungeCreationStrategyTest {
             "Leader is not allowed in lounge"));
   }
 
-  static CreateChannelCommand lounge(
-      ChannelType channelType, Integer leaderId, List<Integer> memberIds) {
+  static CreateChannelCommand lounge(ChannelType channelType, Long leaderId, List<Long> memberIds) {
     return new CreateChannelCommand(
         "dev-lounge",
         BoundaryType.PUBLIC,
@@ -207,7 +206,7 @@ class LoungeCreationStrategyTest {
         MEMBER_IDS);
   }
 
-  private static User user(int id) {
+  private static User user(long id) {
     return User.builder().id(id).build();
   }
 }

@@ -4,7 +4,7 @@ import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 
 public interface UpdateChannelUseCase {
-  boolean updateChannel(Integer channelId, UpdateChannelCommand command);
+  boolean updateChannel(Long channelId, UpdateChannelCommand command);
 
-  boolean addMember(Integer channelId, AddMembersCommand command);
+  boolean addMember(Long channelId, AddMembersCommand command);
 }

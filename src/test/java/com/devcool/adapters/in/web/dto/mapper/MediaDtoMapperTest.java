@@ -15,7 +15,7 @@ class MediaDtoMapperTest {
     MockMultipartFile file =
         new MockMultipartFile("file", "photo.png", "image/png", new byte[] {1, 2, 3, 4, 5});
 
-    UploadMediaCommand command = mapper.toUploadMediaCommand(file, 11, 22);
+    UploadMediaCommand command = mapper.toUploadMediaCommand(file, 11L, 22L);
 
     assertThat(command.filename()).isEqualTo("photo.png");
     assertThat(command.content().open()).hasBinaryContent(new byte[] {1, 2, 3, 4, 5});

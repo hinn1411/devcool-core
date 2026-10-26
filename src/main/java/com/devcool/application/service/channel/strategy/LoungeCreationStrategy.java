@@ -39,10 +39,10 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
   }
 
   @Override
-  public Integer createChannel(CreateChannelCommand command) {
+  public Long createChannel(CreateChannelCommand command) {
     validate(command);
 
-    Set<Integer> distinctMemberIds = new HashSet<>(command.memberIds());
+    Set<Long> distinctMemberIds = new HashSet<>(command.memberIds());
     if (distinctMemberIds.size() < command.memberIds().size()) {
       throw new UserDuplicateException(command.memberIds());
     }
@@ -51,8 +51,8 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
     }
     List<User> users = loadUsers(command.memberIds());
     if (users.size() < distinctMemberIds.size()) {
-      Set<Integer> foundIds = users.stream().map(User::getId).collect(Collectors.toSet());
-      List<Integer> missingIds =
+      Set<Long> foundIds = users.stream().map(User::getId).collect(Collectors.toSet());
+      List<Long> missingIds =
           distinctMemberIds.stream().filter(id -> !foundIds.contains(id)).toList();
       throw new UserNotFoundException(missingIds);
     }
@@ -66,7 +66,7 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
   private void validate(CreateChannelCommand command) {
     ChannelType channelType = command.channelType();
     int totalOfMembers = command.memberIds().size();
-    Integer leaderId = command.leaderId();
+    Long leaderId = command.leaderId();
 
     if (!Objects.equals(channelType, ChannelType.LOUNGE)) {
       log.info("Channel type must be LOUNGE");

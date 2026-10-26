@@ -9,7 +9,7 @@ class ChangePasswordCommandTest {
   @Test
   void toString_showsTheUserIdAndNoPassword() {
     ChangePasswordCommand command =
-        new ChangePasswordCommand(7, "old-secret", "new-secret", "confirm-secret");
+        new ChangePasswordCommand(7L, "old-secret", "new-secret", "confirm-secret");
 
     assertThat(command.toString())
         .contains("7")

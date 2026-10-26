@@ -37,7 +37,7 @@ public class ChannelAuthorizer {
    * Channel exists → caller is a member. The channel is checked first so an unknown channel reports
    * {@link ChannelNotFoundException} rather than being masked by the membership lookup.
    */
-  public void requireMember(Integer channelId, Integer userId) {
+  public void requireMember(Long channelId, Long userId) {
     if (!channelPort.existById(channelId)) {
       log.warn("Channel id {} does not exist", channelId);
       throw new ChannelNotFoundException(channelId);
@@ -49,7 +49,7 @@ public class ChannelAuthorizer {
    * Caller is a member, without checking the channel first: a member row can't exist without its
    * channel (FK), so an unknown channel also reports {@link MemberNotFoundException}.
    */
-  public void requireMembership(Integer channelId, Integer userId) {
+  public void requireMembership(Long channelId, Long userId) {
     if (!memberPort.existMemberOfChannelByUserId(channelId, userId)) {
       log.warn("User {} is not a member of channel {}", userId, channelId);
       throw new MemberNotFoundException(userId);
@@ -60,8 +60,7 @@ public class ChannelAuthorizer {
    * Channel exists → caller is a member → the action exists for this channel type → the caller's
    * role may perform it. Returns the channel's access info for the checks that follow.
    */
-  public ChannelAccessInfo requireAllowed(
-      Integer channelId, Integer callerId, ChannelAction action) {
+  public ChannelAccessInfo requireAllowed(Long channelId, Long callerId, ChannelAction action) {
 
     ChannelAccessInfo channelInfo =
         channelPort

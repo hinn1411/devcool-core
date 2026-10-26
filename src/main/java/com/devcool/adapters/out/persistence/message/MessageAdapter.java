@@ -23,7 +23,7 @@ public class MessageAdapter implements MessagePort {
   private final EntityManager em;
 
   @Override
-  public Integer save(Message message) {
+  public Long save(Message message) {
     MessageEntity entity = mapper.toEntity(message);
     entity.setUser(em.getReference(UserEntity.class, message.getSenderId()));
     entity.setChannel(em.getReference(ChannelEntity.class, message.getChannelId()));
@@ -34,7 +34,7 @@ public class MessageAdapter implements MessagePort {
   }
 
   @Override
-  public List<MessageItem> findMessages(Integer channelId, Integer cursorId, Integer size) {
+  public List<MessageItem> findMessages(Long channelId, Long cursorId, Integer size) {
     Pageable page = PageRequest.of(0, size);
     return repo.findByChannelId(channelId, cursorId, page).stream().map(mapper::toItem).toList();
   }

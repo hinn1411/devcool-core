@@ -85,7 +85,7 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
   }
 
   @Override
-  public PresignedUrlResult getPresignedUrl(Integer userId, String objectKey) {
+  public PresignedUrlResult getPresignedUrl(Long userId, String objectKey) {
     channelAuthorizer.requireMembership(channelIdFrom(objectKey), userId);
 
     MediaStoragePort.PresignedGetResult presignedResult =
@@ -94,18 +94,18 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
     return new PresignedUrlResult(presignedResult.url(), presignedResult.expiresAt());
   }
 
-  private static Integer channelIdFrom(String objectKey) {
+  private static Long channelIdFrom(String objectKey) {
     if (Objects.nonNull(objectKey)) {
       Matcher matcher = OBJECT_KEY_PATTERN.matcher(objectKey);
       if (matcher.matches()) {
-        return Integer.valueOf(matcher.group(1));
+        return Long.valueOf(matcher.group(1));
       }
     }
     log.warn("Rejected an object key that does not match the expected format");
     throw new InvalidObjectKeyException();
   }
 
-  private String buildMediaKey(Integer channelId, String fileName) {
+  private String buildMediaKey(Long channelId, String fileName) {
     String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
 
     String extension = extractExtension(fileName);

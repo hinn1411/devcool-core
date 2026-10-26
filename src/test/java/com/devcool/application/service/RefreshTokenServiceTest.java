@@ -34,7 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RefreshTokenServiceTest {
 
   private static final String JTI = "jti-1";
-  private static final Integer USER_ID = 7;
+  private static final Long USER_ID = 7L;
   private static final String REFRESH_TOKEN = "presented-refresh-token";
   private static final TokenSubject SUBJECT = new TokenSubject("7", JTI);
   private static final String JTI_HASH = "hash-of-jti-1";

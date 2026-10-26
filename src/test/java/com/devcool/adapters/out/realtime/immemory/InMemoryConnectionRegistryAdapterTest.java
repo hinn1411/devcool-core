@@ -20,33 +20,33 @@ class InMemoryConnectionRegistryAdapterTest {
   @Nested
   class ConnectionRegistration {
     String connectionId = "c1";
-    Integer userId = 100;
+    Long userId = 100L;
 
     @Test
     void registeredConnection_getUserIdReturnsUser() {
 
       registry.registerConnection(connectionId, userId);
-      Integer storedUserId = registry.getUserId(connectionId);
+      Long storedUserId = registry.getUserId(connectionId);
       assertThat(storedUserId).isEqualTo(userId);
     }
 
     @Test
     void removeConnection_removesItFromEveryChannel() {
-      registry.subscribe("c1", 1);
-      registry.subscribe("c2", 1);
-      registry.subscribe("c1", 2);
+      registry.subscribe("c1", 1L);
+      registry.subscribe("c2", 1L);
+      registry.subscribe("c1", 2L);
 
       registry.removeConnection("c1");
 
-      assertThat(registry.getConnectionsByChannel(1)).containsExactly("c2");
-      assertThat(registry.getConnectionsByChannel(2)).isEmpty();
+      assertThat(registry.getConnectionsByChannel(1L)).containsExactly("c2");
+      assertThat(registry.getConnectionsByChannel(2L)).isEmpty();
     }
 
     @Test
     void removedConnection_getUserIdReturnsNull() {
       registry.registerConnection(connectionId, userId);
       registry.removeConnection(connectionId);
-      Integer actual = registry.getUserId(connectionId);
+      Long actual = registry.getUserId(connectionId);
       assertThat(actual).isNull();
     }
   }
@@ -56,7 +56,7 @@ class InMemoryConnectionRegistryAdapterTest {
     @Test
     void multipleConnectionsForAChannel_returnsConnections() {
       List<String> connectionIds = List.of("c1", "c2", "c3");
-      Integer channelId = 100;
+      Long channelId = 100L;
       for (String connectionId : connectionIds) {
         registry.subscribe(connectionId, channelId);
       }
@@ -69,12 +69,12 @@ class InMemoryConnectionRegistryAdapterTest {
     @Test
     void oneConnectionForMultipleChannel_returnsOnlyConnection() {
       String connectionId = "c";
-      List<Integer> channelIds = List.of(100, 101, 102);
-      for (Integer channelId : channelIds) {
+      List<Long> channelIds = List.of(100L, 101L, 102L);
+      for (Long channelId : channelIds) {
         registry.subscribe(connectionId, channelId);
       }
 
-      for (Integer channelId : channelIds) {
+      for (Long channelId : channelIds) {
         Set<String> actual = registry.getConnectionsByChannel(channelId);
         assertThat(actual).containsExactly(connectionId);
       }
@@ -83,7 +83,7 @@ class InMemoryConnectionRegistryAdapterTest {
     @Test
     void duplicateSubscription_returnsOnlyConnection() {
       String connectionId = "c";
-      Integer channelId = 100;
+      Long channelId = 100L;
       registry.subscribe(connectionId, channelId);
       registry.subscribe(connectionId, channelId);
 
@@ -94,7 +94,7 @@ class InMemoryConnectionRegistryAdapterTest {
 
     @Test
     void emptyChannel_returnsEmptySet() {
-      Integer emptyChannelId = 1;
+      Long emptyChannelId = 1L;
       Set<String> actual = registry.getConnectionsByChannel(emptyChannelId);
 
       assertThat(actual).isNotNull().isEmpty();
@@ -106,8 +106,8 @@ class InMemoryConnectionRegistryAdapterTest {
     @Test
     void currentConnection_anotherConnectionStillPersist() {
       String connectionId = "c";
-      Integer currentChannelId = 100;
-      Integer anotherChannelId = 101;
+      Long currentChannelId = 100L;
+      Long anotherChannelId = 101L;
       registry.subscribe(connectionId, currentChannelId);
       registry.subscribe(connectionId, anotherChannelId);
       registry.unsubscribe(connectionId, currentChannelId);
@@ -121,7 +121,7 @@ class InMemoryConnectionRegistryAdapterTest {
     @Test
     void unexistedConnection_noThrows() {
       String connectionId = "c";
-      Integer channelId = 100;
+      Long channelId = 100L;
 
       assertThatCode(() -> registry.unsubscribe(connectionId, channelId))
           .doesNotThrowAnyException();

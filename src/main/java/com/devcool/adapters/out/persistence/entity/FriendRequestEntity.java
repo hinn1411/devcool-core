@@ -18,7 +18,7 @@ public class FriendRequestEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "ID", nullable = false)
-  private Integer id;
+  private Long id;
 
   @Column(name = "REQUEST_ID", nullable = false)
   private String requestId;

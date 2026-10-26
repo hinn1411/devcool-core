@@ -1,3 +1,3 @@
 package com.devcool.domain.channel.port.in.command;
 
-public record GetChannelCommand(Integer memberId, Integer cursorId, Integer limit) {}
+public record GetChannelCommand(Long memberId, Long cursorId, Integer limit) {}

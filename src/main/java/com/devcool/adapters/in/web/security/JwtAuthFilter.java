@@ -46,7 +46,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       return;
     }
 
-    Integer subject = claims.userId();
+    Long subject = claims.userId();
     User user = userPort.findById(subject).orElse(null);
     if (Objects.isNull(user) || !user.isTokenVersionValid(claims.tokenVersion())) {
       logger.warn("User is invalid");

@@ -25,7 +25,7 @@ class AuthDtoMapperTest {
 
   @Test
   void toRegisterResponse_carriesUserId() {
-    RegisterUserResponse response = mapper.toRegisterResponse(42);
+    RegisterUserResponse response = mapper.toRegisterResponse(42L);
 
     assertThat(response.getUserId()).isEqualTo(42);
   }
@@ -65,7 +65,7 @@ class AuthDtoMapperTest {
     ChangePasswordRequest request =
         new ChangePasswordRequest("old-secret", "new-secret", "confirm-secret");
 
-    ChangePasswordCommand command = mapper.toChangePasswordCommand(request, 7);
+    ChangePasswordCommand command = mapper.toChangePasswordCommand(request, 7L);
 
     assertThat(command.userId()).isEqualTo(7);
     assertThat(command.currentPassword()).isEqualTo("old-secret");
@@ -78,7 +78,7 @@ class AuthDtoMapperTest {
     Instant lastLogin = Instant.parse("2025-10-12T15:30:00Z");
     User user =
         User.builder()
-            .id(101)
+            .id(101L)
             .username("hien_giang")
             .email("hien@example.com")
             .name("Hien Giang")
@@ -113,7 +113,7 @@ class AuthDtoMapperTest {
   @ParameterizedTest
   @EnumSource(Role.class)
   void toProfileResponse_everyRole_mapsToItsName(Role role) {
-    User user = User.builder().id(1).role(role).status(UserStatus.ACTIVE).build();
+    User user = User.builder().id(1L).role(role).status(UserStatus.ACTIVE).build();
 
     assertThat(mapper.toProfileResponse(user).getRole()).isEqualTo(role.name());
   }
@@ -121,7 +121,7 @@ class AuthDtoMapperTest {
   @ParameterizedTest
   @EnumSource(UserStatus.class)
   void toProfileResponse_everyStatus_mapsToItsName(UserStatus status) {
-    User user = User.builder().id(1).role(Role.USER).status(status).build();
+    User user = User.builder().id(1L).role(Role.USER).status(status).build();
 
     assertThat(mapper.toProfileResponse(user).getStatus()).isEqualTo(status.name());
   }
