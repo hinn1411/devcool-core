@@ -16,7 +16,7 @@ class UserDtoMapperTest {
   void toProfileResponse_mapsThePublicFields() {
     User user =
         User.builder()
-            .id(101)
+            .id(101L)
             .username("hien_giang")
             .password("stored-hash")
             .email("hien@example.com")

@@ -20,7 +20,7 @@ public class UserEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "ID", nullable = false)
-  private Integer id;
+  private Long id;
 
   @Column(name = "USER_NAME", length = 20)
   private String username;

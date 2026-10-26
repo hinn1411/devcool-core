@@ -10,6 +10,6 @@ public record CreateChannelCommand(
     BoundaryType boundaryType,
     Instant expiredTime,
     ChannelType channelType,
-    Integer creatorId,
-    Integer leaderId,
-    List<Integer> memberIds) {}
+    Long creatorId,
+    Long leaderId,
+    List<Long> memberIds) {}

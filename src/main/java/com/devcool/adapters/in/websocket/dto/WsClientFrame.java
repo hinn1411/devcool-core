@@ -4,7 +4,7 @@ import com.devcool.domain.chat.model.enums.ContentType;
 
 public record WsClientFrame(
     WsMessageType action,
-    Integer channelId,
+    Long channelId,
     ContentType contentType,
     String content,
     String clientMsgId // Idempotent key

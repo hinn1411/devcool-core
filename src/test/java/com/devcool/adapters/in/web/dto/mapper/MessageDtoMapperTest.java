@@ -22,11 +22,11 @@ class MessageDtoMapperTest {
 
   private static MessageItem item(ContentType contentType) {
     return MessageItem.builder()
-        .id(5)
+        .id(5L)
         .content("hello")
         .contentType(contentType)
         .createdTime(CREATED)
-        .userId(9)
+        .userId(9L)
         .senderName("Alice")
         .senderAvatar("https://cdn.devcool.com/avatars/alice.png")
         .build();
@@ -34,7 +34,7 @@ class MessageDtoMapperTest {
 
   @Test
   void toGetCommand_keepsEachArgumentInItsOwnField() {
-    GetMessageCommand command = mapper.toGetCommand(11, 22, 33, 44);
+    GetMessageCommand command = mapper.toGetCommand(11L, 22L, 33L, 44);
 
     assertThat(command.userId()).isEqualTo(11);
     assertThat(command.channelId()).isEqualTo(22);
@@ -44,25 +44,25 @@ class MessageDtoMapperTest {
 
   @Test
   void toGetCommand_firstPage_hasNullCursor() {
-    GetMessageCommand command = mapper.toGetCommand(11, 22, null, 44);
+    GetMessageCommand command = mapper.toGetCommand(11L, 22L, null, 44);
 
     assertThat(command.cursorId()).isNull();
   }
 
   @Test
   void toGetResponse_mapsEveryItemFieldCursorAndHasMore() {
-    MessageList messageList = new MessageList(List.of(item(ContentType.TEXT)), 5, true);
+    MessageList messageList = new MessageList(List.of(item(ContentType.TEXT)), 5L, true);
 
     GetMessagesResponse response = mapper.toGetResponse(messageList);
 
     assertThat(response.getItems())
         .containsExactly(
             new MessageItemResponse(
-                5,
+                5L,
                 "hello",
                 "TEXT",
                 CREATED,
-                9,
+                9L,
                 "Alice",
                 "https://cdn.devcool.com/avatars/alice.png"));
     assertThat(response.getCursorId()).isEqualTo(5);
@@ -73,7 +73,7 @@ class MessageDtoMapperTest {
   @EnumSource(ContentType.class)
   void toGetResponse_everyContentType_mapsToItsName(ContentType contentType) {
     GetMessagesResponse response =
-        mapper.toGetResponse(new MessageList(List.of(item(contentType)), 5, false));
+        mapper.toGetResponse(new MessageList(List.of(item(contentType)), 5L, false));
 
     assertThat(response.getItems())
         .singleElement()

@@ -6,5 +6,5 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 public interface ChannelCreationStrategy {
   ChannelType getSupportedType();
 
-  Integer createChannel(CreateChannelCommand command);
+  Long createChannel(CreateChannelCommand command);
 }

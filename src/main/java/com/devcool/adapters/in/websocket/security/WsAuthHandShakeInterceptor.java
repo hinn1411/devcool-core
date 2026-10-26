@@ -24,12 +24,12 @@ public class WsAuthHandShakeInterceptor implements HandshakeInterceptor {
       ServerHttpResponse response,
       WebSocketHandler wsHandler,
       Map<String, Object> attributes) {
-    Integer userId =
+    Long userId =
         Optional.of(SecurityContextHolder.getContext().getAuthentication())
             .filter(Authentication::isAuthenticated)
             .map(Authentication::getPrincipal)
-            .filter(Integer.class::isInstance)
-            .map(Integer.class::cast)
+            .filter(Long.class::isInstance)
+            .map(Long.class::cast)
             .orElse(null);
 
     if (Objects.isNull(userId)) {

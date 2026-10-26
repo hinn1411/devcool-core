@@ -22,7 +22,7 @@ public class UserAdapter implements UserPort {
   private final UserMapper mapper;
 
   @Override
-  public Optional<User> findById(Integer id) {
+  public Optional<User> findById(Long id) {
     return repo.findById(id).map(mapper::toDomain);
   }
 
@@ -32,7 +32,7 @@ public class UserAdapter implements UserPort {
   }
 
   @Override
-  public List<User> findByIds(Collection<Integer> ids) {
+  public List<User> findByIds(Collection<Long> ids) {
     if (Objects.isNull(ids) || ids.isEmpty()) {
       return List.of();
     }
@@ -55,28 +55,28 @@ public class UserAdapter implements UserPort {
   }
 
   @Override
-  public Integer save(User user) {
+  public Long save(User user) {
     UserEntity saved = repo.save(mapper.toEntity(user));
     return saved.getId();
   }
 
   @Override
-  public boolean updatePassword(Integer id, String newHash) {
+  public boolean updatePassword(Long id, String newHash) {
     return repo.updatePassword(id, newHash) > 0;
   }
 
   @Override
-  public boolean updateLoginTime(Integer id, Instant loginTime) {
+  public boolean updateLoginTime(Long id, Instant loginTime) {
     return repo.updateLastLoginTime(id, loginTime) > 0;
   }
 
   @Override
-  public boolean remove(Integer id) {
+  public boolean remove(Long id) {
     return false;
   }
 
   @Override
-  public Set<Integer> findExistingUserIds(Set<Integer> userIds) {
+  public Set<Long> findExistingUserIds(Set<Long> userIds) {
     return repo.findExistingIds(userIds);
   }
 }

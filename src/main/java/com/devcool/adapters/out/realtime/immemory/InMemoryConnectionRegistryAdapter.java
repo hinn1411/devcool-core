@@ -8,11 +8,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort {
-  private final Map<String, Integer> connectionToUser = new ConcurrentHashMap<>();
-  private final Map<Integer, Set<String>> channelToConnections = new ConcurrentHashMap<>();
+  private final Map<String, Long> connectionToUser = new ConcurrentHashMap<>();
+  private final Map<Long, Set<String>> channelToConnections = new ConcurrentHashMap<>();
 
   @Override
-  public void registerConnection(String connectionId, Integer userId) {
+  public void registerConnection(String connectionId, Long userId) {
     connectionToUser.put(connectionId, userId);
   }
 
@@ -28,19 +28,19 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
   }
 
   @Override
-  public Integer getUserId(String connectionId) {
+  public Long getUserId(String connectionId) {
     return connectionToUser.get(connectionId);
   }
 
   @Override
-  public void subscribe(String connectionId, Integer channelId) {
+  public void subscribe(String connectionId, Long channelId) {
     channelToConnections
         .computeIfAbsent(channelId, k -> ConcurrentHashMap.newKeySet())
         .add(connectionId);
   }
 
   @Override
-  public void unsubscribe(String connectionId, Integer channelId) {
+  public void unsubscribe(String connectionId, Long channelId) {
     Set<String> connections = channelToConnections.get(channelId);
     if (connections != null) {
       connections.remove(connectionId);
@@ -48,7 +48,7 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
   }
 
   @Override
-  public Set<String> getConnectionsByChannel(Integer channelId) {
+  public Set<String> getConnectionsByChannel(Long channelId) {
     return Set.copyOf(channelToConnections.getOrDefault(channelId, Set.of()));
   }
 }

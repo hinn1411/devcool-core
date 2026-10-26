@@ -27,8 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ChannelAuthorizerTest {
 
-  private static final int CHANNEL_ID = 42;
-  private static final int USER_ID = 7;
+  private static final long CHANNEL_ID = 42L;
+  private static final long USER_ID = 7L;
 
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;

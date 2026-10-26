@@ -35,8 +35,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-  private static final int USER_ID = 7;
-  private static final int SAVED_ID = 42;
+  private static final long USER_ID = 7L;
+  private static final long SAVED_ID = 42L;
   private static final String USERNAME = "alice";
   private static final String EMAIL = "alice@devcool.com";
   private static final String NAME = "Alice";
@@ -104,7 +104,7 @@ class UserServiceTest {
       when(passwordHasherPort.hash(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
       when(userPort.save(any(User.class))).thenReturn(SAVED_ID);
 
-      Integer id = userService.register(registerCommand());
+      Long id = userService.register(registerCommand());
 
       assertThat(id).isEqualTo(SAVED_ID);
       // id, emailVerified, avatar and lastLoginTime must stay null.

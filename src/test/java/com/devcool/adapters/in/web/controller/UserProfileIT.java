@@ -32,7 +32,7 @@ class UserProfileIT extends AbstractIntegrationTest {
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
 
-  record Account(Integer id, String username) {}
+  record Account(Long id, String username) {}
 
   @Test
   void anotherUsersProfile_exposesOnlyPublicFields() throws Exception {
@@ -92,7 +92,7 @@ class UserProfileIT extends AbstractIntegrationTest {
             .andReturn()
             .getResponse()
             .getContentAsString();
-    Integer id = JsonPath.read(body, "$.data.userId");
+    Long id = ((Number) JsonPath.read(body, "$.data.userId")).longValue();
     return new Account(id, username);
   }
 

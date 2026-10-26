@@ -34,9 +34,14 @@ class ChannelDtoMapperTest {
   void toCreateChannelCommand_carriesEveryFieldAndKeepsCreatorSeparateFromLeader() {
     CreateChannelRequest request =
         new CreateChannelRequest(
-            "forum-name-1", BoundaryType.PRIVATE, EXPIRED, ChannelType.FORUM, 22, List.of(3, 4, 5));
+            "forum-name-1",
+            BoundaryType.PRIVATE,
+            EXPIRED,
+            ChannelType.FORUM,
+            22L,
+            List.of(3L, 4L, 5L));
 
-    CreateChannelCommand command = mapper.toCreateChannelCommand(request, 11);
+    CreateChannelCommand command = mapper.toCreateChannelCommand(request, 11L);
 
     assertThat(command.name()).isEqualTo("forum-name-1");
     assertThat(command.boundaryType()).isEqualTo(BoundaryType.PRIVATE);
@@ -44,7 +49,7 @@ class ChannelDtoMapperTest {
     assertThat(command.channelType()).isEqualTo(ChannelType.FORUM);
     assertThat(command.creatorId()).isEqualTo(11);
     assertThat(command.leaderId()).isEqualTo(22);
-    assertThat(command.memberIds()).containsExactly(3, 4, 5);
+    assertThat(command.memberIds()).containsExactly(3L, 4L, 5L);
   }
 
   @Test
@@ -53,7 +58,7 @@ class ChannelDtoMapperTest {
         new CreateChannelRequest(
             "lounge-name-1", BoundaryType.PUBLIC, null, ChannelType.LOUNGE, null, null);
 
-    CreateChannelCommand command = mapper.toCreateChannelCommand(request, 11);
+    CreateChannelCommand command = mapper.toCreateChannelCommand(request, 11L);
 
     assertThat(command.expiredTime()).isNull();
     assertThat(command.leaderId()).isNull();
@@ -63,7 +68,7 @@ class ChannelDtoMapperTest {
 
   @Test
   void toCreateChannelResponse_carriesChannelId() {
-    CreateChannelResponse response = mapper.toCreateChannelResponse(42);
+    CreateChannelResponse response = mapper.toCreateChannelResponse(42L);
 
     assertThat(response.getChannelId()).isEqualTo(42);
   }
@@ -73,7 +78,7 @@ class ChannelDtoMapperTest {
     UpdateChannelRequest request =
         new UpdateChannelRequest("renamed-room", BoundaryType.PUBLIC, EXPIRED, ChannelType.LOUNGE);
 
-    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request, 9);
+    UpdateChannelCommand command = mapper.toUpdateChannelCommand(request, 9L);
 
     assertThat(command.callerId()).isEqualTo(9);
     assertThat(command.name()).isEqualTo("renamed-room");
@@ -92,10 +97,11 @@ class ChannelDtoMapperTest {
 
   @Test
   void toAddMembersCommand_carriesCallerAndUserIds() {
-    AddMembersCommand command = mapper.toAddMembersCommand(new AddMembersRequest(List.of(7, 8)), 9);
+    AddMembersCommand command =
+        mapper.toAddMembersCommand(new AddMembersRequest(List.of(7L, 8L)), 9L);
 
     assertThat(command.callerId()).isEqualTo(9);
-    assertThat(command.userIds()).containsExactly(7, 8);
+    assertThat(command.userIds()).containsExactly(7L, 8L);
   }
 
   @ParameterizedTest
@@ -108,7 +114,7 @@ class ChannelDtoMapperTest {
 
   @Test
   void toGetChannelCommand_keepsEachArgumentInItsOwnField() {
-    GetChannelCommand command = mapper.toGetChannelCommand(11, 22, 33);
+    GetChannelCommand command = mapper.toGetChannelCommand(11L, 22L, 33);
 
     assertThat(command.memberId()).isEqualTo(11);
     assertThat(command.cursorId()).isEqualTo(22);
@@ -117,7 +123,7 @@ class ChannelDtoMapperTest {
 
   @Test
   void toGetChannelCommand_firstPage_hasNullCursor() {
-    GetChannelCommand command = mapper.toGetChannelCommand(11, null, 33);
+    GetChannelCommand command = mapper.toGetChannelCommand(11L, null, 33);
 
     assertThat(command.cursorId()).isNull();
   }
@@ -127,18 +133,18 @@ class ChannelDtoMapperTest {
     ChannelListPage page =
         new ChannelListPage(
             List.of(
-                new ChannelListItem(1, "general-room", ChannelType.LOUNGE, BoundaryType.PUBLIC),
+                new ChannelListItem(1L, "general-room", ChannelType.LOUNGE, BoundaryType.PUBLIC),
                 new ChannelListItem(
-                    2, "secret-room", ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE)),
-            2,
+                    2L, "secret-room", ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE)),
+            2L,
             true);
 
     GetChannelResponse response = mapper.toGetChannelResponse(page);
 
     assertThat(response.getChannels())
         .containsExactly(
-            new ChannelListItemResponse(1, "general-room", "LOUNGE", "PUBLIC"),
-            new ChannelListItemResponse(2, "secret-room", "PRIVATE_CHAT", "PRIVATE"));
+            new ChannelListItemResponse(1L, "general-room", "LOUNGE", "PUBLIC"),
+            new ChannelListItemResponse(2L, "secret-room", "PRIVATE_CHAT", "PRIVATE"));
     assertThat(response.getNextCursorId()).isEqualTo(2);
     assertThat(response.isHasMore()).isTrue();
   }

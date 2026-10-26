@@ -24,7 +24,7 @@ class TokenIssuerAdapterTest {
   private static final byte[] ACCESS_KEY = key("access-key-0123456789abcdef0123456789");
   private static final byte[] REFRESH_KEY = key("refresh-key-0123456789abcdef012345678");
   private static final byte[] OTHER_KEY = key("another-key-0123456789abcdef012345678");
-  private static final User USER = User.builder().id(7).role(Role.USER).build();
+  private static final User USER = User.builder().id(7L).role(Role.USER).build();
 
   private final TokenIssuerAdapter adapter =
       new TokenIssuerAdapter(b64(ACCESS_KEY), b64(REFRESH_KEY));

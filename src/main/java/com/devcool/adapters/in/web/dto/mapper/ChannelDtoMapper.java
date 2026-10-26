@@ -22,13 +22,13 @@ import org.mapstruct.ReportingPolicy;
 public interface ChannelDtoMapper {
 
   @Mapping(target = "creatorId", source = "creatorId")
-  CreateChannelCommand toCreateChannelCommand(CreateChannelRequest request, Integer creatorId);
+  CreateChannelCommand toCreateChannelCommand(CreateChannelRequest request, Long creatorId);
 
   @Mapping(target = "channelId", source = "channelId")
-  CreateChannelResponse toCreateChannelResponse(Integer channelId);
+  CreateChannelResponse toCreateChannelResponse(Long channelId);
 
   @Mapping(target = "callerId", source = "callerId")
-  UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request, Integer callerId);
+  UpdateChannelCommand toUpdateChannelCommand(UpdateChannelRequest request, Long callerId);
 
   // Boxed because MapStruct rejects primitive source parameters. Mapped by expression, not
   // source: MapStruct would otherwise emit a second, redundant null check that SpotBugs flags
@@ -37,13 +37,13 @@ public interface ChannelDtoMapper {
   UpdateChannelResponse toUpdateChannelResponse(Boolean isChannelUpdated);
 
   @Mapping(target = "callerId", source = "callerId")
-  AddMembersCommand toAddMembersCommand(AddMembersRequest request, Integer callerId);
+  AddMembersCommand toAddMembersCommand(AddMembersRequest request, Long callerId);
 
   // Boxed + expression for the same reason as toUpdateChannelResponse.
   @Mapping(target = "memberAdded", expression = "java(isMemberAdded)")
   AddMembersResponse toAddMembersResponse(Boolean isMemberAdded);
 
-  GetChannelCommand toGetChannelCommand(Integer memberId, Integer cursorId, Integer limit);
+  GetChannelCommand toGetChannelCommand(Long memberId, Long cursorId, Integer limit);
 
   @Mapping(target = "channels", source = "items")
   @Mapping(target = "nextCursorId", source = "cursorId")

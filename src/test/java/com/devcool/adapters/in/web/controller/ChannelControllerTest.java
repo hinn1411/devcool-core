@@ -63,7 +63,7 @@ class ChannelControllerTest {
 
   @Test
   void updateChannel_passesTheAuthenticatedCallerIdToTheUseCase() throws Exception {
-    when(channelUpdater.updateChannel(eq(42), any())).thenReturn(true);
+    when(channelUpdater.updateChannel(eq(42L), any())).thenReturn(true);
 
     mockMvc
         .perform(
@@ -75,13 +75,13 @@ class ChannelControllerTest {
 
     ArgumentCaptor<UpdateChannelCommand> command =
         ArgumentCaptor.forClass(UpdateChannelCommand.class);
-    verify(channelUpdater).updateChannel(eq(42), command.capture());
+    verify(channelUpdater).updateChannel(eq(42L), command.capture());
     assertThat(command.getValue().callerId()).isEqualTo(7);
   }
 
   @Test
   void addMembers_passesTheAuthenticatedCallerIdToTheUseCase() throws Exception {
-    when(channelUpdater.addMember(eq(42), any())).thenReturn(true);
+    when(channelUpdater.addMember(eq(42L), any())).thenReturn(true);
 
     mockMvc
         .perform(
@@ -92,15 +92,15 @@ class ChannelControllerTest {
         .andExpect(status().isOk());
 
     ArgumentCaptor<AddMembersCommand> command = ArgumentCaptor.forClass(AddMembersCommand.class);
-    verify(channelUpdater).addMember(eq(42), command.capture());
+    verify(channelUpdater).addMember(eq(42L), command.capture());
     assertThat(command.getValue().callerId()).isEqualTo(7);
-    assertThat(command.getValue().userIds()).containsExactly(8, 9);
+    assertThat(command.getValue().userIds()).containsExactly(8L, 9L);
   }
 
   // A client cannot name the caller: an id in the body is not part of the request contract.
   @Test
   void addMembers_ignoresACallerIdSentInTheBody() throws Exception {
-    when(channelUpdater.addMember(eq(42), any())).thenReturn(true);
+    when(channelUpdater.addMember(eq(42L), any())).thenReturn(true);
 
     mockMvc
         .perform(
@@ -111,7 +111,7 @@ class ChannelControllerTest {
         .andExpect(status().isOk());
 
     ArgumentCaptor<AddMembersCommand> command = ArgumentCaptor.forClass(AddMembersCommand.class);
-    verify(channelUpdater).addMember(eq(42), command.capture());
+    verify(channelUpdater).addMember(eq(42L), command.capture());
     assertThat(command.getValue().callerId()).isEqualTo(7);
   }
 
@@ -133,7 +133,7 @@ class ChannelControllerTest {
 
   @Test
   void updateChannel_nameOnlyBody_isAccepted() throws Exception {
-    when(channelUpdater.updateChannel(eq(42), any())).thenReturn(true);
+    when(channelUpdater.updateChannel(eq(42L), any())).thenReturn(true);
 
     mockMvc
         .perform(
@@ -147,14 +147,14 @@ class ChannelControllerTest {
 
     ArgumentCaptor<UpdateChannelCommand> command =
         ArgumentCaptor.forClass(UpdateChannelCommand.class);
-    verify(channelUpdater).updateChannel(eq(42), command.capture());
+    verify(channelUpdater).updateChannel(eq(42L), command.capture());
     assertThat(command.getValue().channelType()).isNull();
     assertThat(command.getValue().expiredTime()).isNull();
   }
 
   @Test
   void updateChannel_invalidConfig_returns400() throws Exception {
-    when(channelUpdater.updateChannel(eq(42), any()))
+    when(channelUpdater.updateChannel(eq(42L), any()))
         .thenThrow(new InvalidChannelConfigException("Channel type can't change"));
 
     mockMvc
@@ -169,7 +169,7 @@ class ChannelControllerTest {
 
   @Test
   void updateChannel_forbiddenCaller_returns403() throws Exception {
-    when(channelUpdater.updateChannel(eq(42), any()))
+    when(channelUpdater.updateChannel(eq(42L), any()))
         .thenThrow(new ForbiddenException("Only the creator or the leader may do this"));
 
     mockMvc

@@ -69,7 +69,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     NON_MEMBER
   }
 
-  record Account(Integer id, String username, String accessToken) {}
+  record Account(Long id, String username, String accessToken) {}
 
   record LoginSession(String accessToken, String refreshCookie) {}
 
@@ -115,7 +115,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withoutToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> before = channelRow(channelId);
 
       ResultActions result = patchChannel(channelId, null, renameRequest(ChannelType.LOUNGE));
@@ -126,7 +126,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withMalformedToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> before = channelRow(channelId);
 
       ResultActions result =
@@ -138,7 +138,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withWronglySignedToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       // The creator's own claims, signed with a key the server doesn't know
       String forged = resignWithRandomKey(creator.accessToken());
       Map<String, Object> before = channelRow(channelId);
@@ -152,7 +152,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withTokenIssuedBeforeLogout() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       String staleToken = tokenThenLogout(creator);
       Map<String, Object> before = channelRow(channelId);
 
@@ -168,7 +168,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     void authenticatedCaller(
         ChannelType type, Caller caller, int expectedStatus, String expectedCode) throws Exception {
       // A fresh channel per case, so an accepted write can't leak into the next one
-      Integer channelId = seedChannel(type);
+      Long channelId = seedChannel(type);
       UpdateChannelRequest rename = renameRequest(type);
       Map<String, Object> before = channelRow(channelId);
 
@@ -185,7 +185,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     @Test
     void unknownChannel() throws Exception {
       // An id no sequence will reach in a test run
-      Integer missingId = Integer.MAX_VALUE;
+      Long missingId = Long.MAX_VALUE;
 
       ResultActions result =
           patchChannel(missingId, bearer(creator), renameRequest(ChannelType.LOUNGE));
@@ -197,8 +197,8 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     @Test
     void memberOfChannelA_onChannelB() throws Exception {
       // The outsider really is a member of A, and not of B; membership in A grants nothing on B
-      Integer channelA = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
-      Integer channelB = seedChannel(ChannelType.LOUNGE);
+      Long channelA = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
+      Long channelB = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> beforeA = channelRow(channelA);
       Map<String, Object> beforeB = channelRow(channelB);
 
@@ -213,7 +213,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     @Test
     void renameOnly_keepsTypeAndExpiry_ofALoungeExpiringSoon() throws Exception {
       // Set in SQL: create rejects an expiry this close
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       jdbc.update(
           "update channel set expired_time = now() + interval '3 days' where id = ?", channelId);
       Map<String, Object> before = channelRow(channelId);
@@ -232,7 +232,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void loungeBoundaryToggle_isSaved() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       UpdateChannelRequest toPrivate =
           new UpdateChannelRequest(null, BoundaryType.PRIVATE, null, null);
 
@@ -244,7 +244,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void privateChatToPublic_returns400AndChangesNothing() throws Exception {
-      Integer channelId = seedChannel(ChannelType.PRIVATE_CHAT);
+      Long channelId = seedChannel(ChannelType.PRIVATE_CHAT);
       Map<String, Object> before = channelRow(channelId);
       UpdateChannelRequest toPublic =
           new UpdateChannelRequest(null, BoundaryType.PUBLIC, null, null);
@@ -275,7 +275,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withoutToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> before = channelRow(channelId);
 
       ResultActions result = addMembers(channelId, null, addNewcomer());
@@ -287,7 +287,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withMalformedToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> before = channelRow(channelId);
 
       ResultActions result = addMembers(channelId, "Bearer not-a-jwt", addNewcomer());
@@ -299,7 +299,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withWronglySignedToken() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       String forged = resignWithRandomKey(creator.accessToken());
       Map<String, Object> before = channelRow(channelId);
 
@@ -312,7 +312,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void withTokenIssuedBeforeLogout() throws Exception {
-      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      Long channelId = seedChannel(ChannelType.LOUNGE);
       String staleToken = tokenThenLogout(creator);
       Map<String, Object> before = channelRow(channelId);
 
@@ -327,7 +327,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     @MethodSource("matrix")
     void authenticatedCaller(
         ChannelType type, Caller caller, int expectedStatus, String expectedCode) throws Exception {
-      Integer channelId = seedChannel(type);
+      Long channelId = seedChannel(type);
       MemberCounts before = memberCounts(channelId);
 
       ResultActions result = addMembers(channelId, bearer(account(caller)), addNewcomer());
@@ -344,7 +344,7 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
 
     @Test
     void unknownChannel() throws Exception {
-      Integer missingId = Integer.MAX_VALUE;
+      Long missingId = Long.MAX_VALUE;
       int rowsBefore = memberCount(missingId);
 
       ResultActions result = addMembers(missingId, bearer(creator), addNewcomer());
@@ -356,8 +356,8 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     @Test
     void memberOfChannelA_addsSelfToChannelB() throws Exception {
       // The self-add attack from audit 02 §4
-      Integer channelA = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
-      Integer channelB = seedChannel(ChannelType.LOUNGE);
+      Long channelA = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
+      Long channelB = seedChannel(ChannelType.LOUNGE);
       Map<String, Object> rowBeforeA = channelRow(channelA);
       MemberCounts countsBeforeA = memberCounts(channelA);
       MemberCounts countsBeforeB = memberCounts(channelB);
@@ -391,19 +391,21 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     void returnsOnlyTheCallersChannels() throws Exception {
       // The member's channels interleaved with channels they're not in, so ids of excluded
       // channels fall between included ones
-      Integer mine1 = seedChannel(ChannelType.LOUNGE);
-      Integer notMine1 = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
-      Integer mine2 = seedChannel(ChannelType.FORUM);
-      Integer notMine2 =
+      Long mine1 = seedChannel(ChannelType.LOUNGE);
+      Long notMine1 = createChannel(outsider, ChannelType.LOUNGE, List.of(newcomer.id()), null);
+      Long mine2 = seedChannel(ChannelType.FORUM);
+      Long notMine2 =
           createChannel(outsider, ChannelType.FORUM, List.of(newcomer.id()), leader.id());
-      Integer mine3 = seedChannel(ChannelType.PRIVATE_CHAT);
+      Long mine3 = seedChannel(ChannelType.PRIVATE_CHAT);
 
       ResultActions result =
           mvc.perform(get("/api/v1/channels").header(HttpHeaders.AUTHORIZATION, bearer(member)));
 
       MvcResult response = expectResponse(result, 200, ErrorCode.OK.code()).andReturn();
-      List<Integer> ids =
+      // JsonPath parses small numbers as Integer, so widen each id before comparing with Long
+      List<Number> rawIds =
           JsonPath.read(response.getResponse().getContentAsString(), "$.data.channels[*].id");
+      List<Long> ids = rawIds.stream().map(Number::longValue).toList();
       // Newest first
       assertThat(ids).containsExactly(mine3, mine2, mine1).doesNotContain(notMine1, notMine2);
     }
@@ -426,39 +428,39 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.code").value(code));
   }
 
-  private void assertChannelUnchanged(Integer channelId, Map<String, Object> before) {
+  private void assertChannelUnchanged(Long channelId, Map<String, Object> before) {
     assertThat(channelRow(channelId)).isEqualTo(before);
   }
 
-  private void assertNotMember(Integer channelId, Integer userId) {
+  private void assertNotMember(Long channelId, Long userId) {
     assertThat(memberRole(channelId, userId)).isEmpty();
   }
 
   /** The whole channel row, so "unchanged" covers every column, not just the name. */
-  private Map<String, Object> channelRow(Integer channelId) {
+  private Map<String, Object> channelRow(Long channelId) {
     return jdbc.queryForMap("select * from channel where id = ?", channelId);
   }
 
-  private int channelCount(Integer channelId) {
+  private int channelCount(Long channelId) {
     return jdbc.queryForObject(
         "select count(*) from channel where id = ?", Integer.class, channelId);
   }
 
   /** Requires the channel to exist; use {@link #memberCount} for a missing one. */
-  private MemberCounts memberCounts(Integer channelId) {
+  private MemberCounts memberCounts(Long channelId) {
     int total =
         jdbc.queryForObject(
             "select total_of_members from channel where id = ?", Integer.class, channelId);
     return new MemberCounts(total, memberCount(channelId));
   }
 
-  private int memberCount(Integer channelId) {
+  private int memberCount(Long channelId) {
     return jdbc.queryForObject(
         "select count(*) from member where channel_id = ?", Integer.class, channelId);
   }
 
   /** The user's role in the channel, or empty when they have no member row. */
-  private Optional<String> memberRole(Integer channelId, Integer userId) {
+  private Optional<String> memberRole(Long channelId, Long userId) {
     return jdbc
         .queryForList(
             "select role from member where channel_id = ? and user_id = ?",
@@ -481,7 +483,9 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
                     .content(json.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andReturn();
-    Integer id = JsonPath.read(registered.getResponse().getContentAsString(), "$.data.userId");
+    Long id =
+        ((Number) JsonPath.read(registered.getResponse().getContentAsString(), "$.data.userId"))
+            .longValue();
     String accessToken = tokenIssuer.issue(userPort.findById(id).orElseThrow()).accessToken();
     return new Account(id, username, accessToken);
   }
@@ -532,14 +536,14 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
    * The channel the matrix runs against, created by {@code creator} with {@code member} in it. A
    * FORUM also gets {@code leader}.
    */
-  private Integer seedChannel(ChannelType type) throws Exception {
-    Integer leaderId = type == ChannelType.FORUM ? leader.id() : null;
+  private Long seedChannel(ChannelType type) throws Exception {
+    Long leaderId = type == ChannelType.FORUM ? leader.id() : null;
     return createChannel(creator, type, List.of(member.id()), leaderId);
   }
 
   /** Creates through the API, so the creation strategies run too. */
-  private Integer createChannel(
-      Account owner, ChannelType type, List<Integer> memberIds, Integer leaderId) throws Exception {
+  private Long createChannel(Account owner, ChannelType type, List<Long> memberIds, Long leaderId)
+      throws Exception {
     var request =
         new CreateChannelRequest(
             uniqueName(type.name().toLowerCase()),
@@ -556,7 +560,8 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
                     .content(json.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andReturn();
-    return JsonPath.read(created.getResponse().getContentAsString(), "$.data.channelId");
+    return ((Number) JsonPath.read(created.getResponse().getContentAsString(), "$.data.channelId"))
+        .longValue();
   }
 
   /** A valid body that changes only the name, so validation can't be what rejects a request. */
@@ -565,14 +570,14 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
   }
 
   private ResultActions patchChannel(
-      Integer channelId, String authorization, UpdateChannelRequest body) throws Exception {
+      Long channelId, String authorization, UpdateChannelRequest body) throws Exception {
     return mvc.perform(
         withAuth(patch("/api/v1/channels/{id}", channelId), authorization)
             .contentType(MediaType.APPLICATION_JSON)
             .content(json.writeValueAsString(body)));
   }
 
-  private ResultActions addMembers(Integer channelId, String authorization, AddMembersRequest body)
+  private ResultActions addMembers(Long channelId, String authorization, AddMembersRequest body)
       throws Exception {
     return mvc.perform(
         withAuth(post("/api/v1/channels/{id}/members", channelId), authorization)

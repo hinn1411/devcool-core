@@ -7,12 +7,12 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface MemberPort {
-  List<Member> findMembersOfChannelByUserIds(Integer channelId, Set<Integer> userIds);
+  List<Member> findMembersOfChannelByUserIds(Long channelId, Set<Long> userIds);
 
-  boolean existMemberOfChannelByUserId(Integer channelId, Integer userId);
+  boolean existMemberOfChannelByUserId(Long channelId, Long userId);
 
   /** The user's role in the channel, or empty when the user is not a member. */
-  Optional<MemberType> findRoleOfMember(Integer channelId, Integer userId);
+  Optional<MemberType> findRoleOfMember(Long channelId, Long userId);
 
-  boolean addMembers(Integer channelId, Set<Integer> memberIds);
+  boolean addMembers(Long channelId, Set<Long> memberIds);
 }

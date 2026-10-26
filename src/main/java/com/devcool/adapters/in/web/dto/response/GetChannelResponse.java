@@ -18,6 +18,6 @@ public class GetChannelResponse {
   @Schema(description = "returned channels", example = "[]")
   private List<ChannelListItemResponse> channels;
 
-  private Integer nextCursorId;
+  private Long nextCursorId;
   private boolean hasMore;
 }

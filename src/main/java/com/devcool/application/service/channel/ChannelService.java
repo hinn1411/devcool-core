@@ -58,7 +58,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   }
 
   @Override
-  public Integer createChannel(CreateChannelCommand command) {
+  public Long createChannel(CreateChannelCommand command) {
     ChannelType type = command.channelType();
 
     ChannelCreationStrategy strategy = creationStrategies.get(type);
@@ -72,7 +72,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
 
   @Override
   @Transactional
-  public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
+  public boolean updateChannel(Long channelId, UpdateChannelCommand command) {
     ChannelAccessInfo current =
         channelAuthorizer.requireAllowed(
             channelId, command.callerId(), ChannelAction.UPDATE_CHANNEL);
@@ -99,18 +99,18 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
 
   @Override
   @Transactional
-  public boolean addMember(Integer channelId, AddMembersCommand command) {
+  public boolean addMember(Long channelId, AddMembersCommand command) {
     ChannelAccessInfo channel =
         channelAuthorizer.requireAllowed(channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
 
-    Set<Integer> distinctMemberIds = new HashSet<>(command.userIds());
+    Set<Long> distinctMemberIds = new HashSet<>(command.userIds());
     if (distinctMemberIds.size() < command.userIds().size()) {
       throw new InvalidChannelConfigException("Member ids are duplicate");
     }
 
-    Set<Integer> existingUserIds = userPort.findExistingUserIds(distinctMemberIds);
+    Set<Long> existingUserIds = userPort.findExistingUserIds(distinctMemberIds);
     if (existingUserIds.size() < distinctMemberIds.size()) {
-      List<Integer> missingIds =
+      List<Long> missingIds =
           distinctMemberIds.stream().filter(id -> !existingUserIds.contains(id)).toList();
       throw new UserNotFoundException(missingIds);
     }
@@ -118,7 +118,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
     List<Member> alreadyMembers =
         memberPort.findMembersOfChannelByUserIds(channelId, existingUserIds);
     if (!alreadyMembers.isEmpty()) {
-      List<Integer> existedMemberIds = alreadyMembers.stream().map(Member::getId).toList();
+      List<Long> existedMemberIds = alreadyMembers.stream().map(Member::getId).toList();
       throw new MemberAlreadyInChannelException(existedMemberIds);
     }
 

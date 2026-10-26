@@ -56,5 +56,5 @@ public class WsSendMessageService implements SendMessageUseCase {
   }
 
   public record OutboundWsEvent(
-      String type, Integer channelId, Integer senderId, String contentType, String content) {}
+      String type, Long channelId, Long senderId, String contentType, String content) {}
 }

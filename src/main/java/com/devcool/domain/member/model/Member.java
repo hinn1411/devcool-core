@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class Member {
-  private Integer id;
+  private Long id;
   private User user;
   private MemberType role;
   private Instant joinedTime;

@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public class UserNotFoundException extends DomainException {
-  public UserNotFoundException(Integer id) {
+  public UserNotFoundException(Long id) {
     super(ErrorCode.USER_NOT_FOUND, "User not found", Map.of("userId", id));
   }
 
@@ -16,11 +16,11 @@ public class UserNotFoundException extends DomainException {
     super(ErrorCode.USER_NOT_FOUND, "User not found", Map.of("userName", username));
   }
 
-  public UserNotFoundException(List<Integer> ids) {
+  public UserNotFoundException(List<Long> ids) {
     super(ErrorCode.USER_NOT_FOUND, "Users not found", Map.of("userIds", ids));
   }
 
-  public UserNotFoundException(Set<Integer> ids) {
+  public UserNotFoundException(Set<Long> ids) {
     super(
         ErrorCode.USER_NOT_FOUND,
         "Users not found",

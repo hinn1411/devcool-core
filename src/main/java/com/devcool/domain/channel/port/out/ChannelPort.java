@@ -6,18 +6,18 @@ import com.devcool.domain.channel.model.ChannelListPage;
 import java.util.Optional;
 
 public interface ChannelPort {
-  Optional<Channel> findById(Integer id);
+  Optional<Channel> findById(Long id);
 
-  ChannelListPage loadChannels(Integer userId, Integer cursorId, Integer limit);
+  ChannelListPage loadChannels(Long userId, Long cursorId, Integer limit);
 
-  boolean existById(Integer id);
+  boolean existById(Long id);
 
   /** Type and member count of the channel, or empty when the channel does not exist. */
-  Optional<ChannelAccessInfo> findAccessInfo(Integer id);
+  Optional<ChannelAccessInfo> findAccessInfo(Long id);
 
-  Integer save(Channel channel);
+  Long save(Channel channel);
 
   boolean update(Channel channel);
 
-  boolean increaseTotalMembers(Integer channelId, Integer newMembers);
+  boolean increaseTotalMembers(Long channelId, Integer newMembers);
 }

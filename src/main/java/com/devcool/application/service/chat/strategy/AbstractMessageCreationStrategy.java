@@ -18,7 +18,7 @@ public abstract class AbstractMessageCreationStrategy implements MessageCreation
    * before delegating the message construction to {@link #buildMessage(CreateMessageCommand)}.
    */
   @Override
-  public final Integer createMessage(CreateMessageCommand command) {
+  public final Long createMessage(CreateMessageCommand command) {
     channelAuthorizer.requireMember(command.channelId(), command.userId());
 
     return messagePort.save(buildMessage(command));

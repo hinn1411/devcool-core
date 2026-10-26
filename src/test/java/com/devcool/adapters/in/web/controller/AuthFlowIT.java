@@ -50,7 +50,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
 
-  record Account(Integer id, String username) {}
+  record Account(Long id, String username) {}
 
   /** What a client holds after login or refresh: the bearer token and the {@code rt} value. */
   record Session(String accessToken, String refreshCookie) {}
@@ -317,7 +317,7 @@ class AuthFlowIT extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(request)))
             .andExpect(status().isCreated());
-    Integer id = JsonPath.read(body(registered), "$.data.userId");
+    Long id = ((Number) JsonPath.read(body(registered), "$.data.userId")).longValue();
     return new Account(id, username);
   }
 

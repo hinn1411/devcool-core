@@ -18,7 +18,7 @@ import org.mapstruct.ReportingPolicy;
 public interface AuthDtoMapper {
 
   @Mapping(target = "userId", source = "userId")
-  RegisterUserResponse toRegisterResponse(Integer userId);
+  RegisterUserResponse toRegisterResponse(Long userId);
 
   LoginResponse toLoginResponse(TokenPair tokenPair);
 
@@ -30,5 +30,5 @@ public interface AuthDtoMapper {
   RegisterUserCommand toRegisterCommand(RegisterUserRequest request);
 
   @Mapping(target = "userId", source = "userId")
-  ChangePasswordCommand toChangePasswordCommand(ChangePasswordRequest request, Integer userId);
+  ChangePasswordCommand toChangePasswordCommand(ChangePasswordRequest request, Long userId);
 }

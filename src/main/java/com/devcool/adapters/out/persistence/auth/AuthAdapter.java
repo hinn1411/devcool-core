@@ -29,7 +29,7 @@ public class AuthAdapter implements RefreshTokenPort, AccessTokenPort {
   }
 
   @Override
-  public void deleteOldRefreshTokens(Integer userId) {
+  public void deleteOldRefreshTokens(Long userId) {
     refreshTokenRepo.deleteAllByUserId(String.valueOf(userId));
   }
 
@@ -39,7 +39,7 @@ public class AuthAdapter implements RefreshTokenPort, AccessTokenPort {
   }
 
   @Override
-  public boolean updateVersion(Integer userId) {
+  public boolean updateVersion(Long userId) {
     return userRepo.updateTokenVersion(userId) > 0;
   }
 }

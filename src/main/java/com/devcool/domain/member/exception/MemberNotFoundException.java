@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class MemberNotFoundException extends DomainException {
 
-  public MemberNotFoundException(Integer memberId) {
+  public MemberNotFoundException(Long memberId) {
     super(
         ErrorCode.MEMBER_NOT_FOUND,
         "Member does not exist in channel",

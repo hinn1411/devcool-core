@@ -12,7 +12,7 @@ class RefreshTokenTest {
   void issue_expiresSevenDaysAfterIssueAndIsNotConsumed() {
     Instant now = Instant.parse("2026-10-07T10:00:00Z");
 
-    RefreshToken token = RefreshToken.issue(7, "jti-hash", now);
+    RefreshToken token = RefreshToken.issue(7L, "jti-hash", now);
 
     assertThat(token.getJti()).isEqualTo("jti-hash");
     assertThat(token.getUserId()).isEqualTo(7);

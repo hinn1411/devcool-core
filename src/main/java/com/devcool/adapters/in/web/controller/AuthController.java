@@ -89,7 +89,7 @@ public class AuthController {
       @Valid @RequestBody RegisterUserRequest request) {
     RegisterUserCommand newUser = mapper.toRegisterCommand(request);
 
-    Integer id = registerUser.register(newUser);
+    Long id = registerUser.register(newUser);
     RegisterUserResponse response = mapper.toRegisterResponse(id);
     return ResponseEntity.created(URI.create("/api/v1/auth/" + id))
         .body(
@@ -150,7 +150,7 @@ public class AuthController {
   @PostMapping("/password")
   public ResponseEntity<Void> changePassword(
       @Valid @RequestBody ChangePasswordRequest request, Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     changePassword.change(mapper.toChangePasswordCommand(request, userId));
 
     return ResponseEntity.noContent()
@@ -177,7 +177,7 @@ public class AuthController {
       })
   @GetMapping("/profile")
   public ResponseEntity<ApiSuccessResponse<GetProfileResponse>> getProfile(Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     User user = userQuery.byId(userId);
     GetProfileResponse response = mapper.toProfileResponse(user);
     return ResponseEntity.ok(
@@ -203,7 +203,7 @@ public class AuthController {
       @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
       Authentication auth) {
 
-    tokenRevoker.logout(refreshToken, Integer.valueOf(auth.getName()));
+    tokenRevoker.logout(refreshToken, Long.valueOf(auth.getName()));
 
     return ResponseEntity.noContent()
         .header(HttpHeaders.SET_COOKIE, expiredRefreshCookie().toString())

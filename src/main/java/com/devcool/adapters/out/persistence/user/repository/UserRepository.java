@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<UserEntity, Integer> {
+public interface UserRepository extends JpaRepository<UserEntity, Long> {
   Optional<UserEntity> findByEmail(String email);
 
   boolean existsByEmail(String email);
@@ -29,18 +29,18 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
       WHERE id = :userId
       """,
       nativeQuery = true)
-  int updateTokenVersion(@Param("userId") Integer userId);
+  int updateTokenVersion(@Param("userId") Long userId);
 
   @Modifying
   @Query("UPDATE UserEntity u SET u.lastLoginTime = :loginTime WHERE u.id = :id")
-  int updateLastLoginTime(@Param("id") Integer id, @Param("loginTime") Instant loginTime);
+  int updateLastLoginTime(@Param("id") Long id, @Param("loginTime") Instant loginTime);
 
   @Modifying
   @Query("UPDATE UserEntity u SET u.password = :passwordHash WHERE u.id = :id")
-  int updatePassword(@Param("id") Integer id, @Param("passwordHash") String passwordHash);
+  int updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
 
-  List<UserEntity> findByIdIn(Collection<Integer> ids);
+  List<UserEntity> findByIdIn(Collection<Long> ids);
 
   @Query(value = "SELECT id FROM app_user WHERE id in :userIds", nativeQuery = true)
-  Set<Integer> findExistingIds(@Param("userIds") Collection<Integer> userIds);
+  Set<Long> findExistingIds(@Param("userIds") Collection<Long> userIds);
 }

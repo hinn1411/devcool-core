@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class MemberAlreadyInChannelException extends DomainException {
-  public MemberAlreadyInChannelException(List<Integer> memberIds) {
+  public MemberAlreadyInChannelException(List<Long> memberIds) {
     super(ErrorCode.DUPLICATE_MEMBER, "Members already in channel", Map.of("memberIds", memberIds));
   }
 }

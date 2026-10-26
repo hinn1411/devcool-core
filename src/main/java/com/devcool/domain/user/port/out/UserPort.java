@@ -8,11 +8,11 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserPort {
-  Optional<User> findById(Integer id);
+  Optional<User> findById(Long id);
 
   Optional<User> findByUsername(String username);
 
-  List<User> findByIds(Collection<Integer> ids);
+  List<User> findByIds(Collection<Long> ids);
 
   boolean existsByEmail(String email);
 
@@ -20,14 +20,14 @@ public interface UserPort {
 
   boolean existsByUsername(String username);
 
-  Integer save(User user); // create or update, return id
+  Long save(User user); // create or update, return id
 
-  boolean updatePassword(Integer id, String newHash);
+  boolean updatePassword(Long id, String newHash);
 
   // writes only LAST_LOGIN_TIME; returns false if no such user
-  boolean updateLoginTime(Integer id, Instant loginTime);
+  boolean updateLoginTime(Long id, Instant loginTime);
 
-  boolean remove(Integer id);
+  boolean remove(Long id);
 
-  Set<Integer> findExistingUserIds(Set<Integer> userIds);
+  Set<Long> findExistingUserIds(Set<Long> userIds);
 }

@@ -37,8 +37,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
 
-  private static final int USER_ID = 1;
-  private static final int CHANNEL_ID = 42;
+  private static final long USER_ID = 1L;
+  private static final long CHANNEL_ID = 42L;
   private static final String UUID_PART = "123e4567-e89b-12d3-a456-426614174000";
   private static final byte[] DATA = "data".getBytes();
   private static final String VALID_KEY = "channel/42/2026/03/08/" + UUID_PART + ".jpg";
@@ -153,12 +153,12 @@ class MediaServiceTest {
   void upload_membershipIsCheckedAgainstTheTargetChannel() {
     // The caller may belong to channel 42, but is uploading into channel 9.
     UploadMediaCommand command = makeCommand("photo.jpg", "image/jpeg", 9);
-    when(memberPort.existMemberOfChannelByUserId(9, USER_ID)).thenReturn(false);
+    when(memberPort.existMemberOfChannelByUserId(9L, USER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> mediaService.upload(command))
         .isInstanceOf(MemberNotFoundException.class);
 
-    verify(memberPort).existMemberOfChannelByUserId(9, USER_ID);
+    verify(memberPort).existMemberOfChannelByUserId(9L, USER_ID);
     verifyNoMoreInteractions(memberPort);
     verifyNoInteractions(storagePort);
   }
@@ -219,12 +219,12 @@ class MediaServiceTest {
   void getPresignedUrl_membershipIsCheckedAgainstTheChannelInTheKey() {
     // The caller belongs to channel 42, but the key is under channel 9.
     String otherChannelKey = "channel/9/2026/03/08/" + UUID_PART + ".jpg";
-    when(memberPort.existMemberOfChannelByUserId(9, USER_ID)).thenReturn(false);
+    when(memberPort.existMemberOfChannelByUserId(9L, USER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> mediaService.getPresignedUrl(USER_ID, otherChannelKey))
         .isInstanceOf(MemberNotFoundException.class);
 
-    verify(memberPort).existMemberOfChannelByUserId(9, USER_ID);
+    verify(memberPort).existMemberOfChannelByUserId(9L, USER_ID);
     verifyNoMoreInteractions(memberPort);
     verifyNoInteractions(storagePort);
   }
@@ -285,7 +285,7 @@ class MediaServiceTest {
   }
 
   private static UploadMediaCommand makeCommand(
-      String filename, String contentType, int channelId) {
+      String filename, String contentType, long channelId) {
     return new UploadMediaCommand(
         filename,
         contentType,
@@ -295,7 +295,7 @@ class MediaServiceTest {
         channelId);
   }
 
-  private void stubMember(int channelId) {
+  private void stubMember(long channelId) {
     when(memberPort.existMemberOfChannelByUserId(channelId, USER_ID)).thenReturn(true);
   }
 

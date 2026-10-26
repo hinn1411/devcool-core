@@ -14,7 +14,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class Channel {
-  private Integer id;
+  private Long id;
   private String name;
   private BoundaryType boundaryType;
   private Integer totalOfMembers;

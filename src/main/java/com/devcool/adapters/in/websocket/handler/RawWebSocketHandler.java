@@ -34,7 +34,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
     sessionStore.put(session);
-    Integer userId = getUserId(session);
+    Long userId = getUserId(session);
     String connectionId = session.getId();
     connectionRegistryPort.registerConnection(connectionId, userId);
   }
@@ -42,7 +42,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   @Override
   public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
     String connectionId = session.getId();
-    Integer userId = getUserId(session);
+    Long userId = getUserId(session);
 
     WsClientFrame clientFrame;
     try {
@@ -112,7 +112,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     connectionRegistryPort.removeConnection(connectionId);
   }
 
-  private Integer getUserId(WebSocketSession session) {
-    return (Integer) session.getAttributes().get(WsAuthHandShakeInterceptor.ATTR_USER_ID);
+  private Long getUserId(WebSocketSession session) {
+    return (Long) session.getAttributes().get(WsAuthHandShakeInterceptor.ATTR_USER_ID);
   }
 }

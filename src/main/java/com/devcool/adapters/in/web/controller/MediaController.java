@@ -25,10 +25,8 @@ public class MediaController {
 
   @PostMapping("/upload")
   public ResponseEntity<ApiSuccessResponse<Map<String, String>>> uploadMedia(
-      @RequestParam("file") MultipartFile file,
-      @RequestParam Integer channelId,
-      Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+      @RequestParam("file") MultipartFile file, @RequestParam Long channelId, Authentication auth) {
+    Long userId = Long.valueOf(auth.getName());
     UploadMediaCommand command = mapper.toUploadMediaCommand(file, userId, channelId);
     String key = uploadUseCase.upload(command);
 
@@ -40,7 +38,7 @@ public class MediaController {
   @GetMapping("/presigned-url")
   public ResponseEntity<ApiSuccessResponse<Map<String, String>>> getPresignedUrl(
       @RequestParam String key, Authentication auth) {
-    Integer userId = Integer.valueOf(auth.getName());
+    Long userId = Long.valueOf(auth.getName());
     GetMediaUrlUseCase.PresignedUrlResult result = getMediaUrlUseCase.getPresignedUrl(userId, key);
     return ResponseEntity.ok(
         ApiResponseFactory.success(

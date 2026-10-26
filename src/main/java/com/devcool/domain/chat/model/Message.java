@@ -11,13 +11,13 @@ import lombok.Setter;
 @Setter
 @Builder
 public class Message {
-  private Integer id;
-  private Integer senderId;
+  private Long id;
+  private Long senderId;
   private String content;
   private ContentType contentType;
   private Instant createdTime;
   private Instant deletedTime;
   private Instant editedTime;
-  private Integer channelId;
+  private Long channelId;
   private Media media;
 }

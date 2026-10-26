@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer> {
+public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
   @Modifying
   @Query(
       """
@@ -22,7 +22,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       SET totalOfMembers = totalOfMembers + :delta
       WHERE id = :channelId
       """)
-  int increaseTotalMembers(@Param("channelId") Integer channelId, @Param("delta") int delta);
+  int increaseTotalMembers(@Param("channelId") Long channelId, @Param("delta") int delta);
 
   /** A null argument keeps the stored value. */
   @Modifying
@@ -36,7 +36,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       WHERE c.id = :id
       """)
   int updateChannelInfo(
-      @Param("id") Integer id,
+      @Param("id") Long id,
       @Param("name") String name,
       @Param("channelType") ChannelType channelType,
       @Param("boundaryType") BoundaryType boundaryType,
@@ -56,7 +56,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       ORDER BY c.id DESC
       """)
   List<ChannelListRow> findChannelPageByMemberId(
-      @Param("memberId") Integer memberId, @Param("cursorId") Integer cursorId, Pageable pageable);
+      @Param("memberId") Long memberId, @Param("cursorId") Long cursorId, Pageable pageable);
 
   @Query(
       """
@@ -67,5 +67,5 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       FROM ChannelEntity c
       WHERE c.id = :id
       """)
-  Optional<ChannelAccessRow> findAccessRowById(@Param("id") Integer id);
+  Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
 }

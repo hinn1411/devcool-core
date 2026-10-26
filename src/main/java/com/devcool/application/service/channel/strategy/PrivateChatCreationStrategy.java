@@ -31,7 +31,7 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
   }
 
   @Override
-  public Integer createChannel(CreateChannelCommand command) {
+  public Long createChannel(CreateChannelCommand command) {
     validate(command);
 
     List<User> users = loadUsers(command.memberIds());
@@ -45,7 +45,7 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
     ChannelType channelType = command.channelType();
     BoundaryType boundaryType = command.boundaryType();
     int totalOfMembers = command.memberIds().size();
-    Integer leaderId = command.leaderId();
+    Long leaderId = command.leaderId();
     Instant expiredTime = command.expiredTime();
 
     if (!Objects.equals(channelType, ChannelType.PRIVATE_CHAT)) {

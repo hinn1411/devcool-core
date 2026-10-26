@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class UserDuplicateException extends DomainException {
-  public UserDuplicateException(List<Integer> ids) {
+  public UserDuplicateException(List<Long> ids) {
     super(ErrorCode.USER_DUPLICATE, "User duplicate", Map.of("userIds", ids));
   }
 }

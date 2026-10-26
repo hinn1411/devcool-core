@@ -6,4 +6,4 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 @Schema(name = "AddMembersRequest", description = "Request for adding members to a channel")
-public record AddMembersRequest(@NotNull @Size(min = 1, max = 50) List<Integer> userIds) {}
+public record AddMembersRequest(@NotNull @Size(min = 1, max = 50) List<Long> userIds) {}

@@ -62,18 +62,18 @@ class AuthenticateUserServiceTest {
 
   @Test
   void login_validCredentials_storesTheRefreshTokenHashedForSevenDays() {
-    User user = User.builder().id(7).password("hashed").build();
+    User user = User.builder().id(7L).password("hashed").build();
     TokenPair pair = new TokenPair("access", "refresh", "refresh-jti");
     when(userPort.findByUsername("carol")).thenReturn(Optional.of(user));
     when(passwordHasherPort.matches("secret", "hashed")).thenReturn(true);
-    when(userPort.updateLoginTime(eq(7), any())).thenReturn(true);
+    when(userPort.updateLoginTime(eq(7L), any())).thenReturn(true);
     when(tokenIssuerPort.issue(user)).thenReturn(pair);
     when(tokenHashPort.hash("refresh-jti")).thenReturn("hash-of-refresh-jti");
 
     assertThat(service.login(new LoginCommand("carol", "secret"))).isEqualTo(pair);
 
     ArgumentCaptor<RefreshToken> stored = ArgumentCaptor.forClass(RefreshToken.class);
-    verify(refreshTokenPort).deleteOldRefreshTokens(7);
+    verify(refreshTokenPort).deleteOldRefreshTokens(7L);
     verify(refreshTokenPort).store(stored.capture());
     assertThat(stored.getValue().getJti()).isEqualTo("hash-of-refresh-jti");
     assertThat(stored.getValue().getUserId()).isEqualTo(7);

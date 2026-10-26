@@ -24,7 +24,7 @@ import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,9 +41,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ForumCreationStrategyTest {
 
-  private static final int CREATOR_ID = 1;
-  private static final int LEADER_ID = 2;
-  private static final List<Integer> VALID_MEMBER_IDS = List.of(3, 4);
+  private static final long CREATOR_ID = 1L;
+  private static final long LEADER_ID = 2L;
+  private static final List<Long> VALID_MEMBER_IDS = List.of(3L, 4L);
   private static final Instant SOME_EXPIRY = Instant.parse("2030-01-01T00:00:00Z");
 
   @Mock UserPort userPort;
@@ -107,14 +107,14 @@ class ForumCreationStrategyTest {
   @ParameterizedTest(name = "{0} members")
   @ValueSource(ints = {1, 10})
   void createChannel_withValidMemberCount_returnsSavedChannelId(int memberCount) {
-    Integer savedChannelId = 101;
-    List<Integer> memberIds = memberIds(memberCount);
+    Long savedChannelId = 101L;
+    List<Long> memberIds = memberIds(memberCount);
     when(userPort.findByIds(memberIds)).thenReturn(memberIds.stream().map(id -> user(id)).toList());
     when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
     when(userPort.findById(LEADER_ID)).thenReturn(Optional.of(user(LEADER_ID)));
     when(channelPort.save(any())).thenReturn(savedChannelId);
     CreateChannelCommand command = forum(ChannelType.FORUM, LEADER_ID, memberIds, null);
-    Integer actual = strategy.createChannel(command);
+    Long actual = strategy.createChannel(command);
 
     assertThat(actual).isEqualTo(savedChannelId);
   }
@@ -132,14 +132,14 @@ class ForumCreationStrategyTest {
   static Stream<Arguments> creatorAndLeaderCases() {
     return Stream.of(
         Arguments.of(
-            "leader is a different user", LEADER_ID, List.of(CREATOR_ID, LEADER_ID, 3, 4), 4),
-        Arguments.of("leader is the creator", CREATOR_ID, List.of(CREATOR_ID, 3, 4), 3));
+            "leader is a different user", LEADER_ID, List.of(CREATOR_ID, LEADER_ID, 3L, 4L), 4),
+        Arguments.of("leader is the creator", CREATOR_ID, List.of(CREATOR_ID, 3L, 4L), 3));
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("creatorAndLeaderCases")
   void createChannel_savesOneMemberRowPerPerson(
-      String description, int leaderId, List<Integer> expectedUserIds, int expectedTotal) {
+      String description, long leaderId, List<Long> expectedUserIds, int expectedTotal) {
     // Any id resolves to a user with that id, so the ids in the saved members show who was loaded.
     when(userPort.findByIds(VALID_MEMBER_IDS))
         .thenReturn(VALID_MEMBER_IDS.stream().map(id -> user(id)).toList());
@@ -155,8 +155,8 @@ class ForumCreationStrategyTest {
     assertThat(saved.getMembers())
         .extracting(member -> member.getUser().getId(), Member::getRole)
         .contains(
-            tuple(3, MemberType.MEMBER),
-            tuple(4, MemberType.MEMBER),
+            tuple(3L, MemberType.MEMBER),
+            tuple(4L, MemberType.MEMBER),
             tuple(CREATOR_ID, MemberType.CREATOR));
     assertThat(saved.getTotalOfMembers()).isEqualTo(expectedTotal);
   }
@@ -164,14 +164,14 @@ class ForumCreationStrategyTest {
   static Stream<Arguments> commandsListingTheSamePersonTwice() {
     return Stream.of(
         Arguments.of("duplicate member ids", List.of(3, 4, 3), List.of(3, 4, 3)),
-        Arguments.of("creator is also a member", List.of(CREATOR_ID, 3, 4), List.of(CREATOR_ID)),
+        Arguments.of("creator is also a member", List.of(CREATOR_ID, 3L, 4L), List.of(CREATOR_ID)),
         Arguments.of("leader is also a member", List.of(LEADER_ID, 3, 4), List.of(LEADER_ID)));
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("commandsListingTheSamePersonTwice")
   void createChannel_personListedTwice_throwsUserDuplicateAndTouchesNoPort(
-      String description, List<Integer> memberIds, List<Integer> expectedReportedIds) {
+      String description, List<Long> memberIds, List<Long> expectedReportedIds) {
     CreateChannelCommand command = forum(ChannelType.FORUM, LEADER_ID, memberIds, null);
 
     assertThatExceptionOfType(UserDuplicateException.class)
@@ -180,17 +180,17 @@ class ForumCreationStrategyTest {
     verifyNoInteractions(userPort, channelPort);
   }
 
-  private static User user(int id) {
+  private static User user(long id) {
     return User.builder().id(id).build();
   }
 
   private static CreateChannelCommand forum(
-      ChannelType type, Integer leaderId, List<Integer> memberIds, Instant expiredTime) {
+      ChannelType type, Long leaderId, List<Long> memberIds, Instant expiredTime) {
     return new CreateChannelCommand(
         "dev-forum", BoundaryType.PUBLIC, expiredTime, type, CREATOR_ID, leaderId, memberIds);
   }
 
-  private static List<Integer> memberIds(int count) {
-    return IntStream.rangeClosed(10, 10 + count - 1).boxed().toList();
+  private static List<Long> memberIds(int count) {
+    return LongStream.rangeClosed(10, 10 + count - 1).boxed().toList();
   }
 }
