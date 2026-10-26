@@ -23,7 +23,7 @@ Messages have an `INTEGER` id from a global DB sequence. The WS push carries nei
 | **`channel.last_seq` bumped in the send transaction** | **per channel, commit order** | **✓** | row lock per channel | Serializes writers of one channel only |
 
 ## Decision
-Keep `message.id BIGINT` (identity) as the primary key and global reference (citations, replies). Add `message.seq BIGINT NOT NULL` with `UNIQUE (channel_id, seq)`, assigned by:
+Keep `message.id BIGINT` as the primary key and global reference (citations, replies). It stays sequence-generated (`message_seq`, Hibernate's pooled optimizer allocating 50 ids per `nextval`); P3-T01 only widens the column. `IDENTITY` was rejected: Hibernate must run each insert immediately to read the id back, which rules out JDBC insert batching, and it needs a per-table identity swap and sequence reset. So message inserts go through JPA: a native `INSERT` calling `nextval('message_seq')` directly could take an id inside a block Hibernate has already reserved. Add `message.seq BIGINT NOT NULL` with `UNIQUE (channel_id, seq)`, assigned by:
 
 ```sql
 UPDATE channel SET last_seq = last_seq + 1, last_message_at = now()
