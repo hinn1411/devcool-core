@@ -11,7 +11,9 @@ import static org.mockito.Mockito.when;
 
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
+import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.ChannelAccessInfo;
+import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
@@ -21,6 +23,10 @@ import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,6 +45,8 @@ class ChannelServiceTest {
 
   private static final int CHANNEL_ID = 42;
   private static final int CALLER_ID = 7;
+  private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
+  private static final Duration SEVEN_DAYS = Duration.ofDays(7);
 
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
@@ -49,7 +58,8 @@ class ChannelServiceTest {
         channelPort,
         memberPort,
         userPort,
-        new ChannelAuthorizer(channelPort, memberPort));
+        new ChannelAuthorizer(channelPort, memberPort),
+        Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private void channelIs(ChannelType type, int totalOfMembers) {
@@ -73,7 +83,15 @@ class ChannelServiceTest {
   class UpdateChannel {
 
     private UpdateChannelCommand command() {
-      return new UpdateChannelCommand(CALLER_ID, "new-name", null, null, ChannelType.FORUM);
+      return command(ChannelType.FORUM, null);
+    }
+
+    private UpdateChannelCommand command(ChannelType type, Instant expiredTime) {
+      return new UpdateChannelCommand(CALLER_ID, "new-name", null, expiredTime, type);
+    }
+
+    private UpdateChannelCommand boundaryCommand(BoundaryType boundary) {
+      return new UpdateChannelCommand(CALLER_ID, null, boundary, null, null);
     }
 
     @ParameterizedTest(name = "{0}: {1} may update")
@@ -90,11 +108,109 @@ class ChannelServiceTest {
       callerIs(role);
       when(channelPort.update(any())).thenReturn(true);
 
-      boolean result = newService().updateChannel(CHANNEL_ID, command());
+      boolean result = newService().updateChannel(CHANNEL_ID, command(type, null));
 
       assertThat(result).isTrue();
       verify(channelPort).update(any());
       verify(channelPort, never()).findById(anyInt());
+    }
+
+    @ParameterizedTest(name = "{0} → {1} is rejected")
+    @CsvSource({
+      "PRIVATE_CHAT, LOUNGE",
+      "PRIVATE_CHAT, FORUM",
+      "LOUNGE, FORUM",
+      "LOUNGE, PRIVATE_CHAT",
+      "FORUM, LOUNGE",
+      "FORUM, PRIVATE_CHAT",
+    })
+    void typeChange_isRejectedAndWritesNothing(ChannelType current, ChannelType requested) {
+      channelIs(current, 2);
+      callerIs(MemberType.CREATOR);
+
+      assertThatThrownBy(() -> newService().updateChannel(CHANNEL_ID, command(requested, null)))
+          .isInstanceOf(InvalidChannelConfigException.class);
+
+      verify(channelPort, never()).update(any());
+    }
+
+    @ParameterizedTest(name = "{0} can't get an expiry")
+    @EnumSource(
+        value = ChannelType.class,
+        names = {"PRIVATE_CHAT", "FORUM"})
+    void expiryOnANonLounge_isRejectedAndWritesNothing(ChannelType type) {
+      channelIs(type, 2);
+      callerIs(MemberType.CREATOR);
+      Instant farAhead = NOW.plus(Duration.ofDays(30));
+
+      assertThatThrownBy(() -> newService().updateChannel(CHANNEL_ID, command(type, farAhead)))
+          .isInstanceOf(InvalidChannelConfigException.class);
+
+      verify(channelPort, never()).update(any());
+    }
+
+    @ParameterizedTest(name = "{0}: a rename without type or expiry is saved")
+    @EnumSource(ChannelType.class)
+    void renameOnly_isSaved(ChannelType type) {
+      // A lounge expiring in 3 days can still be renamed
+      channelIs(type, 2);
+      callerIs(MemberType.CREATOR);
+      when(channelPort.update(any())).thenReturn(true);
+
+      boolean result = newService().updateChannel(CHANNEL_ID, command(null, null));
+
+      assertThat(result).isTrue();
+      verify(channelPort).update(any());
+    }
+
+    @Test
+    void privateChatToPublic_isRejectedAndWritesNothing() {
+      channelIs(ChannelType.PRIVATE_CHAT, 2);
+      callerIs(MemberType.MEMBER);
+
+      assertThatThrownBy(
+              () -> newService().updateChannel(CHANNEL_ID, boundaryCommand(BoundaryType.PUBLIC)))
+          .isInstanceOf(InvalidChannelConfigException.class);
+
+      verify(channelPort, never()).update(any());
+    }
+
+    @Test
+    void boundary_isPassedToThePort() {
+      channelIs(ChannelType.LOUNGE, 3);
+      callerIs(MemberType.MEMBER);
+      when(channelPort.update(any())).thenReturn(true);
+
+      newService().updateChannel(CHANNEL_ID, boundaryCommand(BoundaryType.PRIVATE));
+
+      ArgumentCaptor<Channel> saved = ArgumentCaptor.forClass(Channel.class);
+      verify(channelPort).update(saved.capture());
+      assertThat(saved.getValue().getBoundaryType()).isEqualTo(BoundaryType.PRIVATE);
+    }
+
+    @Test
+    void loungeExpiryExactlySevenDaysAhead_isRejectedAndWritesNothing() {
+      channelIs(ChannelType.LOUNGE, 3);
+      callerIs(MemberType.MEMBER);
+      UpdateChannelCommand command = command(ChannelType.LOUNGE, NOW.plus(SEVEN_DAYS));
+
+      assertThatThrownBy(() -> newService().updateChannel(CHANNEL_ID, command))
+          .isInstanceOf(InvalidChannelConfigException.class);
+
+      verify(channelPort, never()).update(any());
+    }
+
+    @Test
+    void loungeExpiryJustOverSevenDaysAhead_isSaved() {
+      channelIs(ChannelType.LOUNGE, 3);
+      callerIs(MemberType.MEMBER);
+      when(channelPort.update(any())).thenReturn(true);
+      Instant expiry = NOW.plus(SEVEN_DAYS).plusSeconds(1);
+
+      boolean result = newService().updateChannel(CHANNEL_ID, command(ChannelType.LOUNGE, expiry));
+
+      assertThat(result).isTrue();
+      verify(channelPort).update(any());
     }
 
     @Test
@@ -136,7 +252,8 @@ class ChannelServiceTest {
       callerIs(MemberType.MEMBER);
       when(channelPort.update(any())).thenReturn(false);
 
-      assertThatThrownBy(() -> newService().updateChannel(CHANNEL_ID, command()))
+      assertThatThrownBy(
+              () -> newService().updateChannel(CHANNEL_ID, command(ChannelType.LOUNGE, null)))
           .isInstanceOf(ChannelNotFoundException.class);
     }
   }

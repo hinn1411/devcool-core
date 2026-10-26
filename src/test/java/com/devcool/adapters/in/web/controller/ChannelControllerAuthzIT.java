@@ -209,6 +209,51 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
       assertChannelUnchanged(channelB, beforeB);
       assertChannelUnchanged(channelA, beforeA);
     }
+
+    @Test
+    void renameOnly_keepsTypeAndExpiry_ofALoungeExpiringSoon() throws Exception {
+      // Set in SQL: create rejects an expiry this close
+      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      jdbc.update(
+          "update channel set expired_time = now() + interval '3 days' where id = ?", channelId);
+      Map<String, Object> before = channelRow(channelId);
+      UpdateChannelRequest rename =
+          new UpdateChannelRequest(uniqueName("renamed"), null, null, null);
+
+      ResultActions result = patchChannel(channelId, bearer(creator), rename);
+
+      expectResponse(result, 200, "SVR_200");
+      assertThat(channelRow(channelId))
+          .containsEntry("name", rename.name())
+          .containsEntry("channel_type", before.get("channel_type"))
+          .containsEntry("boundary", before.get("boundary"))
+          .containsEntry("expired_time", before.get("expired_time"));
+    }
+
+    @Test
+    void loungeBoundaryToggle_isSaved() throws Exception {
+      Integer channelId = seedChannel(ChannelType.LOUNGE);
+      UpdateChannelRequest toPrivate =
+          new UpdateChannelRequest(null, BoundaryType.PRIVATE, null, null);
+
+      ResultActions result = patchChannel(channelId, bearer(creator), toPrivate);
+
+      expectResponse(result, 200, "SVR_200");
+      assertThat(channelRow(channelId)).containsEntry("boundary", "PRIVATE");
+    }
+
+    @Test
+    void privateChatToPublic_returns400AndChangesNothing() throws Exception {
+      Integer channelId = seedChannel(ChannelType.PRIVATE_CHAT);
+      Map<String, Object> before = channelRow(channelId);
+      UpdateChannelRequest toPublic =
+          new UpdateChannelRequest(null, BoundaryType.PUBLIC, null, null);
+
+      ResultActions result = patchChannel(channelId, bearer(creator), toPublic);
+
+      expectResponse(result, 400, ErrorCode.INVALID_CHANNEL_CONFIG.code());
+      assertChannelUnchanged(channelId, before);
+    }
   }
 
   @Nested

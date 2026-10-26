@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.devcool.adapters.in.web.dto.mapper.ChannelDtoMapperImpl;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
+import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
@@ -128,6 +129,42 @@ class ChannelControllerTest {
         .andExpect(status().isUnprocessableEntity());
 
     verifyNoInteractions(channelUpdater);
+  }
+
+  @Test
+  void updateChannel_nameOnlyBody_isAccepted() throws Exception {
+    when(channelUpdater.updateChannel(eq(42), any())).thenReturn(true);
+
+    mockMvc
+        .perform(
+            patch("/api/v1/channels/42")
+                .principal(CALLER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name": "renamed-room"}
+                    """))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<UpdateChannelCommand> command =
+        ArgumentCaptor.forClass(UpdateChannelCommand.class);
+    verify(channelUpdater).updateChannel(eq(42), command.capture());
+    assertThat(command.getValue().channelType()).isNull();
+    assertThat(command.getValue().expiredTime()).isNull();
+  }
+
+  @Test
+  void updateChannel_invalidConfig_returns400() throws Exception {
+    when(channelUpdater.updateChannel(eq(42), any()))
+        .thenThrow(new InvalidChannelConfigException("Channel type can't change"));
+
+    mockMvc
+        .perform(
+            patch("/api/v1/channels/42")
+                .principal(CALLER)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(UPDATE_BODY))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CHANNEL_400"));
   }
 
   @Test

@@ -8,6 +8,7 @@ import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelAction;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
+import com.devcool.domain.channel.policy.ChannelUpdatePolicy;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
@@ -21,6 +22,7 @@ import com.devcool.domain.member.model.Member;
 import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Clock;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,20 +32,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCase, GetChannelQuery {
   private static final Logger log = LoggerFactory.getLogger(ChannelService.class);
-  // Creator plus ten members (docs/plans/architecture/03-chat-system-design.md).
   private static final int LOUNGE_MAX_PEOPLE = 11;
   private final Map<ChannelType, ChannelCreationStrategy> creationStrategies;
   private final ChannelPort channelPort;
   private final MemberPort memberPort;
   private final UserPort userPort;
   private final ChannelAuthorizer channelAuthorizer;
+  private final Clock clock;
 
   public ChannelService(
       List<ChannelCreationStrategy> creationStrategies,
       ChannelPort channelPort,
       MemberPort memberPort,
       UserPort userPort,
-      ChannelAuthorizer channelAuthorizer) {
+      ChannelAuthorizer channelAuthorizer,
+      Clock clock) {
     this.channelPort = channelPort;
     this.creationStrategies = new EnumMap<>(ChannelType.class);
     creationStrategies.forEach(
@@ -51,6 +54,7 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
     this.memberPort = memberPort;
     this.userPort = userPort;
     this.channelAuthorizer = channelAuthorizer;
+    this.clock = clock;
   }
 
   @Override
@@ -69,13 +73,22 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   @Transactional
   public boolean updateChannel(Integer channelId, UpdateChannelCommand command) {
-    channelAuthorizer.requireAllowed(channelId, command.callerId(), ChannelAction.UPDATE_CHANNEL);
+    ChannelAccessInfo current =
+        channelAuthorizer.requireAllowed(
+            channelId, command.callerId(), ChannelAction.UPDATE_CHANNEL);
+    ChannelUpdatePolicy.validateUpdate(
+        current.channelType(),
+        command.channelType(),
+        command.boundaryType(),
+        command.expiredTime(),
+        clock.instant());
 
     Channel channel =
         Channel.builder()
             .id(channelId)
             .name(command.name())
             .channelType(command.channelType())
+            .boundaryType(command.boundaryType())
             .expiredTime(command.expiredTime())
             .build();
     if (!channelPort.update(channel)) {

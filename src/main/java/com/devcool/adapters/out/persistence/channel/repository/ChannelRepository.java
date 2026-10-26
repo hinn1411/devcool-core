@@ -3,6 +3,7 @@ package com.devcool.adapters.out.persistence.channel.repository;
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
+import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import java.time.Instant;
 import java.util.List;
@@ -23,17 +24,22 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Integer>
       """)
   int increaseTotalMembers(@Param("channelId") Integer channelId, @Param("delta") int delta);
 
+  /** A null argument keeps the stored value. */
   @Modifying
   @Query(
       """
-      UPDATE ChannelEntity
-      SET name = :name, channelType = :channelType, expiredTime = :expiredTime
-      WHERE id = :id
+      UPDATE ChannelEntity c
+      SET c.name = COALESCE(:name, c.name),
+          c.channelType = COALESCE(:channelType, c.channelType),
+          c.boundaryType = COALESCE(:boundaryType, c.boundaryType),
+          c.expiredTime = COALESCE(:expiredTime, c.expiredTime)
+      WHERE c.id = :id
       """)
   int updateChannelInfo(
       @Param("id") Integer id,
       @Param("name") String name,
       @Param("channelType") ChannelType channelType,
+      @Param("boundaryType") BoundaryType boundaryType,
       @Param("expiredTime") Instant expiredTime);
 
   @Query(

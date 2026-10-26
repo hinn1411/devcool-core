@@ -4,6 +4,7 @@ import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
+import com.devcool.domain.channel.policy.ChannelUpdatePolicy;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
@@ -11,6 +12,7 @@ import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -24,8 +26,11 @@ import org.springframework.stereotype.Component;
 public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
     implements ChannelCreationStrategy {
 
-  public LoungeCreationStrategy(UserPort userPort, ChannelPort channelPort) {
+  private final Clock clock;
+
+  public LoungeCreationStrategy(UserPort userPort, ChannelPort channelPort, Clock clock) {
     super(userPort, channelPort);
+    this.clock = clock;
   }
 
   @Override
@@ -77,5 +82,7 @@ public class LoungeCreationStrategy extends AbstractChannelCreationStrategy
       log.info("Leader is not allowed in lounge");
       throw new InvalidChannelConfigException("Leader is not allowed in lounge");
     }
+
+    ChannelUpdatePolicy.validateLoungeExpiry(command.expiredTime(), clock.instant());
   }
 }

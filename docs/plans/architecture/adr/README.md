@@ -21,6 +21,7 @@ Create a new one with `/write-adr <title>`.
 | [0011](0011-ws-ticket-auth-single-origin.md) | One-time WS tickets and a single CloudFront origin | Accepted |
 | [0012](0012-message-ordering-per-channel-seq.md) | Per-channel sequence numbers for ordering and gap detection | Accepted |
 | [0013](0013-dev-cost-envelope-under-20-usd.md) | Dev cost envelope under $20/month: dev only, toggled NAT + endpoints, destroyable Valkey | Accepted |
+| [0014](0014-partial-patch-null-keeps-value.md) | Partial PATCH: a missing or null field keeps its stored value (`COALESCE`) | Accepted |
 
 ## Template
 
