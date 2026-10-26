@@ -16,7 +16,10 @@ import com.devcool.domain.user.exception.UserDuplicateException;
 import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -36,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class LoungeCreationStrategyTest {
+  private static final Instant NOW = Instant.parse("2026-10-26T10:00:00Z");
   private static final int CREATOR_ID = 1;
   private static final int LEADER_ID = 2;
   private static final List<Integer> MEMBER_IDS = List.of(3, 4);
@@ -49,7 +53,7 @@ class LoungeCreationStrategyTest {
 
   @BeforeEach
   void setUp() {
-    strategy = new LoungeCreationStrategy(userPort, channelPort);
+    strategy = new LoungeCreationStrategy(userPort, channelPort, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -75,6 +79,27 @@ class LoungeCreationStrategyTest {
     Integer actual = strategy.createChannel(lounge(ChannelType.LOUNGE, null, memberIds));
 
     assertThat(actual).isEqualTo(savedChannelId);
+  }
+
+  @Test
+  void createChannel_expiryExactlySevenDaysAhead_throwsAndTouchNoPort() {
+    CreateChannelCommand command = loungeExpiring(NOW.plus(Duration.ofDays(7)));
+
+    assertThatThrownBy(() -> strategy.createChannel(command))
+        .isInstanceOf(InvalidChannelConfigException.class);
+
+    verifyNoInteractions(userPort, channelPort);
+  }
+
+  @Test
+  void createChannel_noExpiry_isSaved() {
+    List<User> members = MEMBER_IDS.stream().map(id -> user(id)).toList();
+    when(userPort.findByIds(MEMBER_IDS)).thenReturn(members);
+    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(user(CREATOR_ID)));
+
+    strategy.createChannel(loungeExpiring(null));
+
+    verify(channelPort).save(any());
   }
 
   @Test
@@ -164,11 +189,22 @@ class LoungeCreationStrategyTest {
     return new CreateChannelCommand(
         "dev-lounge",
         BoundaryType.PUBLIC,
-        Instant.now(),
+        NOW.plus(Duration.ofDays(30)),
         channelType,
         CREATOR_ID,
         leaderId,
         memberIds);
+  }
+
+  static CreateChannelCommand loungeExpiring(Instant expiredTime) {
+    return new CreateChannelCommand(
+        "dev-lounge",
+        BoundaryType.PUBLIC,
+        expiredTime,
+        ChannelType.LOUNGE,
+        CREATOR_ID,
+        null,
+        MEMBER_IDS);
   }
 
   private static User user(int id) {

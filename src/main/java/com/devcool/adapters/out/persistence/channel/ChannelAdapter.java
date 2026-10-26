@@ -77,7 +77,11 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean update(Channel channel) {
     return repo.updateChannelInfo(
-            channel.getId(), channel.getName(), channel.getChannelType(), channel.getExpiredTime())
+            channel.getId(),
+            channel.getName(),
+            channel.getChannelType(),
+            channel.getBoundaryType(),
+            channel.getExpiredTime())
         > 0;
   }
 
