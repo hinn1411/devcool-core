@@ -73,10 +73,9 @@ class ChannelUpdatePolicyTest {
 
     @Test
     void loungeExpiryTooSoon_isRejectedThroughUpdate() {
+      Instant expiry = NOW.plus(SEVEN_DAYS);
       assertThatThrownBy(
-              () ->
-                  ChannelUpdatePolicy.validateUpdate(
-                      ChannelType.LOUNGE, null, null, NOW.plus(SEVEN_DAYS), NOW))
+              () -> ChannelUpdatePolicy.validateUpdate(ChannelType.LOUNGE, null, null, expiry, NOW))
           .isInstanceOf(InvalidChannelConfigException.class);
     }
 
@@ -126,26 +125,23 @@ class ChannelUpdatePolicyTest {
 
     @Test
     void expiryExactlySevenDaysAhead_isRejected() {
-      assertThatThrownBy(() -> ChannelUpdatePolicy.validateLoungeExpiry(NOW.plus(SEVEN_DAYS), NOW))
+      Instant expiry = NOW.plus(SEVEN_DAYS);
+      assertThatThrownBy(() -> ChannelUpdatePolicy.validateLoungeExpiry(expiry, NOW))
           .isInstanceOf(InvalidChannelConfigException.class);
     }
 
     @Test
     void expiryJustOverSevenDaysAhead_passes() {
+      Instant expiry = NOW.plus(SEVEN_DAYS).plusSeconds(1);
       assertThatNoException()
-          .isThrownBy(
-              () ->
-                  ChannelUpdatePolicy.validateLoungeExpiry(
-                      NOW.plus(SEVEN_DAYS).plusSeconds(1), NOW));
+          .isThrownBy(() -> ChannelUpdatePolicy.validateLoungeExpiry(expiry, NOW));
     }
 
     @ParameterizedTest(name = "now + {0}d is rejected")
     @ValueSource(longs = {-1, 0, 1, 6})
     void expiryWithinSevenDays_isRejected(long daysAhead) {
-      assertThatThrownBy(
-              () ->
-                  ChannelUpdatePolicy.validateLoungeExpiry(
-                      NOW.plus(daysAhead, ChronoUnit.DAYS), NOW))
+      Instant expiry = NOW.plus(daysAhead, ChronoUnit.DAYS);
+      assertThatThrownBy(() -> ChannelUpdatePolicy.validateLoungeExpiry(expiry, NOW))
           .isInstanceOf(InvalidChannelConfigException.class);
     }
   }
