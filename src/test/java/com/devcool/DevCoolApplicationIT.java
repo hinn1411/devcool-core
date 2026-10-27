@@ -36,7 +36,8 @@ class DevCoolApplicationIT extends AbstractIntegrationTest {
             (rs, rowNum) -> tuple(rs.getString("version"), rs.getBoolean("success")));
 
     // startsWith: new migrations must not break this test.
-    assertThat(history).startsWith(tuple("1", true), tuple("2", true), tuple("3", true));
+    assertThat(history)
+        .startsWith(tuple("1", true), tuple("2", true), tuple("3", true), tuple("4", true));
     assertThat(history).allSatisfy(row -> assertThat(row.toList().get(1)).isEqualTo(true));
   }
 

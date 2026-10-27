@@ -1,5 +1,9 @@
 package com.devcool.support;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.UUID;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -20,6 +24,19 @@ public interface PostgresTestContainer {
           .asCompatibleSubstituteFor("postgres");
 
   @ServiceConnection PostgreSQLContainer<?> POSTGRES = startedPostgres();
+
+  /** Empty database in the shared container, named {@code prefix + uuid}; returns its JDBC URL. */
+  static String freshDatabase(String prefix) {
+    String name = prefix + UUID.randomUUID().toString().replace("-", "");
+    try (Connection c =
+        DriverManager.getConnection(
+            POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())) {
+      c.createStatement().execute("create database " + name);
+    } catch (SQLException e) {
+      throw new IllegalStateException("could not create " + name, e);
+    }
+    return POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + name);
+  }
 
   private static PostgreSQLContainer<?> startedPostgres() {
     PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(PGVECTOR).withReuse(true);

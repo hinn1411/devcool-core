@@ -41,8 +41,9 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - [x] **P3-T01** Migration:
   - Ids `INTEGER` → `BIGINT` (all PK/FK).
   - Update entities and domain types (`Integer` → `Long`) consistently across ports, DTOs and mappers.
-- [ ] **P3-T02** Migration: `channel.last_seq`, `channel.last_message_at`, `message.seq` (backfill + `UNIQUE(channel_id, seq)`), `message.client_msg_id UUID` + `UNIQUE(sender_id, client_msg_id)`, `message.version`, `member.last_read_seq`; index `(channel_id, seq DESC)`
+- [x] **P3-T02** Migration: `channel.last_seq`, `channel.last_message_at`, `message.seq` (backfill + `UNIQUE(channel_id, seq)`), `message.client_msg_id UUID` + `UNIQUE(sender_id, client_msg_id)`, `message.version`, `member.last_read_seq`. Expand only: `seq` stays nullable. No separate `(channel_id, seq DESC)` index: the unique index serves it
 - [ ] **P3-T03** `MessageService.save`: seq assignment + idempotent send. Unit tests: first send, retry returns the same seq without a bump, concurrent retry race (IT)
+- [ ] **P3-T03a** Contract for P3-T02, after P3-T03 is deployed: number the messages that arrived with a NULL `seq`, bump `last_seq`, then `message.seq SET NOT NULL`
 - [ ] **P3-T04** Outbound WS event includes `messageId`, `seq`, `createdTime` (the minimum needed before P4)
 - [ ] **P3-T05** History API: `GET /channels/{id}/messages?beforeSeq=&limit=` and `?afterSeq=&limit=`. Keep `cursorId` as a deprecated alias for one phase
 - [ ] **P3-T06** Edit message: `EditMessageUseCase`, `PATCH /messages/{id}`, sender-only, 24 h window, version check → 409 on conflict
