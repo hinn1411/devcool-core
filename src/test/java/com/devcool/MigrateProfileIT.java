@@ -5,11 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.devcool.support.LoggingUtils;
 import com.devcool.support.PostgresTestContainer;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -89,16 +85,7 @@ class MigrateProfileIT {
     return SpringApplication.run(DevCoolApplication.class, args);
   }
 
-  /** Empty database in the shared container; returns its JDBC URL. */
   private static String freshDatabase() {
-    String name = "migrate_it_" + UUID.randomUUID().toString().replace("-", "");
-    var pg = PostgresTestContainer.POSTGRES;
-    try (Connection c =
-        DriverManager.getConnection(pg.getJdbcUrl(), pg.getUsername(), pg.getPassword())) {
-      c.createStatement().execute("create database " + name);
-    } catch (SQLException e) {
-      throw new IllegalStateException("could not create " + name, e);
-    }
-    return pg.getJdbcUrl().replace("/" + pg.getDatabaseName(), "/" + name);
+    return PostgresTestContainer.freshDatabase("migrate_it_");
   }
 }
