@@ -28,9 +28,9 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
         <!-- SpotBugs analyzer and its annotations move together -->
-        <spotbugs.version>4.8.6</spotbugs.version>
+        <spotbugs.version>4.10.5</spotbugs.version>
         <!-- CVE patch overrides of Boot-managed versions (P2-T14); drop once Boot catches up -->
         <jackson-bom.version>2.21.8</jackson-bom.version>
         <netty.version>4.1.139.Final</netty.version>
@@ -46,7 +46,7 @@
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>2.41.24</version>
+                <version>2.56.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -200,14 +200,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.16.0</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <!-- Lombok must come first -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.30</version>
+                            <version>1.18.48</version>
                         </path>
                         <!-- MapStruct -->
                         <path>
@@ -257,7 +257,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>enforce</id>
@@ -280,7 +280,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.15</version>
                 <executions>
                     <execution>
                         <goals>
@@ -312,7 +312,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.2.5</version>
+                        <version>3.6.0</version>
                         <configuration>
                             <!-- A run with 0 ITs is a vacuous pass, not a green build -->
                             <failIfNoTests>true</failIfNoTests>
@@ -367,7 +367,7 @@
                     <plugin>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-maven-plugin</artifactId>
-                        <version>4.8.6.6</version>
+                        <version>4.10.5.0</version>
                         <dependencies>
                             <dependency>
                                 <groupId>com.github.spotbugs</groupId>
