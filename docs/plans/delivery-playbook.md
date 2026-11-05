@@ -90,33 +90,35 @@ One task = one PR. Each step has a timebox.
 
 ```mermaid
 flowchart LR
-  F[1 Frame<br/>15 min] --> P[2 Plan<br/>10-30 min] --> B[3 Build<br/>mode A/B/C] --> V[4 Prove<br/>red → green,<br/>break it, /verify] --> R[5 Review<br/>agents + merge gate] --> C[6 Close<br/>PR, tick, journal,<br/>explain-back]
+  F[1 Frame<br/>15 min] --> RD[2 Red<br/>failing tests,<br/>commit] --> G[3 Green<br/>mode A/B/C,<br/>commit] --> RV[4 Review<br/>agents, break it,<br/>merge gate] --> RF[5 Refactor<br/>approved items,<br/>/verify] --> C[6 Close<br/>tick, PR, journal,<br/>explain-back]
 ```
 
 1. **Frame (15 min).** Run `/frame-task Pn-Tmm`: it asks for your prediction, then compares, explains the concepts with with/without examples, asks the open decisions and saves the brief in [`docs/journal/briefs/`](../journal/README.md). The skill reads the sources for you; the prediction is still yours:
    - Read the task line, its phase's Design notes and Test plan, and the linked ADR.
    - The first time you meet a topic, also read the "Read first" of its [reference file](../references/README.md) (cap: 60 min).
    - Give your **prediction** when the skill asks: the invariants, a design sketch and the test list. For mode C, the acceptance criteria are enough.
-2. **Plan (10–30 min).**
-   - Use plan mode when the task touches more than 5 files, a migration, the protocol or infra.
-   - Compare Claude's plan with your prediction. Every difference is either a gap in your knowledge or a mistake in Claude's plan. Write down which one it was.
-3. **Build.**
-   - Run `/implement-task Pn-Tmm` in the task's mode.
+2. **Red (10–30 min).** Run `/implement-task Pn-Tmm` in the task's mode.
+   - Claude maps every **Done when** item in the brief to a named test. If the task touches more than 5 files, a migration, the protocol or infra, it shows its plan first.
+   - Compare the plan and the test list with your prediction. Every difference is either a gap in your knowledge or a mistake in Claude's plan. Write down which one it was.
+   - Each new test must fail on an assertion, not on a compile error. If you can't make it fail, it doesn't test anything. The brief and the tests are committed as `test(<id>): …`. Don't push yet: a Red commit fails CI.
+3. **Green.**
+   - Claude writes the simplest code that makes every test pass, without changing the Red tests. If a test turns out to be wrong, it stops and asks you.
    - In mode A, answer Claude's `TODO(human)` requests yourself. Ask it questions; don't ask it to "just do it".
-4. **Prove.**
-   - Red before green: the new test must fail on the old code. If you can't make it fail, it doesn't test anything.
+   - Committed as `feat(<id>): …`.
+4. **Review.**
+   - The reviewer agents run on the diff, chosen by the paths it touches: `hexagonal-reviewer` for the backend, `security-reviewer` for auth, WebSocket, AI or infra, and `aws-architect` for `infra/`. Claude merges their findings into one ranked list, and you approve or reject each item.
    - **Break it on purpose** (A/B): remove the row lock, drop the `ON CONFLICT`, skip the membership check. Watch the right test fail, then restore.
-   - Run `/verify`.
-5. **Review.**
-   - Run the `hexagonal-reviewer` agent. For auth, WebSocket, AI or infra changes, run the `security-reviewer` agent as well.
    - Then the **merge gate**: answer these three questions out loud, or in the journal.
      1. **What does it do?** In two sentences, without reading the code.
      2. **Why this way?** Which ADR or trade-off, and the option you didn't take.
      3. **How does it fail, and how would I know?** The test that covers it, the metric or log that would show it.
 
      If you can't answer one of them, you don't merge. Go back and read, or ask Claude to explain that part, and try again.
+5. **Refactor.**
+   - Claude applies only the items you approved, plus cleanups that don't change behaviour, and keeps the tests green. An approved item that does change behaviour gets its failing test first.
+   - Run `/verify`.
 6. **Close.**
-   - Tick the task, open the PR, get CI green.
+   - Tick the task (committed as `refactor(<id>): …`), open the PR, get CI green.
    - Write a 10-minute journal entry (§9).
    - **Explain-back:** answer the reference file's Self-check questions for this topic without notes. Every one you miss goes on your question list for Friday.
 
@@ -148,7 +150,7 @@ Copy these and adapt the task id.
 | 08:50–09:00 | Kick off the C task in a worktree (`claude --worktree <name>`) so it runs while you focus |
 | 09:00–12:00 | **Deep block**, mode A/B. Notifications off |
 | 13:00–13:45 | Review the C task's diff (Explanatory style), give feedback, queue its next step |
-| 13:45–16:00 | Finish the A/B task: prove, verify, review, PR |
+| 13:45–16:00 | Finish the A/B task: green, review, refactor, verify, PR |
 | 16:00–17:00 | Read: the deep-dive part of tomorrow's reference file |
 | 17:00–17:15 | Journal: task entry, reflection prompts, cut-list update |
 
