@@ -1,6 +1,6 @@
 # Delivery journal
 
-A working log of how DevCool is built: what was predicted, what happened, what broke, and what was learned. It's the evidence behind the interview stories. The rules and templates are in the [delivery playbook](../plans/delivery-playbook.md#9-journal-templates).
+A working log of how DevCool is built: what was predicted, what happened, what broke, and what was learned. It's the evidence behind the interview stories. The rules and templates are in the [delivery playbook](../plans/delivery-book/09-journal-templates.md).
 
 ## Layout
 

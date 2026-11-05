@@ -5,7 +5,7 @@
 - **Phase:** P2
 
 ## Context
-The AWS budget is **< \$20/month** ([playbook §0](../../delivery-playbook.md#0-profile-and-goals)), with alerts at \$10/\$18 from P2-T13 (`infra/stacks/bootstrap/budget.tf`). [Playbook §6](../../delivery-playbook.md#6-aws-under-20month) prices the P2 plan as written at about \$260/month if always on, and asks for this ADR before P2-T02. Three parts of the current plan don't fit:
+The AWS budget is **< \$20/month** ([playbook §0](../../delivery-book/00-goals.md)), with alerts at \$10/\$18 from P2-T13 (`infra/stacks/bootstrap/budget.tf`). [Playbook §6](../../delivery-book/06-aws-budget.md) prices the P2 plan as written at about \$260/month if always on, and asks for this ADR before P2-T02. Three parts of the current plan don't fit:
 - P2-T02 lists 4 interface endpoints but only the NAT has a toggle. Endpoints bill per hour per AZ even with no traffic, so they would bill while hibernated.
 - [ADR-0003](0003-terraform-layered-stacks.md) and P4-T05 put Valkey in `data` ("never destroyed"), which bills ~\$7.4/month while asleep. That breaks the rule in `infra/CLAUDE.md` ("anything always-on and billed hourly must be in `app`, `edge` or a toggle in `network`").
 - ADR-0003 and P2-T08 plan two environments (`dev`, `prod`), which doubles every cost.
