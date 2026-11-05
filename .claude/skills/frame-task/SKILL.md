@@ -22,7 +22,7 @@ Read these without pasting them into the chat:
 - The task line and its phase file: **Goal**, **Why it matters**, **Scope**, **Design notes**, **Test plan**, **Definition of Done**, **Risks**.
 - Every ADR and architecture section the phase links for this task (`docs/plans/architecture/`).
 - The matching reference file in `docs/references/` (use the index in its README; phases are listed per file). Take its **Concepts to own** and **Self-check**.
-- From `docs/plans/delivery-playbook.md`: the task's ownership mode (§2, A/B/C) and its Must/Should/Could tier (§4).
+- From the delivery playbook: the task's ownership mode (`docs/plans/delivery-book/02-ownership.md`, A/B/C) and its Must/Should/Could tier (`docs/plans/delivery-book/04-pace-and-scope.md`).
 - Dependencies:
   - Earlier unticked tasks in the same phase that this one needs.
   - Later tasks, phases or milestones (M1–M5 in `docs/plans/README.md`) that rely on this one. `grep -rn "$task" docs/plans` helps.
