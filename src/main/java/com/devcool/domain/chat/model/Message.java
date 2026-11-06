@@ -3,6 +3,7 @@ package com.devcool.domain.chat.model;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.media.model.Media;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,5 +20,7 @@ public class Message {
   private Instant deletedTime;
   private Instant editedTime;
   private Long channelId;
+  private Long seq;
+  private UUID clientMsgId;
   private Media media;
 }

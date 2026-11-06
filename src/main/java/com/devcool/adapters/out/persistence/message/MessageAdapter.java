@@ -10,6 +10,8 @@ import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,11 @@ public class MessageAdapter implements MessagePort {
       entity.getMedia().setMessage(entity);
     }
     return repo.save(entity).getId();
+  }
+
+  @Override
+  public Optional<Message> findByClientMsgId(Long senderId, UUID clientMsgId) {
+    throw new UnsupportedOperationException();
   }
 
   @Override

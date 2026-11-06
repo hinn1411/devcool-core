@@ -89,7 +89,8 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
                 userId,
                 clientFrame.channelId(),
                 clientFrame.contentType(),
-                clientFrame.content()));
+                clientFrame.content(),
+                null));
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(

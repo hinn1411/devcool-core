@@ -52,7 +52,8 @@ public class WsSendMessageService implements SendMessageUseCase {
         sendCommand.content(),
         sendCommand.contentType(),
         sendCommand.channelId(),
-        sendCommand.userId());
+        sendCommand.userId(),
+        sendCommand.clientMsgId());
   }
 
   public record OutboundWsEvent(

@@ -1,9 +1,7 @@
 package com.devcool.application.service.chat.strategy;
 
-import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
-import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.media.model.Media;
 import java.time.Instant;
 
@@ -13,13 +11,8 @@ import java.time.Instant;
  */
 public abstract class AbstractMediaMessageCreationStrategy extends AbstractMessageCreationStrategy {
 
-  protected AbstractMediaMessageCreationStrategy(
-      ChannelAuthorizer channelAuthorizer, MessagePort messagePort) {
-    super(channelAuthorizer, messagePort);
-  }
-
   @Override
-  protected Message buildMessage(CreateMessageCommand command) {
+  public Message buildMessage(CreateMessageCommand command) {
     Message message = super.buildMessage(command);
     Media media = Media.builder().path(command.content()).createdTime(Instant.now()).build();
     message.setMedia(media);
