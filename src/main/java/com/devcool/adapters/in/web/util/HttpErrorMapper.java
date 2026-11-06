@@ -9,11 +9,7 @@ public class HttpErrorMapper {
   public static HttpStatus toHttpStatus(ErrorCode code) {
     return switch (code) {
       case USER_NOT_FOUND, CHANNEL_NOT_FOUND -> HttpStatus.NOT_FOUND;
-      case EMAIL_ALREADY_USED,
-              USERNAME_ALREADY_USED,
-              DUPLICATE_MEMBER,
-              DUPLICATE_CLIENT_MSG_ID,
-              CLIENT_MSG_ID_REUSED ->
+      case EMAIL_ALREADY_USED, USERNAME_ALREADY_USED, DUPLICATE_MEMBER, CLIENT_MSG_ID_REUSED ->
           HttpStatus.CONFLICT;
       case PASSWORD_WEAK,
               PASSWORD_INCORRECT,

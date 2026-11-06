@@ -13,7 +13,6 @@ import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.application.service.chat.strategy.TextMessageCreationStrategy;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
-import com.devcool.domain.chat.exception.DuplicateClientMsgIdException;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.SavedMessage;
@@ -67,8 +66,8 @@ class MessageServiceTest {
   void firstSend_takesSeqFromChannelCounter_andSavesItWithTheKey() {
     aliceIsMember();
     when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
-    when(channelPort.nextSeq(CHANNEL)).thenReturn(42L);
-    when(messagePort.save(any())).thenReturn(100L);
+    when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(42L));
+    when(messagePort.save(any())).thenReturn(Optional.of(100L));
 
     SavedMessage saved = service.save(text(CHANNEL));
 
@@ -92,7 +91,7 @@ class MessageServiceTest {
     SavedMessage saved = service.save(text(CHANNEL));
 
     assertThat(saved).isEqualTo(new SavedMessage(100L, 42L, ORIGINAL_TIME, true));
-    verify(channelPort, never()).nextSeq(anyLong());
+    verify(channelPort, never()).getNextSequence(anyLong());
     verify(messagePort, never()).save(any());
   }
 
@@ -103,14 +102,16 @@ class MessageServiceTest {
     when(messagePort.findByClientMsgId(ALICE, KEY))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(existing(CHANNEL)));
-    when(channelPort.nextSeq(CHANNEL)).thenReturn(43L);
-    when(messagePort.save(any())).thenThrow(new DuplicateClientMsgIdException());
+    when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(43L));
+    when(messagePort.save(any())).thenReturn(Optional.empty()); // key taken by the winner
 
     SavedMessage saved = service.save(text(CHANNEL));
 
     assertThat(saved).isEqualTo(new SavedMessage(100L, 42L, ORIGINAL_TIME, true));
     // The failed transaction is aborted (and its bump rolled back), so the re-read needs its own.
     assertThat(transactions.started).isEqualTo(2);
+    // The losing attempt must roll back, or its commit fails on the aborted transaction.
+    assertThat(transactions.rolledBack).isEqualTo(1);
   }
 
   @Test
@@ -120,7 +121,7 @@ class MessageServiceTest {
 
     assertThatThrownBy(() -> service.save(text(CHANNEL)))
         .isInstanceOf(MemberNotFoundException.class);
-    verify(channelPort, never()).nextSeq(anyLong());
+    verify(channelPort, never()).getNextSequence(anyLong());
     verifyNoInteractions(messagePort);
   }
 
@@ -132,7 +133,7 @@ class MessageServiceTest {
 
     assertThatThrownBy(() -> service.save(text(CHANNEL)))
         .isInstanceOf(ClientMsgIdReusedException.class);
-    verify(channelPort, never()).nextSeq(anyLong());
+    verify(channelPort, never()).getNextSequence(anyLong());
     verify(messagePort, never()).save(any());
   }
 
@@ -171,15 +172,23 @@ class MessageServiceTest {
         .build();
   }
 
-  /** Runs callbacks inline and counts how many transactions the service opened. */
+  /**
+   * Runs callbacks inline; counts the transactions the service opened and how many it marked
+   * rollback-only.
+   */
   private static final class CountingTransactions implements TransactionOperations {
     int started;
+    int rolledBack;
 
     @Override
     public <T> T execute(TransactionCallback<T> action) {
       started++;
       TransactionStatus status = new SimpleTransactionStatus();
-      return action.doInTransaction(status);
+      T result = action.doInTransaction(status);
+      if (status.isRollbackOnly()) {
+        rolledBack++;
+      }
+      return result;
     }
   }
 }

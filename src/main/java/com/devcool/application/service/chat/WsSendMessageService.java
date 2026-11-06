@@ -1,5 +1,6 @@
 package com.devcool.application.service.chat;
 
+import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SaveMessageUseCase;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
@@ -27,7 +28,12 @@ public class WsSendMessageService implements SendMessageUseCase {
     // Validate channel status later
 
     CreateMessageCommand saveCommand = toSaveMessageCommand(command);
-    saveMessageUseCase.save(saveCommand);
+    SavedMessage saved = saveMessageUseCase.save(saveCommand);
+    if (saved.duplicate()) {
+      // A retry: the original send already published it. Push is at-most-once (design §4);
+      // a client that missed it catches up by seq.
+      return;
+    }
 
     Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
 

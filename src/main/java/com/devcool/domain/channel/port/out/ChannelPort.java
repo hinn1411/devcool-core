@@ -24,7 +24,7 @@ public interface ChannelPort {
   /**
    * Bumps the channel's {@code last_seq} (and {@code last_message_at}) and returns the new value.
    * Locks the channel row until the caller's transaction ends, so sends to one channel get their
-   * seqs in commit order (ADR-0012).
+   * seqs in commit order (ADR-0012). Empty when the channel does not exist.
    */
-  long nextSeq(Long channelId);
+  Optional<Long> getNextSequence(Long channelId);
 }

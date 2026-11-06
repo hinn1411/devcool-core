@@ -6,6 +6,7 @@ import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.chat.model.enums.ContentType;
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -50,6 +51,14 @@ public class MessageEntity {
       referencedColumnName = "ID",
       foreignKey = @ForeignKey(name = "fk_message_channel"))
   private ChannelEntity channel;
+
+  /** Position in the channel (ADR-0012). Nullable until P3-T03a adds NOT NULL. */
+  @Column(name = "SEQ")
+  private Long seq;
+
+  /** The sender's idempotency key, unique per sender (uk_message_user_client_msg). */
+  @Column(name = "CLIENT_MSG_ID")
+  private UUID clientMsgId;
 
   @OneToOne(
       mappedBy = "message",

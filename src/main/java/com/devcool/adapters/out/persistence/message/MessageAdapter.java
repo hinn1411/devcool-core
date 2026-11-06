@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -20,24 +22,45 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class MessageAdapter implements MessagePort {
+  private static final String CLIENT_MSG_ID_KEY = "uk_message_user_client_msg";
+
   private final MessageRepository repo;
   private final MessageMapper mapper;
   private final EntityManager em;
 
   @Override
-  public Long save(Message message) {
+  public Optional<Long> save(Message message) {
     MessageEntity entity = mapper.toEntity(message);
     entity.setUser(em.getReference(UserEntity.class, message.getSenderId()));
     entity.setChannel(em.getReference(ChannelEntity.class, message.getChannelId()));
     if (entity.getMedia() != null) {
       entity.getMedia().setMessage(entity);
     }
-    return repo.save(entity).getId();
+    try {
+      // Flush now so a key collision surfaces here, where it can be reported, not at commit.
+      return Optional.of(repo.saveAndFlush(entity).getId());
+    } catch (DataIntegrityViolationException ex) {
+      if (ex.getCause() instanceof ConstraintViolationException cve
+          && CLIENT_MSG_ID_KEY.equalsIgnoreCase(cve.getConstraintName())) {
+        return Optional.empty();
+      }
+      throw ex;
+    }
   }
 
   @Override
   public Optional<Message> findByClientMsgId(Long senderId, UUID clientMsgId) {
-    throw new UnsupportedOperationException();
+    return repo.findKeyRow(senderId, clientMsgId)
+        .map(
+            row ->
+                Message.builder()
+                    .id(row.id())
+                    .senderId(senderId)
+                    .channelId(row.channelId())
+                    .seq(row.seq())
+                    .clientMsgId(clientMsgId)
+                    .createdTime(row.createdTime())
+                    .build());
   }
 
   @Override

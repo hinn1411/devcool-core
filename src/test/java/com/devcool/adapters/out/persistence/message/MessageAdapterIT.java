@@ -1,7 +1,6 @@
 package com.devcool.adapters.out.persistence.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
 import com.devcool.adapters.out.persistence.media.entity.MediaEntity;
@@ -11,7 +10,6 @@ import com.devcool.adapters.out.persistence.message.mapper.MessageMapperImpl;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
-import com.devcool.domain.chat.exception.DuplicateClientMsgIdException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -190,7 +188,7 @@ class MessageAdapterIT extends AbstractJpaIT {
   @Test
   void savedSeqAndClientMsgId_areFoundBySenderAndKey() {
     UUID key = UUID.randomUUID();
-    Long id = messagePort.save(domainText(alice, channelA, 7L, key));
+    Long id = messagePort.save(domainText(alice, channelA, 7L, key)).orElseThrow();
     resetPersistenceContext();
 
     Optional<Message> found = messagePort.findByClientMsgId(alice.getId(), key);
@@ -218,13 +216,12 @@ class MessageAdapterIT extends AbstractJpaIT {
   }
 
   @Test
-  void secondMessageWithSameSenderAndKey_throwsDuplicateClientMsgId() {
+  void secondMessageWithSameSenderAndKey_returnsEmpty() {
     UUID key = UUID.randomUUID();
     messagePort.save(domainText(alice, channelA, 1L, key));
 
     // Another channel, so only the (user_id, client_msg_id) key can collide.
-    assertThatThrownBy(() -> messagePort.save(domainText(alice, channelB, 1L, key)))
-        .isInstanceOf(DuplicateClientMsgIdException.class);
+    assertThat(messagePort.save(domainText(alice, channelB, 1L, key))).isEmpty();
   }
 
   private static Message domainText(UserEntity sender, ChannelEntity channel, long seq, UUID key) {

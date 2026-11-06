@@ -68,4 +68,19 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       WHERE c.id = :id
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
+
+  /**
+   * ADR-0012: bumps the counter and returns the new value in one round trip. The row lock it takes
+   * is held until the caller's transaction ends, which serializes sends to one channel. Not
+   * {@code @Modifying}: RETURNING makes it a query with a result set.
+   */
+  @Query(
+      value =
+          """
+          UPDATE channel SET last_seq = last_seq + 1, last_message_at = now()
+          WHERE id = :channelId
+          RETURNING last_seq
+          """,
+      nativeQuery = true)
+  Optional<Long> bumpLastSeq(@Param("channelId") Long channelId);
 }

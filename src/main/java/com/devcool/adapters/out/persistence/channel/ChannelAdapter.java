@@ -91,7 +91,7 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
-  public long nextSeq(Long channelId) {
-    throw new UnsupportedOperationException();
+  public Optional<Long> getNextSequence(Long channelId) {
+    return repo.bumpLastSeq(channelId);
   }
 }
