@@ -27,10 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
-/**
- * MessagePort against real Postgres: findMessages (filtering, order, cursor, mapping) and the
- * seq/idempotency-key round trip (P3-T03).
- */
+/** MessagePort against real Postgres. */
 @Import({MessageAdapter.class, MessageMapperImpl.class, MediaMapperImpl.class})
 class MessageAdapterIT extends AbstractJpaIT {
 

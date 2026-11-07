@@ -53,8 +53,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   }
 
   /**
-   * Not {@code @Transactional}: each attempt gets its own transaction from {@link #transactions},
-   * because after a unique-key violation Postgres aborts the transaction it happened in.
+   * Not {@code @Transactional}: a unique violation aborts the tx, so the re-read needs a new one.
    */
   @Override
   public SavedMessage save(CreateMessageCommand command) {
@@ -78,15 +77,12 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
             () -> new IllegalStateException("Lost the clientMsgId race but no winner found"));
   }
 
-  /** Our callbacks never return null; {@code execute} is {@code @Nullable} only in general. */
+  /** {@code execute} is {@code @Nullable}; our callbacks never return null. */
   private Optional<SavedMessage> inTransaction(TransactionCallback<Optional<SavedMessage>> work) {
     return Objects.requireNonNull(transactions.execute(work));
   }
 
-  /**
-   * One attempt, inside the caller's transaction: authz → key lookup → seq bump → insert. Empty
-   * when the insert lost the race on the sender's key; the transaction is then aborted.
-   */
+  /** authz → replay → seq bump → insert. Empty if the insert lost the key race. */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
     // Membership only, no channel-exists check first: a missing channel and a channel the caller
@@ -111,11 +107,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
         .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
   }
 
-  /**
-   * The original message when the sender already used this key in this channel. The key is unique
-   * per sender, not per channel, so reuse in another channel is a client bug: reject it rather than
-   * silently drop the new message.
-   */
+  /** The original send for this key; reuse in another channel is rejected. */
   private Optional<SavedMessage> findReplay(CreateMessageCommand command) {
     return messagePort
         .findByClientMsgId(command.userId(), command.clientMsgId())

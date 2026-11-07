@@ -8,12 +8,7 @@ import java.time.temporal.ChronoUnit;
 
 public abstract class AbstractMessageCreationStrategy implements MessageCreationStrategy {
 
-  /**
-   * Builds the message carrying only the sender and channel ids. The sender is not loaded: the
-   * service's membership check already proves the user exists, and the persistence adapter resolves
-   * both foreign keys without a query. {@code createdTime} is cut to microseconds, the precision of
-   * {@code timestamp(6)}, so a retry that re-reads it returns the same value.
-   */
+  /** {@code createdTime} is cut to micros ({@code timestamp(6)}) so a retry's re-read matches. */
   @Override
   public Message buildMessage(CreateMessageCommand command) {
     return Message.builder()

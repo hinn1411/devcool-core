@@ -70,11 +70,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
 
   /**
-   * ADR-0012: bumps the counter and returns the new value in one round trip. The row lock it takes
-   * is held until the caller's transaction ends, which serializes sends to one channel. Not
-   * {@code @Modifying}: RETURNING makes it a query with a result set. Native SQL bypasses the
-   * persistence context, so a {@code ChannelEntity} loaded earlier in the same transaction keeps a
-   * stale {@code lastSeq}.
+   * ADR-0012 bump; locks the channel row until commit. Not {@code @Modifying}: it returns a row.
    */
   @Query(
       value =

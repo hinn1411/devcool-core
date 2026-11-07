@@ -173,10 +173,7 @@ class MessageServiceTest {
     return new MessageKey(100L, channelId, 42L, ORIGINAL_TIME);
   }
 
-  /**
-   * Runs callbacks inline; counts the transactions the service opened and how many it marked
-   * rollback-only.
-   */
+  /** Runs callbacks inline; counts opened and rolled-back transactions. */
   private static final class CountingTransactions implements TransactionOperations {
     int started;
     int rolledBack;

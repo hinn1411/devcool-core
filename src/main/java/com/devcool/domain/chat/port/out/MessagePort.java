@@ -9,9 +9,7 @@ import java.util.UUID;
 
 public interface MessagePort {
   /**
-   * Inserts the message and returns its id. Empty when the sender already has a message with this
-   * {@code clientMsgId} (a concurrent send won): the caller's transaction is then aborted and must
-   * be rolled back.
+   * Inserts; empty if the sender's {@code clientMsgId} is taken (the transaction is then aborted).
    */
   Optional<Long> save(Message message);
 

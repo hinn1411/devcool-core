@@ -26,10 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/**
- * Seq assignment and idempotent send through real transactions and row locks (P3-T03, ADR-0012).
- * Not @Transactional: every send commits, as in production. Each test seeds its own channel.
- */
+/** Seq and idempotent send through real transactions; not @Transactional, every send commits. */
 class SendMessageSeqIT extends AbstractIntegrationTest {
 
   private static final int THREADS = 20;

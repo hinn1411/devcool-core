@@ -22,9 +22,7 @@ public interface ChannelPort {
   boolean increaseTotalMembers(Long channelId, Integer newMembers);
 
   /**
-   * Bumps the channel's {@code last_seq} (and {@code last_message_at}) and returns the new value.
-   * Locks the channel row until the caller's transaction ends, so sends to one channel get their
-   * seqs in commit order (ADR-0012). Empty when the channel does not exist.
+   * Bumps and returns {@code last_seq}; locks the channel row until commit. Empty if no channel.
    */
   Optional<Long> getNextSequence(Long channelId);
 }
