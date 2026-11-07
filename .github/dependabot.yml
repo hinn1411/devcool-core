@@ -7,6 +7,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore
+    # Stay on the Java 21 LTS line; without this Dependabot proposes 24/25 instead of 21 digest bumps.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types:
+          - version-update:semver-major
 
   # Backend deps (P2-T14): one grouped minor/patch PR a week. Boot majors need their own ADR.
   - package-ecosystem: maven
