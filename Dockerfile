@@ -21,7 +21,13 @@ RUN ./mvnw -B -q package -DskipTests -Djacoco.skip=true \
 
 # ---- runtime: JRE only, non-root, one layer per Boot layer ----
 # eclipse-temurin:21-jre-noble
-FROM eclipse-temurin:21-jre-noble@sha256:000fd431958bc81a24abe1e8e5f0f0fd3ae365a594bd50aadb20696805f9408c
+FROM eclipse-temurin:21-jre-noble@sha256:0eda5830ed7b669abc246a8dc520ea8a23cab06f9a8d4b6964109e2f2394e46f
+
+# Upstream rebuilds lag Ubuntu security fixes (the Trivy gate fails on fixable OS CVEs), so
+# pull them in at build time. The digest stays the reproducible starting point.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 # Fixed numeric IDs: USER must be numeric for the platform to prove non-root (hadolint DL3066).
 RUN groupadd --system --gid 10001 app \
