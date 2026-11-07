@@ -89,4 +89,9 @@ public class ChannelAdapter implements ChannelPort {
   public boolean increaseTotalMembers(Long channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
   }
+
+  @Override
+  public Optional<Long> getNextSequence(Long channelId) {
+    return repo.bumpLastSeq(channelId);
+  }
 }

@@ -20,4 +20,9 @@ public interface ChannelPort {
   boolean update(Channel channel);
 
   boolean increaseTotalMembers(Long channelId, Integer newMembers);
+
+  /**
+   * Bumps and returns {@code last_seq}; locks the channel row until commit. Empty if no channel.
+   */
+  Optional<Long> getNextSequence(Long channelId);
 }

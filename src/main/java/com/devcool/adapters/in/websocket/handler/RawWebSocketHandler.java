@@ -9,11 +9,13 @@ import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.devcool.domain.common.DomainException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -83,17 +85,30 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
                         Map.of("description", "Subscribe successfully")))));
       }
       case WsMessageType.SEND_MESSAGE -> {
-        sendMessageUseCase.sendMessage(
-            new SendMessageCommand(
-                connectionId,
-                userId,
-                clientFrame.channelId(),
-                clientFrame.contentType(),
-                clientFrame.content()));
+        UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
+        if (Objects.isNull(clientMsgId)) {
+          // Don't reflect an arbitrary client string back.
+          sendError(session, null, "Invalid clientMsgId");
+          return;
+        }
+        try {
+          sendMessageUseCase.sendMessage(
+              new SendMessageCommand(
+                  connectionId,
+                  userId,
+                  clientFrame.channelId(),
+                  clientFrame.contentType(),
+                  clientFrame.content(),
+                  clientMsgId));
+        } catch (DomainException ex) {
+          // A rejected send is a frame-level error: report it, keep the socket open.
+          sendError(session, clientMsgId.toString(), ex.getErrorCode().code());
+          return;
+        }
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "SENT"))));
+                    new WsServerFrame(WsMessageType.ACK, clientMsgId.toString(), "SENT"))));
       }
       default -> {
         session.sendMessage(
@@ -110,6 +125,27 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     String connectionId = session.getId();
     sessionStore.remove(connectionId);
     connectionRegistryPort.removeConnection(connectionId);
+  }
+
+  /** The idempotency key in canonical UUID form, or null when it is missing or malformed. */
+  private static UUID parseClientMsgId(String raw) {
+    // UUID.fromString accepts short forms like "1-1-1-1-1"; only the 36-char form is a client key.
+    if (Objects.isNull(raw) || raw.length() != 36) {
+      return null;
+    }
+    try {
+      return UUID.fromString(raw);
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
+
+  private void sendError(WebSocketSession session, String clientMsgId, Object data)
+      throws IOException {
+    session.sendMessage(
+        new TextMessage(
+            objectMapper.writeValueAsString(
+                new WsServerFrame(WsMessageType.ERROR, clientMsgId, data))));
   }
 
   private Long getUserId(WebSocketSession session) {

@@ -12,5 +12,5 @@ paths:
 - Test names describe behaviour: `rejectsEditAfter24Hours`, `returnsSameSeqOnRetriedClientMsgId`.
 - Every authorization rule gets a negative test (non-member, wrong role). Every idempotent operation gets a "called twice → one effect" test.
 - Async assertions use Awaitility. Never use `Thread.sleep`.
-- For concurrency tests, start the threads with a `CountDownLatch`, run ≥ 20 iterations, and assert invariants (no gaps, no duplicates), not timings.
+- For concurrency tests, release ≥ 20 threads together with one `CountDownLatch` and assert invariants (no gaps, no duplicates), not timings. One round is enough; don't wrap it in `@RepeatedTest` (each round is 20 real transactions against Testcontainers and the build slows sharply).
 - For GenAI code, use fake `EmbeddingPort`/`LlmStreamingPort` implementations with deterministic output. Tests never call Bedrock or Ollama unless tagged `@Tag("eval")`.

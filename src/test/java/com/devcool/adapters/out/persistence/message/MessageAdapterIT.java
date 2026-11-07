@@ -10,7 +10,9 @@ import com.devcool.adapters.out.persistence.message.mapper.MessageMapperImpl;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
+import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.user.model.enums.Role;
@@ -25,7 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
-/** MessagePort.findMessages against real Postgres: filtering, order, cursor and mapping. */
+/** MessagePort against real Postgres. */
 @Import({MessageAdapter.class, MessageMapperImpl.class, MediaMapperImpl.class})
 class MessageAdapterIT extends AbstractJpaIT {
 
@@ -176,6 +178,49 @@ class MessageAdapterIT extends AbstractJpaIT {
               assertThat(e.getSenderName()).isEqualTo(alice.getName());
               assertThat(e.getSenderAvatar()).isEqualTo(alice.getAvatar());
             });
+  }
+
+  // ---- seq + idempotency key (P3-T03) ---------------------------------------------------------
+
+  @Test
+  void savedSeqAndClientMsgId_areFoundBySenderAndKey() {
+    UUID key = UUID.randomUUID();
+    Long id = messagePort.save(domainText(alice, channelA, 7L, key)).orElseThrow();
+    resetPersistenceContext();
+
+    assertThat(messagePort.findByClientMsgId(alice.getId(), key))
+        .contains(new MessageKey(id, channelA.getId(), 7L, T0));
+  }
+
+  @Test
+  void sameKeyOfAnotherSender_isNotFound() {
+    UserEntity bob = user("Bob", null);
+    UUID key = UUID.randomUUID();
+    messagePort.save(domainText(alice, channelA, 1L, key));
+    resetPersistenceContext();
+
+    assertThat(messagePort.findByClientMsgId(bob.getId(), key)).isEmpty();
+  }
+
+  @Test
+  void secondMessageWithSameSenderAndKey_returnsEmpty() {
+    UUID key = UUID.randomUUID();
+    messagePort.save(domainText(alice, channelA, 1L, key));
+
+    // Another channel, so only the (user_id, client_msg_id) key can collide.
+    assertThat(messagePort.save(domainText(alice, channelB, 1L, key))).isEmpty();
+  }
+
+  private static Message domainText(UserEntity sender, ChannelEntity channel, long seq, UUID key) {
+    return Message.builder()
+        .senderId(sender.getId())
+        .channelId(channel.getId())
+        .contentType(ContentType.TEXT)
+        .content("hello")
+        .createdTime(T0)
+        .seq(seq)
+        .clientMsgId(key)
+        .build();
   }
 
   // ---- seed helpers ----------------------------------------------------------------------------

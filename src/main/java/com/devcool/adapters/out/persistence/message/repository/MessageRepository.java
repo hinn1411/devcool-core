@@ -1,7 +1,10 @@
 package com.devcool.adapters.out.persistence.message.repository;
 
 import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
+import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +25,19 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       """)
   List<MessageEntity> findByChannelId(
       @Param("channelId") Long channelId, @Param("cursorId") Long cursorId, Pageable pageable);
+
+  /** Served by the uk_message_user_client_msg index; no join, no media load. */
+  @Query(
+      """
+      SELECT new com.devcool.adapters.out.persistence.message.projection.MessageKeyRow(
+      ms.id,
+      ms.channel.id,
+      ms.seq,
+      ms.createdTime
+      )
+      FROM MessageEntity ms
+      WHERE ms.user.id = :senderId AND ms.clientMsgId = :clientMsgId
+      """)
+  Optional<MessageKeyRow> findKeyRow(
+      @Param("senderId") Long senderId, @Param("clientMsgId") UUID clientMsgId);
 }

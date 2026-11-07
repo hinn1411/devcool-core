@@ -434,7 +434,7 @@ A full-stack test has a unique advantage: after the request, it can look at the 
 Some bugs only exist when two transactions overlap. Unit tests run one thread against mocks, so they can't see them. The test conventions (`.claude/rules/testing.md`) already set the rules:
 
 - Start threads together with a `CountDownLatch`, so they really overlap.
-- Run **≥ 20 iterations**: one lucky interleaving proves nothing.
+- Release **≥ 20 threads** in one round: two threads can miss the overlap by luck, twenty contending for one row or key hit it reliably. Don't repeat rounds with `@RepeatedTest`; each round is many real transactions and the build time multiplies.
 - Assert **invariants** ("exactly one succeeded", "count never exceeds the cap"), not timings.
 - Use Awaitility for anything asynchronous, never `Thread.sleep`.
 
@@ -531,7 +531,7 @@ This is the rubric I'll use when you ask me to review an exercise in chapter 13.
 
 **Isolation and determinism**
 - [ ] Passes alone, in any order, and twice in a row against a reused container
-- [ ] Concurrency tests: latch, ≥ 20 iterations, invariant assertions, not `@Transactional`
+- [ ] Concurrency tests: latch releasing ≥ 20 threads (one round), invariant assertions, not `@Transactional`
 - [ ] No `Thread.sleep`
 - [ ] A red test caused by a real bug is **kept red** (or `@Disabled("BUG: …")`) and reported, the same rule as 07 §13
 

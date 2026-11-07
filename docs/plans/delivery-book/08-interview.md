@@ -48,7 +48,7 @@ Answers come from your own work. These add to [03 §13](../architecture/03-chat-
 | 11 | How did you move an existing schema to Flyway? | P1-T01 | Baseline, `validate`, never editing merged migrations |
 | 12 | Authentication vs authorization, with a bug you fixed | P1-T04, T06 | The BOLA example; service-layer checks; negative tests |
 | 13 | Optimistic vs pessimistic locking: where? | P3-T03, P3-T06 | Channel row lock for seq; `version` for edits → 409 |
-| 14 | How do you test concurrency? | [testing rules](../../../.claude/rules/testing.md) | Latch, ≥ 20 iterations, assert invariants not timings |
+| 14 | How do you test concurrency? | [testing rules](../../../.claude/rules/testing.md) | Latch releasing ≥ 20 threads in one round; assert invariants not timings |
 | 15 | Why an outbox and not publish-after-commit? | ADR-0007 | Dual write; the crash window; at-least-once |
 | 16 | How are your consumers idempotent and order-tolerant? | P6-T07 | `processed_event` in the same tx; re-read + `version` guard |
 | 17 | What did virtual threads change, and the risk? | P1-T16, [ref 10](../../references/10-spring-boot-and-java-runtime.md) | Cheap blocking; pinning in `synchronized` on Java 21 |

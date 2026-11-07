@@ -68,4 +68,17 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       WHERE c.id = :id
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
+
+  /**
+   * ADR-0012 bump; locks the channel row until commit. Not {@code @Modifying}: it returns a row.
+   */
+  @Query(
+      value =
+          """
+          UPDATE channel SET last_seq = last_seq + 1, last_message_at = now()
+          WHERE id = :channelId
+          RETURNING last_seq
+          """,
+      nativeQuery = true)
+  Optional<Long> bumpLastSeq(@Param("channelId") Long channelId);
 }
