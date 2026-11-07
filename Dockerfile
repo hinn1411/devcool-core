@@ -4,7 +4,7 @@
 
 # ---- build: compile the fat jar and split it into Spring Boot's layers ----
 # eclipse-temurin:21-jdk-noble
-FROM eclipse-temurin:21-jdk-noble@sha256:b468c3fc688b14450571494f588bd939378e7fd542ed5a73f8efc13f17872a87 AS build
+FROM eclipse-temurin:21-jdk-noble@sha256:114cabb73033ca4ce7ceec3deb62396bc1b716282bae051ed3c1d82e38fcab2d AS build
 WORKDIR /build
 
 # Dependencies get their own layer, so a src-only change doesn't download them again (ch18 §2.3).
