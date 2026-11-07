@@ -89,7 +89,9 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
    */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
-    channelAuthorizer.requireMember(command.channelId(), command.userId());
+    // Membership only, no channel-exists check first: a missing channel and a channel the caller
+    // is not in must give the same answer, or SEND_MESSAGE becomes a channel-id oracle.
+    channelAuthorizer.requireMembership(command.channelId(), command.userId());
 
     Optional<SavedMessage> replay = findReplay(command);
     if (replay.isPresent()) {
@@ -119,16 +121,15 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
         .findByClientMsgId(command.userId(), command.clientMsgId())
         .map(
             original -> {
-              if (!Objects.equals(original.getChannelId(), command.channelId())) {
+              if (!Objects.equals(original.channelId(), command.channelId())) {
                 log.warn(
                     "User {} reused a clientMsgId of channel {} in channel {}",
                     command.userId(),
-                    original.getChannelId(),
+                    original.channelId(),
                     command.channelId());
                 throw new ClientMsgIdReusedException();
               }
-              return new SavedMessage(
-                  original.getId(), original.getSeq(), original.getCreatedTime(), true);
+              return new SavedMessage(original.id(), original.seq(), original.createdTime(), true);
             });
   }
 

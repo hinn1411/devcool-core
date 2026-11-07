@@ -101,6 +101,7 @@ class RawWebSocketHandlerTest {
     WsServerFrame frame = onlyReply();
     assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
     assertThat(frame.data()).isEqualTo("Invalid clientMsgId");
+    assertThat(frame.clientMsgId()).as("the raw client string is not reflected").isNull();
     verifyNoInteractions(sendMessageUseCase);
     verify(session, never()).close(any(CloseStatus.class));
   }

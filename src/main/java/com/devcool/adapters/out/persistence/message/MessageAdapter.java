@@ -7,6 +7,7 @@ import com.devcool.adapters.out.persistence.message.repository.MessageRepository
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
+import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -49,18 +50,9 @@ public class MessageAdapter implements MessagePort {
   }
 
   @Override
-  public Optional<Message> findByClientMsgId(Long senderId, UUID clientMsgId) {
+  public Optional<MessageKey> findByClientMsgId(Long senderId, UUID clientMsgId) {
     return repo.findKeyRow(senderId, clientMsgId)
-        .map(
-            row ->
-                Message.builder()
-                    .id(row.id())
-                    .senderId(senderId)
-                    .channelId(row.channelId())
-                    .seq(row.seq())
-                    .clientMsgId(clientMsgId)
-                    .createdTime(row.createdTime())
-                    .build());
+        .map(row -> new MessageKey(row.id(), row.channelId(), row.seq(), row.createdTime()));
   }
 
   @Override

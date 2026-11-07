@@ -15,6 +15,7 @@ import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
+import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
@@ -116,13 +117,23 @@ class MessageServiceTest {
 
   @Test
   void nonMember_isRejectedBeforeAnyBump() {
-    when(channelPort.existById(CHANNEL)).thenReturn(true);
     when(memberPort.existMemberOfChannelByUserId(CHANNEL, ALICE)).thenReturn(false);
 
     assertThatThrownBy(() -> service.save(text(CHANNEL)))
         .isInstanceOf(MemberNotFoundException.class);
     verify(channelPort, never()).getNextSequence(anyLong());
     verifyNoInteractions(messagePort);
+  }
+
+  @Test
+  void unknownChannel_getsTheSameAnswerAsNonMember() {
+    // No member row can exist without its channel (FK), so this also covers a missing channel.
+    when(memberPort.existMemberOfChannelByUserId(OTHER_CHANNEL, ALICE)).thenReturn(false);
+
+    // A distinct "channel not found" would let any user map which channel ids exist.
+    assertThatThrownBy(() -> service.save(text(OTHER_CHANNEL)))
+        .isInstanceOf(MemberNotFoundException.class);
+    verifyNoInteractions(channelPort, messagePort);
   }
 
   @Test
@@ -150,7 +161,6 @@ class MessageServiceTest {
   // ---- helpers ---------------------------------------------------------------------------------
 
   private void aliceIsMember() {
-    when(channelPort.existById(CHANNEL)).thenReturn(true);
     when(memberPort.existMemberOfChannelByUserId(CHANNEL, ALICE)).thenReturn(true);
   }
 
@@ -159,17 +169,8 @@ class MessageServiceTest {
   }
 
   /** The message Alice already stored under {@link #KEY}. */
-  private static Message existing(long channelId) {
-    return Message.builder()
-        .id(100L)
-        .seq(42L)
-        .channelId(channelId)
-        .senderId(ALICE)
-        .clientMsgId(KEY)
-        .contentType(ContentType.TEXT)
-        .content("hello")
-        .createdTime(ORIGINAL_TIME)
-        .build();
+  private static MessageKey existing(long channelId) {
+    return new MessageKey(100L, channelId, 42L, ORIGINAL_TIME);
   }
 
   /**

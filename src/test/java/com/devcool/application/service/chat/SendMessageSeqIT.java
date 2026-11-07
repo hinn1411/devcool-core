@@ -3,6 +3,7 @@ package com.devcool.application.service.chat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.SaveMessageUseCase;
@@ -44,20 +45,7 @@ class SendMessageSeqIT extends AbstractIntegrationTest {
   void seedChannelWithAliceAsMember() {
     alice = user();
     outsider = user();
-    channel =
-        jdbc.queryForObject(
-            """
-            insert into channel (id, name, boundary, total_of_members, channel_type)
-            values (nextval('channel_seq'), 'seq-it', 'PUBLIC', 1, 'LOUNGE') returning id
-            """,
-            Long.class);
-    jdbc.update(
-        """
-        insert into member (id, user_id, channel_id, role, joined_time)
-        values (nextval('member_seq'), ?, ?, 'CREATOR', now())
-        """,
-        alice,
-        channel);
+    channel = channelWith(alice);
   }
 
   @Test
@@ -120,6 +108,21 @@ class SendMessageSeqIT extends AbstractIntegrationTest {
   }
 
   @Test
+  void keyReusedInAnotherChannel_isRejected_andNothingIsStoredThere() {
+    UUID key = UUID.randomUUID();
+    saveMessage.save(send(alice, key));
+    long otherChannel = channelWith(alice);
+
+    assertThatThrownBy(
+            () ->
+                saveMessage.save(
+                    new CreateMessageCommand("hi", ContentType.TEXT, otherChannel, alice, key)))
+        .isInstanceOf(ClientMsgIdReusedException.class);
+    assertThat(rowsWithKey(key)).isEqualTo(1);
+    assertThat(lastSeqOf(otherChannel)).isZero();
+  }
+
+  @Test
   void nonMember_isRejected_andTheCounterDoesNotMove() {
     assertThatThrownBy(() -> saveMessage.save(send(outsider, UUID.randomUUID())))
         .isInstanceOf(MemberNotFoundException.class);
@@ -168,8 +171,30 @@ class SendMessageSeqIT extends AbstractIntegrationTest {
         name + "@test.dev");
   }
 
+  private long channelWith(long member) {
+    long id =
+        jdbc.queryForObject(
+            """
+            insert into channel (id, name, boundary, total_of_members, channel_type)
+            values (nextval('channel_seq'), 'seq-it', 'PUBLIC', 1, 'LOUNGE') returning id
+            """,
+            Long.class);
+    jdbc.update(
+        """
+        insert into member (id, user_id, channel_id, role, joined_time)
+        values (nextval('member_seq'), ?, ?, 'CREATOR', now())
+        """,
+        member,
+        id);
+    return id;
+  }
+
   private long lastSeq() {
-    return jdbc.queryForObject("select last_seq from channel where id = ?", Long.class, channel);
+    return lastSeqOf(channel);
+  }
+
+  private long lastSeqOf(long channelId) {
+    return jdbc.queryForObject("select last_seq from channel where id = ?", Long.class, channelId);
   }
 
   private OffsetDateTime lastMessageAt() {

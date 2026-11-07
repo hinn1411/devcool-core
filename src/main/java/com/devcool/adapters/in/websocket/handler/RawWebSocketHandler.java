@@ -87,7 +87,8 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
       case WsMessageType.SEND_MESSAGE -> {
         UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
         if (Objects.isNull(clientMsgId)) {
-          sendError(session, clientFrame.clientMsgId(), "Invalid clientMsgId");
+          // Don't reflect an arbitrary client string back.
+          sendError(session, null, "Invalid clientMsgId");
           return;
         }
         try {
@@ -101,13 +102,13 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
                   clientMsgId));
         } catch (DomainException ex) {
           // A rejected send is a frame-level error: report it, keep the socket open.
-          sendError(session, clientFrame.clientMsgId(), ex.getErrorCode().code());
+          sendError(session, clientMsgId.toString(), ex.getErrorCode().code());
           return;
         }
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "SENT"))));
+                    new WsServerFrame(WsMessageType.ACK, clientMsgId.toString(), "SENT"))));
       }
       default -> {
         session.sendMessage(

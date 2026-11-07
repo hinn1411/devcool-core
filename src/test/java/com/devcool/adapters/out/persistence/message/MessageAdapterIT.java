@@ -12,6 +12,7 @@ import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
+import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.user.model.enums.Role;
@@ -19,7 +20,6 @@ import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.support.AbstractJpaIT;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -191,18 +191,8 @@ class MessageAdapterIT extends AbstractJpaIT {
     Long id = messagePort.save(domainText(alice, channelA, 7L, key)).orElseThrow();
     resetPersistenceContext();
 
-    Optional<Message> found = messagePort.findByClientMsgId(alice.getId(), key);
-
-    assertThat(found)
-        .get()
-        .satisfies(
-            m -> {
-              assertThat(m.getId()).isEqualTo(id);
-              assertThat(m.getSeq()).isEqualTo(7L);
-              assertThat(m.getChannelId()).isEqualTo(channelA.getId());
-              assertThat(m.getClientMsgId()).isEqualTo(key);
-              assertThat(m.getCreatedTime()).isEqualTo(T0);
-            });
+    assertThat(messagePort.findByClientMsgId(alice.getId(), key))
+        .contains(new MessageKey(id, channelA.getId(), 7L, T0));
   }
 
   @Test

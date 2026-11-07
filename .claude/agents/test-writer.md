@@ -22,7 +22,7 @@ You write tests for the DevCool Spring Boot backend. You change only files under
 - Arrange/act/assert, with AssertJ assertions and `verify(...)`/`verifyNoInteractions(...)` for the effects on ports.
 - Cover: the happy path, not found, forbidden (non-member, wrong role), validation failure, idempotent repeat, and boundary values.
 - ITs (`*IT.java`) use the shared Testcontainers base and real Postgres/Valkey/LocalStack. Async code uses Awaitility; there's no `Thread.sleep`.
-- Concurrency tests assert invariants over ≥ 20 parallel runs.
+- Concurrency tests release ≥ 20 threads with one `CountDownLatch` and assert invariants; one round, no `@RepeatedTest`.
 
 ## Finish
 Run the tests you wrote (`./mvnw -q test -Dtest=<Class>`, or `./mvnw -q -Dit verify -Dit.test=<Class>`) and `./mvnw -q spotless:apply`. Report the tests added, what each proves, and any production bug they revealed (with a failing test left `@Disabled("bug: …")` only if the user agrees).
