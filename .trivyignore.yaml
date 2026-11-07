@@ -1,5 +1,5 @@
-# Accepted findings for the ci-docker.yml gate: only CVEs with no fix on our Boot line.
-# Each needs a statement and an expiry; on expiry the gate fails and forces a re-check.
+# Accepted findings hidden from the Trivy image reports: only CVEs with no fix on our Boot line.
+# Each needs a statement and an expiry; on expiry the CVE reappears in the report for a re-check.
 vulnerabilities:
   # Fixed only in Framework 7 (Boot 4).
   - id: CVE-2026-47884
