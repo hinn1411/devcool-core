@@ -52,8 +52,8 @@ public class MessageEntity {
       foreignKey = @ForeignKey(name = "fk_message_channel"))
   private ChannelEntity channel;
 
-  /** Position in the channel (ADR-0012). Nullable until P3-T03a adds NOT NULL. */
-  @Column(name = "SEQ")
+  /** Position in the channel (ADR-0012), unique per channel. */
+  @Column(name = "SEQ", nullable = false)
   private Long seq;
 
   /** The sender's idempotency key, unique per sender (uk_message_user_client_msg). */
