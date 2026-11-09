@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
   Never push before Green: a Red commit fails CI.
 - Respect the decisions in `docs/plans/architecture/adr/`. If a change contradicts an ADR, stop and say so instead of silently diverging.
-- Before finishing, run `/verify` (or the commands below that match the changed paths).
+- Local test scope: Red/Green run only the **affected tests** (see Commands). Close runs the full unit + IT suite once (`./mvnw -q -Dit verify`), not the full build: SpotBugs (`-Pstatic-analysis`) and the rest run in CI. `/verify` stays the opt-in full local check.
 - Check library APIs with context7 before adding or upgrading a dependency.
 
 ## Commands
@@ -42,7 +42,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Static analysis (SpotBugs; EI_EXPOSE_REP* baseline in spotbugs-exclude.xml)
 ./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify
+
+# Affected unit tests only (comma-separated classes)
+./mvnw -q test -Dtest='FooTest,BarTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+# Affected ITs only (skips unit tests and the JaCoCo floor: a partial run can't meet it)
+./mvnw -q -Dit verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dit.test='FooIT' -Djacoco.skip=true
 ```
+
+**Affected tests** = changed `*Test`/`*IT` files + `<Class>Test`/`<Class>IT` for each changed main class + test classes that reference a changed main class (`grep -rlw <Class> src/test`). Run ITs only when a migration, `persistence`, `websocket`, `messaging`, `web/controller` or `config` path changed.
 
 ## Architecture
 
