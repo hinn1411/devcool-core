@@ -125,7 +125,7 @@ class BigintIdsIT {
         new WsClientFrame(
             WsMessageType.SEND_MESSAGE, channelId, ContentType.TEXT, "big ids", uuid()));
 
-    assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("SENT");
+    assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("\"messageId\"");
     JsonNode pushed = json.readTree(awaitFrame(listening));
     assertThat(pushed.get("channelId").asLong()).isEqualTo(channelId);
     assertThat(pushed.get("senderId").asLong()).isEqualTo(sender.id());

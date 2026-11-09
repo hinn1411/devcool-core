@@ -38,11 +38,13 @@ import org.springframework.web.socket.WebSocketSession;
 @ExtendWith(MockitoExtension.class)
 class RawWebSocketHandlerTest {
 
-  // Boot's auto-configured mapper: java.time support, ISO-8601 dates (not timestamps).
+  // As Boot's: ISO-8601 dates.
   private final ObjectMapper objectMapper =
       Jackson2ObjectMapperBuilder.json()
           .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
           .build();
+  private static final SavedMessage SAVED =
+      new SavedMessage(100L, 42L, Instant.parse("2026-11-01T10:00:00Z"), false);
 
   @Mock private WsSessionStore sessionStore;
   @Mock private ConnectionRegistryPort connectionRegistryPort;
@@ -129,10 +131,7 @@ class RawWebSocketHandlerTest {
     verify(session, never()).close(any(CloseStatus.class));
   }
 
-  // ---- SEND_MESSAGE: ACK carries the saved ids (P3-T04) ----------------------------------------
-
-  private static final SavedMessage SAVED =
-      new SavedMessage(100L, 42L, Instant.parse("2026-11-01T10:00:00Z"), false);
+  // ---- SEND_MESSAGE: ACK ids (P3-T04) ---------------------------------------------------------
 
   @Test
   void send_ackCarriesMessageIdSeqAndIsoCreatedTime() throws Exception {
