@@ -1,9 +1,11 @@
 package com.devcool.adapters.in.websocket.handler;
 
 import com.devcool.adapters.in.websocket.dto.WsClientFrame;
+import com.devcool.adapters.in.websocket.dto.WsMessageAck;
 import com.devcool.adapters.in.websocket.dto.WsMessageType;
 import com.devcool.adapters.in.websocket.dto.WsServerFrame;
 import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
+import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
@@ -91,24 +93,30 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
           sendError(session, null, "Invalid clientMsgId");
           return;
         }
+        SavedMessage saved;
         try {
-          sendMessageUseCase.sendMessage(
-              new SendMessageCommand(
-                  connectionId,
-                  userId,
-                  clientFrame.channelId(),
-                  clientFrame.contentType(),
-                  clientFrame.content(),
-                  clientMsgId));
+          saved =
+              sendMessageUseCase.sendMessage(
+                  new SendMessageCommand(
+                      connectionId,
+                      userId,
+                      clientFrame.channelId(),
+                      clientFrame.contentType(),
+                      clientFrame.content(),
+                      clientMsgId));
         } catch (DomainException ex) {
           // A rejected send is a frame-level error: report it, keep the socket open.
           sendError(session, clientMsgId.toString(), ex.getErrorCode().code());
           return;
         }
+
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(WsMessageType.ACK, clientMsgId.toString(), "SENT"))));
+                    new WsServerFrame(
+                        WsMessageType.ACK,
+                        clientMsgId.toString(),
+                        new WsMessageAck(saved.id(), saved.seq(), saved.createdTime())))));
       }
       default -> {
         session.sendMessage(

@@ -33,7 +33,7 @@ public class WsSendMessageService implements SendMessageUseCase {
     if (saved.duplicate()) {
       // A retry: the original send already published it. Push is at-most-once (design §4);
       // a client that missed it catches up by seq.
-      return null;
+      return saved;
     }
 
     Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
@@ -45,9 +45,9 @@ public class WsSendMessageService implements SendMessageUseCase {
             command.userId(),
             command.contentType().name(),
             command.content(),
-            null,
-            null,
-            null);
+            saved.id(),
+            saved.seq(),
+            saved.createdTime());
 
     String currentConnectionId = command.connectionId();
     for (String connectionId : connections) {
@@ -55,7 +55,7 @@ public class WsSendMessageService implements SendMessageUseCase {
         realtimeEmitterPort.sendMessageToConnection(connectionId, payload);
       }
     }
-    return null;
+    return saved;
   }
 
   private CreateMessageCommand toSaveMessageCommand(SendMessageCommand sendCommand) {

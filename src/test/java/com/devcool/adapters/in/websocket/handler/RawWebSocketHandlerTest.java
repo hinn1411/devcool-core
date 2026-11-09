@@ -18,6 +18,7 @@ import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.UUID;
@@ -37,8 +38,11 @@ import org.springframework.web.socket.WebSocketSession;
 @ExtendWith(MockitoExtension.class)
 class RawWebSocketHandlerTest {
 
-  // Boot's defaults: java.time support, ISO-8601 dates.
-  private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+  // Boot's auto-configured mapper: java.time support, ISO-8601 dates (not timestamps).
+  private final ObjectMapper objectMapper =
+      Jackson2ObjectMapperBuilder.json()
+          .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .build();
 
   @Mock private WsSessionStore sessionStore;
   @Mock private ConnectionRegistryPort connectionRegistryPort;
