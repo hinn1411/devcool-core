@@ -11,6 +11,7 @@ import lombok.Setter;
 @Builder
 public class MessageItem {
   private Long id;
+  private Long seq;
   private String content;
   private ContentType contentType;
   private Instant createdTime;

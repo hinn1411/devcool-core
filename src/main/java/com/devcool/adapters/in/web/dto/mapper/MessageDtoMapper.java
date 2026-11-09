@@ -6,14 +6,17 @@ import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface MessageDtoMapper {
 
-  GetMessageCommand toGetCommand(Long userId, Long channelId, Long cursorId, Integer limit);
+  GetMessageCommand toGetCommand(
+      Long userId, Long channelId, Long cursorId, Long beforeSeq, Long afterSeq, Integer limit);
 
   GetMessagesResponse toGetResponse(MessageList messageList);
 
+  @Mapping(target = "seq", ignore = true) // Red stub
   MessageItemResponse toItemResponse(MessageItem item);
 }

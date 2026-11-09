@@ -29,7 +29,7 @@ public class HttpErrorMapper {
       case TOO_LARGE_MEDIA -> HttpStatus.PAYLOAD_TOO_LARGE;
       case OK -> HttpStatus.OK;
       case CREATED -> HttpStatus.CREATED;
-      case INTERNAL_SERVER_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+      case INTERNAL_SERVER_ERROR, INVALID_HISTORY_CURSOR -> HttpStatus.INTERNAL_SERVER_ERROR;
     };
   }
 }

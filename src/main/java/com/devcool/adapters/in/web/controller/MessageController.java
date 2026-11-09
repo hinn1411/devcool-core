@@ -34,7 +34,7 @@ public class MessageController {
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit,
       Authentication auth) {
     Long userId = Long.valueOf(auth.getName());
-    GetMessageCommand command = mapper.toGetCommand(userId, channelId, cursorId, limit);
+    GetMessageCommand command = mapper.toGetCommand(userId, channelId, cursorId, null, null, limit);
     MessageList messageList = messageQuerier.getMessages(command);
     GetMessagesResponse response = mapper.toGetResponse(messageList);
     return ResponseEntity.ok(

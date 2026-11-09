@@ -60,4 +60,14 @@ public class MessageAdapter implements MessagePort {
     Pageable page = PageRequest.of(0, size);
     return repo.findByChannelId(channelId, cursorId, page).stream().map(mapper::toItem).toList();
   }
+
+  @Override
+  public List<MessageItem> findBeforeSeq(Long channelId, Long beforeSeq, Integer size) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size) {
+    throw new UnsupportedOperationException();
+  }
 }

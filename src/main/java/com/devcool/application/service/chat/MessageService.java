@@ -6,7 +6,6 @@ import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
-import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -137,17 +136,6 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   @Override
   @Transactional(readOnly = true)
   public MessageList getMessages(GetMessageCommand command) {
-    channelAuthorizer.requireMember(command.channelId(), command.userId());
-
-    // Fetch one extra row to know whether another page exists.
-    List<MessageItem> fetched =
-        messagePort.findMessages(command.channelId(), command.cursorId(), command.limit() + 1);
-    if (fetched.isEmpty()) {
-      return new MessageList(List.of(), null, false);
-    }
-
-    boolean hasMore = fetched.size() > command.limit();
-    List<MessageItem> items = hasMore ? fetched.subList(0, command.limit()) : fetched;
-    return new MessageList(items, items.getLast().getId(), hasMore);
+    throw new UnsupportedOperationException();
   }
 }

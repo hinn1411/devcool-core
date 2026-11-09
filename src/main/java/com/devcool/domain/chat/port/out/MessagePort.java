@@ -16,6 +16,12 @@ public interface MessagePort {
   /** The id, channel, seq and time of the sender's message stored under this idempotency key. */
   Optional<MessageKey> findByClientMsgId(Long senderId, UUID clientMsgId);
 
-  /** Returns up to {@code size} messages older than {@code cursorId}, newest first. */
+  /** Up to {@code size} messages older than {@code cursorId}, newest first (deprecated alias). */
   List<MessageItem> findMessages(Long channelId, Long cursorId, Integer size);
+
+  /** Up to {@code size} messages with seq below {@code beforeSeq} (null = newest), seq DESC. */
+  List<MessageItem> findBeforeSeq(Long channelId, Long beforeSeq, Integer size);
+
+  /** Up to {@code size} messages with seq above {@code afterSeq}, seq ASC. */
+  List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size);
 }
