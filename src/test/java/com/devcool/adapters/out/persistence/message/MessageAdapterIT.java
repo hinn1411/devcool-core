@@ -256,10 +256,7 @@ class MessageAdapterIT extends AbstractJpaIT {
     return em.persist(channel);
   }
 
-  /**
-   * Each message is created one second after the previous one; ids follow insertion order. Seq is
-   * NOT NULL since V5 (P3-T03a); the global counter keeps it unique per channel.
-   */
+  /** One second apart; ids and seqs follow insertion order. */
   private MessageEntity message(ChannelEntity channel, ContentType type, String content) {
     MessageEntity message = new MessageEntity();
     message.setUser(alice);

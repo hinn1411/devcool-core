@@ -15,11 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/**
- * V5 contracts V4 (P3-T03a): migrate to V4, seed rows the way new (seq) and old (no seq) tasks
- * wrote them during the rollout, then apply V5 and check the NULL rows are appended, not
- * renumbered.
- */
+/** V5 (P3-T03a): seed at V4 with seq and NULL-seq rows, then migrate. */
 class V5ContractIT {
 
   private static final long ALICE = 1;
@@ -44,7 +40,7 @@ class V5ContractIT {
           (20, 'quiet', 'PUBLIC', 1, 'LOUNGE', 2, '2026-11-01 09:00:00+00'),
           (30, 'old-only', 'PUBLIC', 1, 'LOUNGE', 0, null)
         """,
-        // New tasks wrote seq; old (pre-T03) tasks left it NULL. Ids interleave across channels.
+        // NULL seq = written by an old task
         """
         insert into message (id, user_id, channel_id, content_type, created_time, seq) values
           (100, 1, 10, 'TEXT', '2026-11-01 08:00:00+00', 1),
@@ -70,7 +66,7 @@ class V5ContractIT {
             Map.entry(107L, 5L));
     assertThat(lastSeq(BUSY)).isEqualTo(5);
 
-    // Numbered per channel: a channel with only seq-less rows starts at 1
+    // Per channel: only NULL rows -> starts at 1
     assertThat(seqById(OLD_ONLY)).containsExactly(Map.entry(105L, 1L));
     assertThat(lastSeq(OLD_ONLY)).isEqualTo(1);
   }

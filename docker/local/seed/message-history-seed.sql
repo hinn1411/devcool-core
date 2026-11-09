@@ -14,17 +14,29 @@ insert into channel (id, name, boundary, total_of_members, channel_type, creator
 select i, 'seed-channel-' || i, 'PUBLIC', 20, 'LOUNGE', 1, 1
 from generate_series(1, 21) i;
 
-insert into message (id, user_id, channel_id, content, content_type, created_time, deleted_time)
-select i,
-       (i % 20) + 1,
-       case when i <= 200 and i % 2 = 1 then 21
-            when i % 2 = 0 then 1
-            else (i % 19) + 2 end,
-       'message ' || i,
-       'TEXT',
-       now() - make_interval(secs => 100000 - i),
-       case when i % 50 = 0 then now() end
-from generate_series(1, 100000) i;
+-- seq: 1..n per channel in id order (NOT NULL since V5).
+insert into message (id, user_id, channel_id, content, content_type, created_time, deleted_time, seq)
+select i, user_id, channel_id, content, 'TEXT', created_time, deleted_time,
+       row_number() over (partition by channel_id order by i)
+from (
+    select i,
+           (i % 20) + 1 as user_id,
+           case when i <= 200 and i % 2 = 1 then 21
+                when i % 2 = 0 then 1
+                else (i % 19) + 2 end as channel_id,
+           'message ' || i as content,
+           now() - make_interval(secs => 100000 - i) as created_time,
+           case when i % 50 = 0 then now() end as deleted_time
+    from generate_series(1, 100000) i) as m;
+
+-- So the next send continues after the seeded seqs.
+update channel
+set last_seq = m.max_seq, last_message_at = m.latest
+from (
+    select channel_id, max(seq) as max_seq, max(created_time) as latest
+    from message
+    group by channel_id) as m
+where channel.id = m.channel_id;
 
 select setval('app_user_seq', 1000), setval('channel_seq', 1000), setval('message_seq', 200000);
 analyze app_user;
