@@ -26,13 +26,13 @@ Current branch and working tree:
 ## 3. Red: failing tests first
 - Map every brief **Done when** item (and the phase **Test plan**) to a named test, and show the map as a short list. Use Mockito unit tests for services (`.claude/rules/testing.md`), Testcontainers ITs where the plan asks, and a negative authorization test for every access rule.
 - Add only the production signatures the tests need to compile: port interfaces, records, and methods that `throw new UnsupportedOperationException()`. No logic.
-- Run the new tests (`./mvnw -q test -Dtest=<Class>`, or `-Dit verify` for ITs). Each must **fail on an assertion or the stub's exception**, not on a compile error or a broken fixture. Show the failing test names.
+- Run the new tests with the affected-tests commands in `CLAUDE.md` › Commands (unit, or the IT form for ITs). Each must **fail on an assertion or the stub's exception**, not on a compile error or a broken fixture. Show the failing test names.
 - Commit the brief and the Red tests: `test($task): <what the tests pin down>`. Don't push: a Red commit fails CI.
 
 ## 4. Green: simplest passing code
 - Write the simplest code that makes every Red test pass. Work through the hexagonal slice in this order: domain → service → adapters → controller/WS handler → DTO/mapper. For migrations, follow `.claude/rules/flyway.md` (use the `flyway-migration` skill for the file name).
 - **Don't edit the Red tests.** If one turns out to be wrong, stop, say why, and get the user's OK before changing it.
-- Run the new tests plus `./mvnw -q test`. Once all are green, commit: `feat($task): <behaviour>`.
+- Run the affected tests, unit and IT (`CLAUDE.md` › Commands), not the full suite. Once all are green, commit: `feat($task): <behaviour>`.
 
 ## 5. Review: the user decides
 - Launch these reviewers **in parallel**, based on `git diff master...HEAD`:
@@ -43,8 +43,8 @@ Current branch and working tree:
 - Ask one AskUserQuestion: "Apply all recommended" (first), "Let me pick" (then a multiSelect over the items), or "None". Apply nothing that the user rejected.
 
 ## 6. Refactor and close
-- Apply the approved items and behaviour-preserving cleanups. Re-run the tests after each change, and keep them green. If an approved item changes behaviour, write its failing test first.
-- Run the `verify` skill's checks for the changed areas. Don't disable, skip or weaken tests to make them pass.
+- Apply the approved items and behaviour-preserving cleanups. Re-run the affected tests after each change, and keep them green. If an approved item changes behaviour, write its failing test first.
+- Run `./mvnw -q spotless:apply`, then the full unit + IT suite once: `./mvnw -q -Dit verify` (needs Docker; the JaCoCo floor applies). No `clean`, no `-Pstatic-analysis`: SpotBugs and the rest of the build run in CI. Don't disable, skip or weaken tests to make them pass.
 - Tick `- [x] **$task**` in the phase file. If every task in the phase is now ticked, set that phase's status to `done` in `docs/plans/README.md`. If it was `todo`, set it to `in-progress` when you start.
 - If the implementation departed from the brief, update the matching row in the brief's **Decisions** table with the reason (add a row only for a new question), and keep the brief within 40 lines. If you made a decision the ADRs don't cover, suggest `/write-adr`.
 - Commit: `refactor($task): <what improved>`. If nothing was refactored, fold the tick into a `chore($task): close out` commit.
