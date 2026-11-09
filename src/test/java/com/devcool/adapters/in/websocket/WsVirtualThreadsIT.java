@@ -120,7 +120,7 @@ class WsVirtualThreadsIT {
 
     send(sending, channelId, "hello");
 
-    assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("SENT");
+    assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("\"messageId\"");
     assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE\"").contains("hello");
     assertThat(handlerThreads).singleElement().satisfies(t -> assertThat(t.isVirtual()).isTrue());
   }

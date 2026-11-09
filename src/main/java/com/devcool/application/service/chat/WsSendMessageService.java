@@ -7,6 +7,7 @@ import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class WsSendMessageService implements SendMessageUseCase {
   private final SaveMessageUseCase saveMessageUseCase;
 
   @Override
-  public void sendMessage(SendMessageCommand command) {
+  public SavedMessage sendMessage(SendMessageCommand command) {
     // Validate channel status later
 
     CreateMessageCommand saveCommand = toSaveMessageCommand(command);
@@ -32,7 +33,7 @@ public class WsSendMessageService implements SendMessageUseCase {
     if (saved.duplicate()) {
       // A retry: the original send already published it. Push is at-most-once (design §4);
       // a client that missed it catches up by seq.
-      return;
+      return saved;
     }
 
     Set<String> connections = connectionRegistryPort.getConnectionsByChannel(command.channelId());
@@ -43,7 +44,10 @@ public class WsSendMessageService implements SendMessageUseCase {
             command.channelId(),
             command.userId(),
             command.contentType().name(),
-            command.content());
+            command.content(),
+            saved.id(),
+            saved.seq(),
+            saved.createdTime());
 
     String currentConnectionId = command.connectionId();
     for (String connectionId : connections) {
@@ -51,6 +55,7 @@ public class WsSendMessageService implements SendMessageUseCase {
         realtimeEmitterPort.sendMessageToConnection(connectionId, payload);
       }
     }
+    return saved;
   }
 
   private CreateMessageCommand toSaveMessageCommand(SendMessageCommand sendCommand) {
@@ -63,5 +68,12 @@ public class WsSendMessageService implements SendMessageUseCase {
   }
 
   public record OutboundWsEvent(
-      String type, Long channelId, Long senderId, String contentType, String content) {}
+      String type,
+      Long channelId,
+      Long senderId,
+      String contentType,
+      String content,
+      Long messageId,
+      Long seq,
+      Instant createdTime) {}
 }

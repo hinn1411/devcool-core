@@ -11,11 +11,15 @@ import static org.mockito.Mockito.when;
 import com.devcool.adapters.in.websocket.dto.WsMessageType;
 import com.devcool.adapters.in.websocket.dto.WsServerFrame;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
+import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -33,7 +38,13 @@ import org.springframework.web.socket.WebSocketSession;
 @ExtendWith(MockitoExtension.class)
 class RawWebSocketHandlerTest {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  // As Boot's: ISO-8601 dates.
+  private final ObjectMapper objectMapper =
+      Jackson2ObjectMapperBuilder.json()
+          .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .build();
+  private static final SavedMessage SAVED =
+      new SavedMessage(100L, 42L, Instant.parse("2026-11-01T10:00:00Z"), false);
 
   @Mock private WsSessionStore sessionStore;
   @Mock private ConnectionRegistryPort connectionRegistryPort;
@@ -85,6 +96,7 @@ class RawWebSocketHandlerTest {
 
   @Test
   void send_passesTheParsedClientMsgIdToTheUseCase() throws Exception {
+    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
     ArgumentCaptor<SendMessageCommand> command = ArgumentCaptor.forClass(SendMessageCommand.class);
@@ -117,6 +129,39 @@ class RawWebSocketHandlerTest {
     assertThat(frame.clientMsgId()).isEqualTo(KEY);
     assertThat(frame.data()).isEqualTo("MESSAGE_410");
     verify(session, never()).close(any(CloseStatus.class));
+  }
+
+  // ---- SEND_MESSAGE: ACK ids (P3-T04) ---------------------------------------------------------
+
+  @Test
+  void send_ackCarriesMessageIdSeqAndIsoCreatedTime() throws Exception {
+    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
+
+    handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
+
+    assertAckCarriesSavedIds();
+  }
+
+  @Test
+  void retriedSend_ackCarriesTheOriginalIds() throws Exception {
+    when(sendMessageUseCase.sendMessage(any()))
+        .thenReturn(new SavedMessage(100L, 42L, SAVED.createdTime(), true));
+
+    handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
+
+    assertAckCarriesSavedIds();
+  }
+
+  private void assertAckCarriesSavedIds() throws Exception {
+    ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
+    verify(session).sendMessage(reply.capture());
+    JsonNode frame = objectMapper.readTree(reply.getValue().getPayload());
+    assertThat(frame.path("type").asText()).isEqualTo("ACK");
+    assertThat(frame.path("clientMsgId").asText()).isEqualTo(KEY);
+    JsonNode data = frame.path("data");
+    assertThat(data.path("messageId").asLong()).isEqualTo(100L);
+    assertThat(data.path("seq").asLong()).isEqualTo(42L);
+    assertThat(data.path("createdTime").asText()).isEqualTo("2026-11-01T10:00:00Z");
   }
 
   /** A SEND_MESSAGE frame; {@code keyField} is the raw JSON for the key ("" leaves it out). */
