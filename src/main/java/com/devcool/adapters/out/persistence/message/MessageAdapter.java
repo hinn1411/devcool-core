@@ -63,11 +63,15 @@ public class MessageAdapter implements MessagePort {
 
   @Override
   public List<MessageItem> findBeforeSeq(Long channelId, Long beforeSeq, Integer size) {
-    throw new UnsupportedOperationException();
+    return repo.findPageBeforeSeq(channelId, beforeSeq, PageRequest.of(0, size)).stream()
+        .map(mapper::toItem)
+        .toList();
   }
 
   @Override
   public List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size) {
-    throw new UnsupportedOperationException();
+    return repo.findPageAfterSeq(channelId, afterSeq, PageRequest.of(0, size)).stream()
+        .map(mapper::toItem)
+        .toList();
   }
 }

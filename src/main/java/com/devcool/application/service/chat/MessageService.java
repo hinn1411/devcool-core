@@ -4,8 +4,10 @@ import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
+import com.devcool.domain.chat.exception.InvalidHistoryCursorException;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
+import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -136,6 +139,33 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   @Override
   @Transactional(readOnly = true)
   public MessageList getMessages(GetMessageCommand command) {
-    throw new UnsupportedOperationException();
+    // Request shape first: no DB read, and the answer doesn't reveal whether the channel exists.
+    if (countCursors(command) > 1) {
+      throw new InvalidHistoryCursorException("Use only one of cursorId, beforeSeq, afterSeq");
+    }
+    channelAuthorizer.requireMember(command.channelId(), command.userId());
+
+    int fetchSize = command.limit() + 1; // one extra row tells whether another page exists
+    List<MessageItem> fetched = queryMessages(command, fetchSize);
+    boolean hasMore = fetched.size() > command.limit();
+    List<MessageItem> items = hasMore ? fetched.subList(0, command.limit()) : fetched;
+    return new MessageList(items, hasMore ? items.getLast().getId() : null, hasMore);
+  }
+
+  private static long countCursors(GetMessageCommand command) {
+    return Stream.of(command.cursorId(), command.beforeSeq(), command.afterSeq())
+        .filter(Objects::nonNull)
+        .count();
+  }
+
+  /** No cursor → the newest page (findBeforeSeq with null). */
+  private List<MessageItem> queryMessages(GetMessageCommand command, int fetchSize) {
+    if (Objects.nonNull(command.cursorId())) {
+      return messagePort.findMessages(command.channelId(), command.cursorId(), fetchSize);
+    }
+    if (Objects.nonNull(command.afterSeq())) {
+      return messagePort.findAfterSeq(command.channelId(), command.afterSeq(), fetchSize);
+    }
+    return messagePort.findBeforeSeq(command.channelId(), command.beforeSeq(), fetchSize);
   }
 }

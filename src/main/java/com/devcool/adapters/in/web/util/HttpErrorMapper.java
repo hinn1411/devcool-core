@@ -21,6 +21,7 @@ public class HttpErrorMapper {
       case INVALID_CHANNEL_CONFIG,
               INVALID_MEDIA_CONTENT,
               INVALID_MESSAGE_CONFIG,
+              INVALID_HISTORY_CURSOR,
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;
       case REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS, UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
@@ -29,7 +30,7 @@ public class HttpErrorMapper {
       case TOO_LARGE_MEDIA -> HttpStatus.PAYLOAD_TOO_LARGE;
       case OK -> HttpStatus.OK;
       case CREATED -> HttpStatus.CREATED;
-      case INTERNAL_SERVER_ERROR, INVALID_HISTORY_CURSOR -> HttpStatus.INTERNAL_SERVER_ERROR;
+      case INTERNAL_SERVER_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
     };
   }
 }

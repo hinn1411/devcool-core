@@ -8,6 +8,7 @@ import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.common.ErrorCode;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +31,26 @@ public class MessageController {
   @GetMapping("/channels/{channelId}/messages")
   public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> getMessages(
       @PathVariable Long channelId,
-      @RequestParam(required = false) Long cursorId,
+      @Parameter(deprecated = true, description = "Use beforeSeq. Message id; older first.")
+          @RequestParam(required = false)
+          Long cursorId,
+      @Parameter(
+              description =
+                  "Older than this seq, newest first. Next page: the last item's seq (exclusive).")
+          @RequestParam(required = false)
+          @Min(1)
+          Long beforeSeq,
+      @Parameter(
+              description =
+                  "Newer than this seq, oldest first. Next page: the last item's seq (exclusive).")
+          @RequestParam(required = false)
+          @Min(0)
+          Long afterSeq,
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit,
       Authentication auth) {
     Long userId = Long.valueOf(auth.getName());
-    GetMessageCommand command = mapper.toGetCommand(userId, channelId, cursorId, null, null, limit);
+    GetMessageCommand command =
+        mapper.toGetCommand(userId, channelId, cursorId, beforeSeq, afterSeq, limit);
     MessageList messageList = messageQuerier.getMessages(command);
     GetMessagesResponse response = mapper.toGetResponse(messageList);
     return ResponseEntity.ok(
