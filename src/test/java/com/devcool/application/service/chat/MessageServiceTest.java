@@ -240,7 +240,8 @@ class MessageServiceTest {
                     Arguments.of(type, null),
                     Arguments.of(type, ""),
                     Arguments.of(type, " \n\t "),
-                    Arguments.of(type, "x".repeat(1001))));
+                    Arguments.of(type, "x".repeat(1001)),
+                    Arguments.of(type, "hi\0there"))); // PG varchar rejects 0x00
   }
 
   private void withMarkdown() {

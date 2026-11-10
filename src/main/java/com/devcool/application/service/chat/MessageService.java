@@ -61,6 +61,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   public SavedMessage save(CreateMessageCommand command) {
     MessageCreationStrategy strategy = strategyFor(command.contentType());
     strategy.validate(command);
+    channelAuthorizer.requireMembership(command.channelId(), command.userId());
     Optional<SavedMessage> saved =
         inTransaction(
             status -> {
@@ -88,9 +89,6 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   /** authz → replay → seq bump → insert. Empty if the insert lost the key race. */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
-    // Membership only, no channel-exists check first: a missing channel and a channel the caller
-    // is not in must give the same answer, or SEND_MESSAGE becomes a channel-id oracle.
-    channelAuthorizer.requireMembership(command.channelId(), command.userId());
 
     Optional<SavedMessage> replay = findReplay(command);
     if (replay.isPresent()) {

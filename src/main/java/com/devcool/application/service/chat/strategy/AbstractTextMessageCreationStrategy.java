@@ -20,5 +20,8 @@ public abstract class AbstractTextMessageCreationStrategy extends AbstractMessag
       throw new InvalidMessageConfigException(
           "Message content exceeds " + MAX_CONTENT_CODE_POINTS + " characters");
     }
+    if (content.indexOf('\0') >= 0) { // PG text types reject 0x00: a raw DB error otherwise
+      throw new InvalidMessageConfigException("Message content contains a NUL character");
+    }
   }
 }
