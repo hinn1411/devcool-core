@@ -11,24 +11,32 @@ import static org.mockito.Mockito.when;
 
 import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.application.service.chat.strategy.TextMessageCreationStrategy;
+import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
+import com.devcool.domain.chat.exception.InvalidHistoryCursorException;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
+import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
+import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.port.out.MemberPort;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,7 +45,7 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
-/** Seq assignment and idempotent send (P3-T03, ADR-0012). */
+/** Seq assignment and idempotent send (P3-T03, ADR-0012); history paging (P3-T05). */
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
 
@@ -158,7 +166,114 @@ class MessageServiceTest {
     verifyNoInteractions(messagePort, channelPort);
   }
 
+  // ---- history paging (P3-T05) ----------------------------------------------------------------
+
+  @Test
+  void beforeSeq_extraRowMeansHasMore() {
+    aliceCanRead();
+    when(messagePort.findBeforeSeq(CHANNEL, 4L, 3)).thenReturn(seqs(3, 2, 1));
+
+    MessageList page = service.getMessages(history(null, 4L, null, 2));
+
+    assertThat(page.items()).extracting(MessageItem::getSeq).containsExactly(3L, 2L);
+    assertThat(page.hasMore()).isTrue();
+    assertThat(page.cursorId()).isEqualTo(idOf(2));
+  }
+
+  @Test
+  void afterSeq_usesTheAscendingQuery() {
+    aliceCanRead();
+    when(messagePort.findAfterSeq(CHANNEL, 2L, 3)).thenReturn(seqs(3, 4, 5));
+
+    MessageList page = service.getMessages(history(null, null, 2L, 2));
+
+    assertThat(page.items()).extracting(MessageItem::getSeq).containsExactly(3L, 4L);
+    assertThat(page.hasMore()).isTrue();
+  }
+
+  @Test
+  void noCursor_readsTheNewestBySeq() {
+    aliceCanRead();
+    when(messagePort.findBeforeSeq(CHANNEL, null, 21)).thenReturn(seqs(2, 1));
+
+    MessageList page = service.getMessages(history(null, null, null, 20));
+
+    assertThat(page.items()).extracting(MessageItem::getSeq).containsExactly(2L, 1L);
+    assertThat(page.hasMore()).isFalse();
+  }
+
+  @Test
+  void exactlyLimitLeft_hasMoreFalse_andNullCursorId() {
+    aliceCanRead();
+    when(messagePort.findBeforeSeq(CHANNEL, 3L, 3)).thenReturn(seqs(2, 1));
+
+    MessageList page = service.getMessages(history(null, 3L, null, 2));
+
+    assertThat(page.items()).hasSize(2);
+    assertThat(page.hasMore()).isFalse();
+    assertThat(page.cursorId()).isNull();
+  }
+
+  @Test
+  void cursorId_usesTheLegacyIdQuery() {
+    aliceCanRead();
+    when(messagePort.findMessages(CHANNEL, idOf(5), 3)).thenReturn(seqs(4, 3, 2));
+
+    MessageList page = service.getMessages(history(idOf(5), null, null, 2));
+
+    assertThat(page.items()).extracting(MessageItem::getSeq).containsExactly(4L, 3L);
+    assertThat(page.cursorId()).isEqualTo(idOf(3));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"100, 2, ", "100, , 2", ", 9, 2", "100, 9, 2"})
+  void twoCursors_throws_andReadsNothing(Long cursorId, Long beforeSeq, Long afterSeq) {
+    assertThatThrownBy(() -> service.getMessages(history(cursorId, beforeSeq, afterSeq, 20)))
+        .isInstanceOf(InvalidHistoryCursorException.class);
+    verifyNoInteractions(messagePort);
+  }
+
+  @Test
+  void nonMember_readsNothing() {
+    when(channelPort.existById(CHANNEL)).thenReturn(true);
+    when(memberPort.existMemberOfChannelByUserId(CHANNEL, ALICE)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.getMessages(history(null, null, null, 20)))
+        .isInstanceOf(MemberNotFoundException.class);
+    verifyNoInteractions(messagePort);
+  }
+
+  @Test
+  void missingChannel_readsNothing() {
+    when(channelPort.existById(CHANNEL)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.getMessages(history(null, null, null, 20)))
+        .isInstanceOf(ChannelNotFoundException.class);
+    verifyNoInteractions(messagePort);
+  }
+
   // ---- helpers ---------------------------------------------------------------------------------
+
+  private void aliceCanRead() {
+    when(channelPort.existById(CHANNEL)).thenReturn(true);
+    aliceIsMember();
+  }
+
+  private static GetMessageCommand history(
+      Long cursorId, Long beforeSeq, Long afterSeq, int limit) {
+    return new GetMessageCommand(ALICE, CHANNEL, cursorId, beforeSeq, afterSeq, limit);
+  }
+
+  /** Ids follow seq here; the id/seq mismatch is covered by MessageAdapterIT. */
+  private static long idOf(long seq) {
+    return 100 + seq;
+  }
+
+  private static List<MessageItem> seqs(long... seqs) {
+    return Arrays.stream(seqs)
+        .mapToObj(seq -> MessageItem.builder().id(idOf(seq)).seq(seq).build())
+        .toList();
+  }
 
   private void aliceIsMember() {
     when(memberPort.existMemberOfChannelByUserId(CHANNEL, ALICE)).thenReturn(true);

@@ -26,6 +26,36 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   List<MessageEntity> findByChannelId(
       @Param("channelId") Long channelId, @Param("cursorId") Long cursorId, Pageable pageable);
 
+  /** Range scan on uk_message_channel_seq, read backwards. */
+  @Query(
+      """
+      SELECT ms
+      FROM MessageEntity ms
+      LEFT JOIN FETCH ms.media
+      JOIN FETCH ms.user
+      WHERE ms.channel.id = :channelId
+        AND ms.deletedTime IS NULL
+        AND (:beforeSeq IS NULL OR ms.seq < :beforeSeq)
+      ORDER BY ms.seq DESC
+      """)
+  List<MessageEntity> findPageBeforeSeq(
+      @Param("channelId") Long channelId, @Param("beforeSeq") Long beforeSeq, Pageable pageable);
+
+  /** Range scan on uk_message_channel_seq, read forwards. */
+  @Query(
+      """
+      SELECT ms
+      FROM MessageEntity ms
+      LEFT JOIN FETCH ms.media
+      JOIN FETCH ms.user
+      WHERE ms.channel.id = :channelId
+        AND ms.deletedTime IS NULL
+        AND ms.seq > :afterSeq
+      ORDER BY ms.seq ASC
+      """)
+  List<MessageEntity> findPageAfterSeq(
+      @Param("channelId") Long channelId, @Param("afterSeq") Long afterSeq, Pageable pageable);
+
   /** Served by the uk_message_user_client_msg index; no join, no media load. */
   @Query(
       """

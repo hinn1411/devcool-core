@@ -11,7 +11,8 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface MessageDtoMapper {
 
-  GetMessageCommand toGetCommand(Long userId, Long channelId, Long cursorId, Integer limit);
+  GetMessageCommand toGetCommand(
+      Long userId, Long channelId, Long cursorId, Long beforeSeq, Long afterSeq, Integer limit);
 
   GetMessagesResponse toGetResponse(MessageList messageList);
 
