@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.application.service.channel.ChannelAuthorizer;
+import com.devcool.application.service.chat.strategy.MarkdownMessageCreationStrategy;
 import com.devcool.application.service.chat.strategy.TextMessageCreationStrategy;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.out.ChannelPort;
@@ -32,11 +33,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -45,7 +50,10 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
-/** Seq assignment and idempotent send (P3-T03, ADR-0012); history paging (P3-T05). */
+/**
+ * Seq assignment and idempotent send (P3-T03, ADR-0012); history paging (P3-T05); markdown and
+ * content rules (P3-T15).
+ */
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
 
@@ -164,6 +172,90 @@ class MessageServiceTest {
     assertThatThrownBy(() -> service.save(markdown))
         .isInstanceOf(InvalidMessageConfigException.class);
     verifyNoInteractions(messagePort, channelPort);
+  }
+
+  // ---- markdown + content rules (P3-T15) ------------------------------------------------------
+
+  @Test
+  void markdownSend_getsTheNextSeq_andStoresTheRawSource() {
+    withMarkdown();
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(7L));
+    when(messagePort.save(any())).thenReturn(Optional.of(100L));
+
+    SavedMessage saved = service.save(send(ContentType.MARKDOWN, "# hi **x**"));
+
+    ArgumentCaptor<Message> stored = ArgumentCaptor.forClass(Message.class);
+    verify(messagePort).save(stored.capture());
+    assertThat(stored.getValue().getContentType()).isEqualTo(ContentType.MARKDOWN);
+    assertThat(stored.getValue().getContent()).isEqualTo("# hi **x**");
+    assertThat(stored.getValue().getSeq()).isEqualTo(7L);
+    assertThat(saved.seq()).isEqualTo(7L);
+  }
+
+  @Test
+  void markdownSend_byNonMember_isRejectedBeforeAnyBump() {
+    withMarkdown();
+    when(memberPort.existMemberOfChannelByUserId(CHANNEL, ALICE)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.save(send(ContentType.MARKDOWN, "# hi")))
+        .isInstanceOf(MemberNotFoundException.class);
+    verify(channelPort, never()).getNextSequence(anyLong());
+    verifyNoInteractions(messagePort);
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidContent")
+  void invalidContent_isRejectedBeforeAnyPortCall(ContentType type, String content) {
+    withMarkdown();
+
+    assertThatThrownBy(() -> service.save(send(type, content)))
+        .isInstanceOf(InvalidMessageConfigException.class);
+    verifyNoInteractions(messagePort, channelPort, memberPort);
+    assertThat(transactions.started).isZero();
+  }
+
+  /** PG {@code varchar(1000)} counts characters (code points), not UTF-16 units. */
+  @ParameterizedTest
+  @EnumSource(
+      value = ContentType.class,
+      names = {"TEXT", "MARKDOWN"})
+  void exactly1000CodePoints_isAccepted(ContentType type) {
+    withMarkdown();
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(1L));
+    when(messagePort.save(any())).thenReturn(Optional.of(100L));
+    String emoji = "\uD83D\uDE42".repeat(1000); // 1000 code points, 2000 chars
+
+    assertThat(service.save(send(type, emoji)).seq()).isEqualTo(1L);
+  }
+
+  static Stream<Arguments> invalidContent() {
+    return Stream.of(ContentType.TEXT, ContentType.MARKDOWN)
+        .flatMap(
+            type ->
+                Stream.of(
+                    Arguments.of(type, null),
+                    Arguments.of(type, ""),
+                    Arguments.of(type, " \n\t "),
+                    Arguments.of(type, "x".repeat(1001)),
+                    Arguments.of(type, "hi\0there"))); // PG varchar rejects 0x00
+  }
+
+  private void withMarkdown() {
+    service =
+        new MessageService(
+            List.of(new TextMessageCreationStrategy(), new MarkdownMessageCreationStrategy()),
+            messagePort,
+            channelPort,
+            new ChannelAuthorizer(channelPort, memberPort),
+            transactions);
+  }
+
+  private static CreateMessageCommand send(ContentType type, String content) {
+    return new CreateMessageCommand(content, type, CHANNEL, ALICE, KEY);
   }
 
   // ---- history paging (P3-T05) ----------------------------------------------------------------

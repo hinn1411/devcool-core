@@ -62,6 +62,22 @@ class WsSendMessageServiceTest {
     verifyNoInteractions(connectionRegistryPort, realtimeEmitterPort);
   }
 
+  @Test
+  void markdownSend_pushCarriesMarkdownContentType() {
+    when(saveMessageUseCase.save(any())).thenReturn(new SavedMessage(100L, 42L, CREATED, false));
+    when(connectionRegistryPort.getConnectionsByChannel(10L)).thenReturn(Set.of("conn-2"));
+
+    service.sendMessage(
+        new SendMessageCommand(
+            "conn-1", 1L, 10L, ContentType.MARKDOWN, "# hi **x**", UUID.randomUUID()));
+
+    ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
+    verify(realtimeEmitterPort).sendMessageToConnection(eq("conn-2"), payload.capture());
+    assertThat((OutboundWsEvent) payload.getValue())
+        .extracting(OutboundWsEvent::contentType, OutboundWsEvent::content)
+        .containsExactly("MARKDOWN", "# hi **x**");
+  }
+
   private static SendMessageCommand command() {
     return new SendMessageCommand("conn-1", 1L, 10L, ContentType.TEXT, "hello", UUID.randomUUID());
   }
