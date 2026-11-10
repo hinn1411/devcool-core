@@ -4,10 +4,10 @@ import com.devcool.domain.chat.model.enums.ContentType;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MarkdownMessageCreationStrategy extends AbstractMessageCreationStrategy {
+public class MarkdownMessageCreationStrategy extends AbstractTextMessageCreationStrategy {
 
   @Override
   public ContentType getSupportedType() {
-    throw new UnsupportedOperationException();
+    return ContentType.MARKDOWN;
   }
 }

@@ -4,7 +4,7 @@ import com.devcool.domain.chat.model.enums.ContentType;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TextMessageCreationStrategy extends AbstractMessageCreationStrategy {
+public class TextMessageCreationStrategy extends AbstractTextMessageCreationStrategy {
 
   @Override
   public ContentType getSupportedType() {

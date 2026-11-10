@@ -60,6 +60,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   @Override
   public SavedMessage save(CreateMessageCommand command) {
     MessageCreationStrategy strategy = strategyFor(command.contentType());
+    strategy.validate(command);
     Optional<SavedMessage> saved =
         inTransaction(
             status -> {
