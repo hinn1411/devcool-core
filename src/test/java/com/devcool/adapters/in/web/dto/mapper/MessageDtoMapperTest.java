@@ -23,6 +23,7 @@ class MessageDtoMapperTest {
   private static MessageItem item(ContentType contentType) {
     return MessageItem.builder()
         .id(5L)
+        .seq(7L)
         .content("hello")
         .contentType(contentType)
         .createdTime(CREATED)
@@ -34,17 +35,14 @@ class MessageDtoMapperTest {
 
   @Test
   void toGetCommand_keepsEachArgumentInItsOwnField() {
-    GetMessageCommand command = mapper.toGetCommand(11L, 22L, 33L, 44);
+    GetMessageCommand command = mapper.toGetCommand(11L, 22L, 33L, 55L, 66L, 44);
 
-    assertThat(command.userId()).isEqualTo(11);
-    assertThat(command.channelId()).isEqualTo(22);
-    assertThat(command.cursorId()).isEqualTo(33);
-    assertThat(command.limit()).isEqualTo(44);
+    assertThat(command).isEqualTo(new GetMessageCommand(11L, 22L, 33L, 55L, 66L, 44));
   }
 
   @Test
   void toGetCommand_firstPage_hasNullCursor() {
-    GetMessageCommand command = mapper.toGetCommand(11L, 22L, null, 44);
+    GetMessageCommand command = mapper.toGetCommand(11L, 22L, null, null, null, 44);
 
     assertThat(command.cursorId()).isNull();
   }
@@ -59,6 +57,7 @@ class MessageDtoMapperTest {
         .containsExactly(
             new MessageItemResponse(
                 5L,
+                7L,
                 "hello",
                 "TEXT",
                 CREATED,

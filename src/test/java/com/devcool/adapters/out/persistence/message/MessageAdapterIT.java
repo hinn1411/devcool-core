@@ -211,6 +211,71 @@ class MessageAdapterIT extends AbstractJpaIT {
     assertThat(messagePort.save(domainText(alice, channelB, 1L, key))).isEmpty();
   }
 
+  // ---- seq paging (P3-T05) ---------------------------------------------------------------------
+
+  @Test
+  void beforeSeq_returnsOlderBySeqDescending_excludingTheBound() {
+    withSeqs(channelA, 1, 2, 3, 4, 5);
+    resetPersistenceContext();
+
+    assertThat(messagePort.findBeforeSeq(channelA.getId(), 4L, 2))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(3L, 2L);
+  }
+
+  @Test
+  void afterSeq_returnsNewerBySeqAscending_excludingTheBound() {
+    withSeqs(channelA, 1, 2, 3, 4, 5);
+    resetPersistenceContext();
+
+    assertThat(messagePort.findAfterSeq(channelA.getId(), 2L, 2))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(3L, 4L);
+  }
+
+  @Test
+  void nullBeforeSeq_returnsNewestBySeq() {
+    withSeqs(channelA, 1, 2, 3, 4, 5);
+    resetPersistenceContext();
+
+    assertThat(messagePort.findBeforeSeq(channelA.getId(), null, 3))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(5L, 4L, 3L);
+  }
+
+  @Test
+  void seqPaging_followsSeqEvenWhenIdOrderDiffers() {
+    // Like V5's renumbered rows: the oldest id holds the highest seq.
+    withSeqs(channelA, 3, 1, 2);
+    resetPersistenceContext();
+
+    assertThat(messagePort.findBeforeSeq(channelA.getId(), null, 3))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(3L, 2L, 1L);
+    assertThat(messagePort.findAfterSeq(channelA.getId(), 0L, 3))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(1L, 2L, 3L);
+  }
+
+  @Test
+  void seqQueries_excludeDeletedAndOtherChannels() {
+    withSeqs(channelA, 1);
+    MessageEntity deleted = message(channelA, ContentType.TEXT, "deleted");
+    deleted.setSeq(2L);
+    deleted.setDeletedTime(deleted.getCreatedTime().plusSeconds(30));
+    em.persist(deleted);
+    withSeqs(channelA, 3);
+    withSeqs(channelB, 1, 2, 4);
+    resetPersistenceContext();
+
+    assertThat(messagePort.findBeforeSeq(channelA.getId(), null, 5))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(3L, 1L);
+    assertThat(messagePort.findAfterSeq(channelA.getId(), 0L, 5))
+        .extracting(MessageItem::getSeq)
+        .containsExactly(1L, 3L);
+  }
+
   private static Message domainText(UserEntity sender, ChannelEntity channel, long seq, UUID key) {
     return Message.builder()
         .senderId(sender.getId())
@@ -266,6 +331,15 @@ class MessageAdapterIT extends AbstractJpaIT {
     message.setSeq((long) ++sequence);
     message.setCreatedTime(T0.plusSeconds(sequence));
     return message;
+  }
+
+  /** Persists one text message per seq, in the given order (so ids follow argument order). */
+  private void withSeqs(ChannelEntity channel, long... seqs) {
+    for (long seq : seqs) {
+      MessageEntity message = message(channel, ContentType.TEXT, "seq " + seq);
+      message.setSeq(seq);
+      em.persist(message);
+    }
   }
 
   private Long text(ChannelEntity channel, String content) {
