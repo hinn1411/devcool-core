@@ -300,6 +300,19 @@
     </build>
 
     <profiles>
+        <!-- VS Code Java / Eclipse set m2e.version on import: the IDE builds into target-ide/,
+             so its background compiler (no Lombok) can't overwrite Maven's target/classes. -->
+        <profile>
+            <id>ide</id>
+            <activation>
+                <property>
+                    <name>m2e.version</name>
+                </property>
+            </activation>
+            <build>
+                <directory>target-ide</directory>
+            </build>
+        </profile>
         <profile>
             <id>integration-test</id>
             <activation>
