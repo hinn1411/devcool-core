@@ -56,6 +56,11 @@ public class ChannelAuthorizer {
     }
   }
 
+  /** Whether the caller is a member, for checks that must not answer with 403 (no oracle). */
+  public boolean isMember(Long channelId, Long userId) {
+    throw new UnsupportedOperationException();
+  }
+
   /**
    * Channel exists → caller is a member → the action exists for this channel type → the caller's
    * role may perform it. Returns the channel's access info for the checks that follow.

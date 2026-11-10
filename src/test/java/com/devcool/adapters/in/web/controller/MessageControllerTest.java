@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,29 +14,40 @@ import com.devcool.adapters.in.web.dto.mapper.MessageDtoMapperImpl;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.chat.exception.InvalidHistoryCursorException;
+import com.devcool.domain.chat.exception.MessageEditWindowClosedException;
+import com.devcool.domain.chat.exception.MessageNotFoundException;
+import com.devcool.domain.chat.exception.MessageVersionConflictException;
+import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.enums.ContentType;
+import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
+import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
+import com.devcool.domain.common.DomainException;
+import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.user.port.out.UserPort;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** History endpoint web slice (P3-T05): params, validation, error statuses. */
+/** History (P3-T05) and edit (P3-T06) endpoints: params, validation, error statuses. */
 @WebMvcTest(MessageController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(MessageDtoMapperImpl.class)
@@ -43,11 +55,14 @@ class MessageControllerTest {
 
   private static final Principal CALLER = new TestingAuthenticationToken("7", null);
   private static final String HISTORY = "/api/v1/channels/42/messages";
+  private static final String EDIT = "/api/v1/messages/500";
+  private static final Instant EDITED = Instant.parse("2026-11-10T12:00:00Z");
   private static final MessageList EMPTY = new MessageList(List.of(), null, false);
 
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private GetMessageQuery messageQuerier;
+  @MockitoBean private EditMessageUseCase messageEditor;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
@@ -124,6 +139,62 @@ class MessageControllerTest {
     when(messageQuerier.getMessages(any())).thenThrow(new ChannelNotFoundException(42L));
 
     mockMvc.perform(get(HISTORY).principal(CALLER)).andExpect(status().isNotFound());
+  }
+
+  // ---- edit (P3-T06) ---------------------------------------------------------------------------
+
+  @Test
+  void patch_returns200WithTheEditedMessage() throws Exception {
+    when(messageEditor.edit(any()))
+        .thenReturn(new EditedMessage(500L, 42L, 9L, ContentType.TEXT, "new", 4, EDITED));
+
+    mockMvc
+        .perform(editRequest("{\"content\":\"new\",\"version\":3}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.id").value(500))
+        .andExpect(jsonPath("$.data.content").value("new"))
+        .andExpect(jsonPath("$.data.version").value(4))
+        .andExpect(jsonPath("$.data.editedTime").exists());
+
+    ArgumentCaptor<EditMessageCommand> command = ArgumentCaptor.forClass(EditMessageCommand.class);
+    verify(messageEditor).edit(command.capture());
+    assertThat(command.getValue()).isEqualTo(new EditMessageCommand(7L, 500L, "new", 3));
+  }
+
+  @ParameterizedTest
+  @MethodSource("editFailures")
+  void patch_mapsDomainErrors(DomainException error, int status) throws Exception {
+    when(messageEditor.edit(any())).thenThrow(error);
+
+    mockMvc
+        .perform(editRequest("{\"content\":\"new\",\"version\":3}"))
+        .andExpect(status().is(status));
+  }
+
+  static Stream<org.junit.jupiter.params.provider.Arguments> editFailures() {
+    return Stream.of(
+        org.junit.jupiter.params.provider.Arguments.of(new MessageVersionConflictException(), 409),
+        org.junit.jupiter.params.provider.Arguments.of(new MessageEditWindowClosedException(), 403),
+        org.junit.jupiter.params.provider.Arguments.of(
+            new ForbiddenException("Not the sender"), 403),
+        org.junit.jupiter.params.provider.Arguments.of(new MessageNotFoundException(500L), 404));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"version\":3}",
+        "{\"content\":\"new\"}",
+        "{\"content\":\"new\",\"version\":-1}"
+      })
+  void patch_missingOrInvalidField_returns422(String body) throws Exception {
+    mockMvc.perform(editRequest(body)).andExpect(status().isUnprocessableEntity());
+
+    verifyNoInteractions(messageEditor);
+  }
+
+  private org.springframework.test.web.servlet.RequestBuilder editRequest(String body) {
+    return patch(EDIT).principal(CALLER).contentType(MediaType.APPLICATION_JSON).content(body);
   }
 
   private GetMessageCommand sentCommand() {

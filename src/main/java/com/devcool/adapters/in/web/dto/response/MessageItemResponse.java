@@ -8,6 +8,8 @@ public record MessageItemResponse(
     String content,
     String contentType,
     Instant createdTime,
+    Integer version,
+    Instant editedTime,
     Long userId,
     String senderName,
     String senderAvatar) {}

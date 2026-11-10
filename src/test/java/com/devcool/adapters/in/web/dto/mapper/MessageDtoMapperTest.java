@@ -2,11 +2,15 @@ package com.devcool.adapters.in.web.dto.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.devcool.adapters.in.web.dto.request.EditMessageRequest;
+import com.devcool.adapters.in.web.dto.response.EditMessageResponse;
 import com.devcool.adapters.in.web.dto.response.GetMessagesResponse;
 import com.devcool.adapters.in.web.dto.response.MessageItemResponse;
+import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.enums.ContentType;
+import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +21,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 class MessageDtoMapperTest {
 
   private static final Instant CREATED = Instant.parse("2026-03-08T10:15:30Z");
+  private static final Instant EDITED = Instant.parse("2026-03-08T11:00:00Z");
 
   private final MessageDtoMapper mapper = new MessageDtoMapperImpl();
 
@@ -27,6 +32,8 @@ class MessageDtoMapperTest {
         .content("hello")
         .contentType(contentType)
         .createdTime(CREATED)
+        .version(2)
+        .editedTime(EDITED)
         .userId(9L)
         .senderName("Alice")
         .senderAvatar("https://cdn.devcool.com/avatars/alice.png")
@@ -61,6 +68,8 @@ class MessageDtoMapperTest {
                 "hello",
                 "TEXT",
                 CREATED,
+                2,
+                EDITED,
                 9L,
                 "Alice",
                 "https://cdn.devcool.com/avatars/alice.png"));
@@ -87,5 +96,23 @@ class MessageDtoMapperTest {
     assertThat(response.getItems()).isEmpty();
     assertThat(response.getCursorId()).isNull();
     assertThat(response.isHasMore()).isFalse();
+  }
+
+  // ---- edit (P3-T06) ---------------------------------------------------------------------------
+
+  @Test
+  void toEditCommand_takesCallerAndIdFromThePath_andTheRestFromTheBody() {
+    EditMessageCommand command = mapper.toEditCommand(7L, 500L, new EditMessageRequest("new", 3));
+
+    assertThat(command).isEqualTo(new EditMessageCommand(7L, 500L, "new", 3));
+  }
+
+  @Test
+  void toEditResponse_mapsEveryField() {
+    EditedMessage edited =
+        new EditedMessage(500L, 42L, 9L, ContentType.MARKDOWN, "# new", 4, EDITED);
+
+    assertThat(mapper.toEditResponse(edited))
+        .isEqualTo(new EditMessageResponse(500L, 42L, 9L, "# new", "MARKDOWN", 4, EDITED));
   }
 }

@@ -1,8 +1,10 @@
 package com.devcool.domain.chat.port.out;
 
+import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +26,13 @@ public interface MessagePort {
 
   /** Up to {@code size} messages with seq above {@code afterSeq}, seq ASC. */
   List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size);
+
+  /** The message unless it is unknown or deleted. */
+  Optional<EditableMessage> findForEdit(Long messageId);
+
+  /**
+   * Replaces the content and bumps the version, only if the stored version is still {@code
+   * expectedVersion} and the message is not deleted. False if no row matched (conflict).
+   */
+  boolean updateContent(Long messageId, int expectedVersion, String content, Instant editedTime);
 }

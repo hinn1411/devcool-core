@@ -1,9 +1,13 @@
 package com.devcool.adapters.in.web.dto.mapper;
 
+import com.devcool.adapters.in.web.dto.request.EditMessageRequest;
+import com.devcool.adapters.in.web.dto.response.EditMessageResponse;
 import com.devcool.adapters.in.web.dto.response.GetMessagesResponse;
 import com.devcool.adapters.in.web.dto.response.MessageItemResponse;
+import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -17,4 +21,8 @@ public interface MessageDtoMapper {
   GetMessagesResponse toGetResponse(MessageList messageList);
 
   MessageItemResponse toItemResponse(MessageItem item);
+
+  EditMessageCommand toEditCommand(Long userId, Long messageId, EditMessageRequest request);
+
+  EditMessageResponse toEditResponse(EditedMessage message);
 }
