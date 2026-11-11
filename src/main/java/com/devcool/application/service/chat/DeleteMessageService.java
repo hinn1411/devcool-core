@@ -1,11 +1,19 @@
 package com.devcool.application.service.chat;
 
+import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.exception.MessageNotFoundException;
+import com.devcool.domain.chat.model.DeletableMessage;
+import com.devcool.domain.chat.policy.MessageDeletePolicy;
 import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.common.ForbiddenException;
+import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +37,25 @@ public class DeleteMessageService implements DeleteMessageUseCase {
   @Override
   @Transactional
   public void delete(DeleteMessageCommand command) {
-    throw new UnsupportedOperationException();
+    DeletableMessage message =
+        messagePort
+            .findForDelete(command.messageId())
+            .orElseThrow(() -> new MessageNotFoundException(command.messageId()));
+    MemberType role =
+        memberPort
+            .findRoleOfMember(message.channelId(), command.userId())
+            .orElseThrow(() -> new MessageNotFoundException(command.messageId()));
+    ChannelType channelType =
+        channelPort
+            .findAccessInfo(message.channelId())
+            .orElseThrow(() -> new MessageNotFoundException(command.messageId()))
+            .channelType();
+    boolean isSender = Objects.equals(command.userId(), message.senderId());
+    if (!MessageDeletePolicy.mayDelete(isSender, channelType, role)) {
+      throw new ForbiddenException("Only the sender or a channel admin can delete this message");
+    }
+    if (message.deletedTime() == null) {
+      messagePort.markDeleted(message.id(), Instant.now(clock));
+    }
   }
 }

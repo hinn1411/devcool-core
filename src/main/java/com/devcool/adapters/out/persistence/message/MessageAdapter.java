@@ -103,11 +103,11 @@ public class MessageAdapter implements MessagePort {
 
   @Override
   public Optional<DeletableMessage> findForDelete(Long messageId) {
-    throw new UnsupportedOperationException();
+    return repo.findDeletable(messageId);
   }
 
   @Override
   public boolean markDeleted(Long messageId, Instant deletedTime) {
-    throw new UnsupportedOperationException();
+    return repo.markDeletedIfLive(messageId, deletedTime) == 1;
   }
 }

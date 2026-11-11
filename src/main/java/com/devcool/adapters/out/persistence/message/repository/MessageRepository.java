@@ -3,6 +3,7 @@ package com.devcool.adapters.out.persistence.message.repository;
 import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.message.projection.EditableMessageRow;
 import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
+import com.devcool.domain.chat.model.DeletableMessage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +23,6 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
       WHERE ms.channel.id = :channelId
-        AND ms.deletedTime IS NULL
         AND (:cursorId IS NULL OR ms.id < :cursorId)
       ORDER BY ms.id DESC
       """)
@@ -37,7 +37,6 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
       WHERE ms.channel.id = :channelId
-        AND ms.deletedTime IS NULL
         AND (:beforeSeq IS NULL OR ms.seq < :beforeSeq)
       ORDER BY ms.seq DESC
       """)
@@ -52,7 +51,6 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
       WHERE ms.channel.id = :channelId
-        AND ms.deletedTime IS NULL
         AND ms.seq > :afterSeq
       ORDER BY ms.seq ASC
       """)
@@ -91,6 +89,25 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       WHERE ms.id = :id AND ms.deletedTime IS NULL
       """)
   Optional<EditableMessageRow> findEditableRow(@Param("id") Long id);
+
+  /** Deleted or not: a repeat delete must find the row to answer 204. */
+  @Query(
+      """
+      SELECT new com.devcool.domain.chat.model.DeletableMessage(
+      ms.id, ms.channel.id, ms.user.id, ms.deletedTime)
+      FROM MessageEntity ms
+      WHERE ms.id = :id
+      """)
+  Optional<DeletableMessage> findDeletable(@Param("id") Long id);
+
+  /** Only the first delete matches, so its timestamp is the one kept. */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      """
+      UPDATE MessageEntity ms SET ms.deletedTime = :deletedTime
+      WHERE ms.id = :id AND ms.deletedTime IS NULL
+      """)
+  int markDeletedIfLive(@Param("id") Long id, @Param("deletedTime") Instant deletedTime);
 
   /** Compare-and-set on the client's version: one edit per version wins. */
   @Modifying(flushAutomatically = true, clearAutomatically = true)

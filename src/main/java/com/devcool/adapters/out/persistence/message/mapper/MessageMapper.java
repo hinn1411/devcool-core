@@ -23,9 +23,11 @@ public interface MessageMapper {
   @Mapping(target = "userId", source = "user.id")
   @Mapping(target = "senderName", source = "user.name")
   @Mapping(target = "senderAvatar", source = "user.avatar")
+  /** A deleted message is a tombstone: seq and sender stay, content and media path don't. */
   @Mapping(
       target = "content",
       expression =
-          "java(entity.getMedia() != null ? entity.getMedia().getPath() : entity.getContent())")
+          "java(entity.getDeletedTime() != null ? null"
+              + " : entity.getMedia() != null ? entity.getMedia().getPath() : entity.getContent())")
   MessageItem toItem(MessageEntity entity);
 }

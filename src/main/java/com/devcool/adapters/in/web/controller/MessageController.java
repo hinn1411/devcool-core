@@ -7,8 +7,10 @@ import com.devcool.adapters.in.web.dto.response.GetMessagesResponse;
 import com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.in.web.util.ApiResponseFactory;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
+import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.common.ErrorCode;
@@ -21,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageController {
   private final GetMessageQuery messageQuerier;
   private final EditMessageUseCase messageEditor;
+  private final DeleteMessageUseCase messageDeleter;
   private final MessageDtoMapper mapper;
 
   @GetMapping("/channels/{channelId}/messages")
@@ -82,5 +86,16 @@ public class MessageController {
     EditMessageResponse response = mapper.toEditResponse(messageEditor.edit(command));
     return ResponseEntity.ok(
         ApiResponseFactory.success(HttpStatus.OK, ErrorCode.OK.code(), "Message edited", response));
+  }
+
+  @Operation(
+      summary = "Delete a message",
+      description =
+          "Soft delete by the sender, a LOUNGE/FORUM CREATOR or a FORUM LEADER. History keeps it"
+              + " as a tombstone (content null, deletedTime set). Repeating it is a no-op.")
+  @DeleteMapping("/messages/{messageId}")
+  public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId, Authentication auth) {
+    messageDeleter.delete(new DeleteMessageCommand(Long.valueOf(auth.getName()), messageId));
+    return ResponseEntity.noContent().build();
   }
 }

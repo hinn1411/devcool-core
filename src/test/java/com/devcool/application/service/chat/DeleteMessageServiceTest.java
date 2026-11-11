@@ -70,7 +70,8 @@ class DeleteMessageServiceTest {
   // ---- 2. group admin --------------------------------------------------------------------------
 
   @ParameterizedTest
-  @CsvSource({"LOUNGE,CREATOR", "LOUNGE,LEADER", "FORUM,CREATOR", "FORUM,LEADER"})
+  // LEADER exists only in FORUM (ForumCreationStrategy), so LOUNGE has no LEADER row.
+  @CsvSource({"LOUNGE,CREATOR", "FORUM,CREATOR", "FORUM,LEADER"})
   void creatorOrLeader_ofGroupChannel_deletesOthersMessage(ChannelType type, MemberType role) {
     aliceMessage(null);
     caller(BOB, role, type);
