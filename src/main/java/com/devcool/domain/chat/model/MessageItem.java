@@ -17,6 +17,7 @@ public class MessageItem {
   private Instant createdTime;
   private Integer version;
   private Instant editedTime;
+  private Instant deletedTime;
   private Long userId;
   private String senderAvatar;
   private String senderName;

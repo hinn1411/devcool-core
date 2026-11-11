@@ -10,6 +10,7 @@ import com.devcool.adapters.out.persistence.message.mapper.MessageMapperImpl;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.chat.model.DeletableMessage;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
@@ -113,17 +114,16 @@ class MessageAdapterIT extends AbstractJpaIT {
   }
 
   @Test
-  void softDeletedMessage_isExcluded_andPageStillFillsToSize() {
+  void softDeletedMessage_isATombstone_inTheCursorPage() {
     Long m1 = text(channelA, "m1");
-    Long m2 = text(channelA, "m2");
-    Long m3 = deletedText(channelA, "m3 (deleted)");
-    Long m4 = text(channelA, "m4");
-    Long m5 = text(channelA, "m5");
+    Long m2 = deletedText(channelA, "m2 (deleted)");
+    Long m3 = text(channelA, "m3");
     resetPersistenceContext();
 
     List<MessageItem> page = messagePort.findMessages(channelA.getId(), null, 3);
 
-    assertThat(page).extracting(MessageItem::getId).containsExactly(m5, m4, m2).doesNotContain(m3);
+    assertThat(page).extracting(MessageItem::getId).containsExactly(m3, m2, m1);
+    assertTombstone(page.get(1));
   }
 
   @Test
@@ -259,7 +259,7 @@ class MessageAdapterIT extends AbstractJpaIT {
   }
 
   @Test
-  void seqQueries_excludeDeletedAndOtherChannels() {
+  void seqQueries_keepDeletedAsTombstones_andExcludeOtherChannels() {
     withSeqs(channelA, 1);
     MessageEntity deleted = message(channelA, ContentType.TEXT, "deleted");
     deleted.setSeq(2L);
@@ -269,12 +269,31 @@ class MessageAdapterIT extends AbstractJpaIT {
     withSeqs(channelB, 1, 2, 4);
     resetPersistenceContext();
 
-    assertThat(messagePort.findBeforeSeq(channelA.getId(), null, 5))
-        .extracting(MessageItem::getSeq)
-        .containsExactly(3L, 1L);
-    assertThat(messagePort.findAfterSeq(channelA.getId(), 0L, 5))
-        .extracting(MessageItem::getSeq)
-        .containsExactly(1L, 3L);
+    List<MessageItem> before = messagePort.findBeforeSeq(channelA.getId(), null, 5);
+    List<MessageItem> after = messagePort.findAfterSeq(channelA.getId(), 0L, 5);
+
+    // ADR-0012: a deleted message keeps its seq, so the gap is explained, not silent.
+    assertThat(before).extracting(MessageItem::getSeq).containsExactly(3L, 2L, 1L);
+    assertThat(after).extracting(MessageItem::getSeq).containsExactly(1L, 2L, 3L);
+    assertTombstone(before.get(1));
+    assertTombstone(after.get(1));
+  }
+
+  @Test
+  void deletedImage_tombstone_dropsTheMediaPath() {
+    Long id = image(channelA, "channel/1/2026/10/01/abc.jpg");
+    resetPersistenceContext();
+    messagePort.markDeleted(id, T0.plusSeconds(3600));
+
+    assertTombstone(messagePort.findBeforeSeq(channelA.getId(), null, 1).getFirst());
+  }
+
+  /** Seq and sender stay so the client can render "message deleted" in place. */
+  private void assertTombstone(MessageItem item) {
+    assertThat(item.getDeletedTime()).isNotNull();
+    assertThat(item.getContent()).isNull();
+    assertThat(item.getSeq()).isNotNull();
+    assertThat(item.getUserId()).isEqualTo(alice.getId());
   }
 
   private static Message domainText(UserEntity sender, ChannelEntity channel, long seq, UUID key) {
@@ -361,6 +380,57 @@ class MessageAdapterIT extends AbstractJpaIT {
               assertThat(item.getVersion()).isEqualTo(1);
               assertThat(item.getEditedTime()).isEqualTo(editedAt);
             });
+  }
+
+  // ---- delete (P3-T07) -------------------------------------------------------------------------
+
+  @Test
+  void findForDelete_includesDeletedMessages() {
+    Long live = text(channelA, "live");
+    Long gone = deletedText(channelA, "gone");
+    resetPersistenceContext();
+
+    assertThat(messagePort.findForDelete(live))
+        .contains(new DeletableMessage(live, channelA.getId(), alice.getId(), null));
+    assertThat(messagePort.findForDelete(gone))
+        .hasValueSatisfying(m -> assertThat(m.deletedTime()).isNotNull());
+  }
+
+  @Test
+  void findForDelete_unknownId_isEmpty() {
+    assertThat(messagePort.findForDelete(-1L)).isEmpty();
+  }
+
+  @Test
+  void markDeleted_setsDeletedTime_andKeepsTheRow() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+    Instant at = T0.plusSeconds(3600);
+
+    assertThat(messagePort.markDeleted(id, at)).isTrue();
+
+    assertThat(storedDeletedTime(id)).isEqualTo(at);
+    assertThat(storedRow(id).getFirst()).isEqualTo("hello");
+  }
+
+  @Test
+  void markDeleted_secondCall_matchesNothing_andKeepsTheFirstTimestamp() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+    Instant first = T0.plusSeconds(3600);
+    messagePort.markDeleted(id, first);
+
+    assertThat(messagePort.markDeleted(id, first.plusSeconds(60))).isFalse();
+
+    assertThat(storedDeletedTime(id)).isEqualTo(first);
+  }
+
+  private Instant storedDeletedTime(Long id) {
+    return toInstant(
+        em.getEntityManager()
+            .createNativeQuery("select deleted_time from message where id = :id")
+            .setParameter("id", id)
+            .getSingleResult());
   }
 
   /** content, version, edited_time straight from Postgres (bypasses the entity mapping). */

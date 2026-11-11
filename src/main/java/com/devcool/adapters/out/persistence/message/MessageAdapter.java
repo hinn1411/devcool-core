@@ -5,6 +5,7 @@ import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.message.mapper.MessageMapper;
 import com.devcool.adapters.out.persistence.message.repository.MessageRepository;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+import com.devcool.domain.chat.model.DeletableMessage;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
@@ -98,5 +99,15 @@ public class MessageAdapter implements MessagePort {
   public boolean updateContent(
       Long messageId, int expectedVersion, String content, Instant editedTime) {
     return repo.updateContentIfVersion(messageId, expectedVersion, content, editedTime) == 1;
+  }
+
+  @Override
+  public Optional<DeletableMessage> findForDelete(Long messageId) {
+    return repo.findDeletable(messageId);
+  }
+
+  @Override
+  public boolean markDeleted(Long messageId, Instant deletedTime) {
+    return repo.markDeletedIfLive(messageId, deletedTime) == 1;
   }
 }
