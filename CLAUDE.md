@@ -20,12 +20,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   2. **Red (`/implement-task <id>` starts here):** one failing test per brief **Done when** item (+ negative authz). Tests must compile and fail on an assertion. Commit brief + tests (`test(<id>): …`).
   3. **Green:** the simplest code that passes every test, without touching the Red tests. Commit (`feat(<id>): …`).
   4. **Review:** reviewer agents picked by changed paths → one ranked list; the user approves or rejects each item.
-  5. **Refactor:** apply the approved items plus cleanups, keep the tests green, then `/verify`.
+  5. **Refactor:** apply the approved items plus cleanups, keep the tests green, then the full unit + IT suite and SpotBugs (see Commands).
   6. **Close:** tick the task in the phase file in the final commit (`refactor(<id>): …`).
 
   Never push before Green: a Red commit fails CI.
 - Respect the decisions in `docs/plans/architecture/adr/`. If a change contradicts an ADR, stop and say so instead of silently diverging.
-- Local test scope: Red/Green run only the **affected tests** (see Commands). Close runs the full unit + IT suite once (`./mvnw -q -Dit verify`), not the full build: SpotBugs (`-Pstatic-analysis`) and the rest run in CI. `/verify` stays the opt-in full local check.
+- Local test scope: Red/Green run only the **affected tests** (see Commands). Close runs the full unit + IT suite once (`./mvnw -q -Dit verify`) and SpotBugs (`-Pstatic-analysis`), not the full build: the rest runs in CI. `/verify` stays the opt-in full local check.
 - Check library APIs with context7 before adding or upgrading a dependency.
 
 ## Commands
