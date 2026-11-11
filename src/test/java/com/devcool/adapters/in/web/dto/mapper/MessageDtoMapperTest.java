@@ -70,11 +70,30 @@ class MessageDtoMapperTest {
                 CREATED,
                 2,
                 EDITED,
+                null,
                 9L,
                 "Alice",
                 "https://cdn.devcool.com/avatars/alice.png"));
     assertThat(response.getCursorId()).isEqualTo(5);
     assertThat(response.isHasMore()).isTrue();
+  }
+
+  @Test
+  void toGetResponse_tombstone_carriesDeletedTimeAndNoContent() {
+    Instant deleted = EDITED.plusSeconds(60);
+    MessageItem tombstone = item(ContentType.TEXT);
+    tombstone.setContent(null);
+    tombstone.setDeletedTime(deleted);
+
+    MessageItemResponse response =
+        mapper
+            .toGetResponse(new MessageList(List.of(tombstone), null, false))
+            .getItems()
+            .getFirst();
+
+    assertThat(response.deletedTime()).isEqualTo(deleted);
+    assertThat(response.content()).isNull();
+    assertThat(response.seq()).isEqualTo(7L);
   }
 
   @ParameterizedTest

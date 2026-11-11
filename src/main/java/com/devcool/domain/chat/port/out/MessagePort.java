@@ -1,5 +1,6 @@
 package com.devcool.domain.chat.port.out;
 
+import com.devcool.domain.chat.model.DeletableMessage;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
@@ -32,4 +33,10 @@ public interface MessagePort {
 
   /** Replaces content and bumps version if still {@code expectedVersion}; false on conflict. */
   boolean updateContent(Long messageId, int expectedVersion, String content, Instant editedTime);
+
+  /** The message, deleted or not; empty if unknown. */
+  Optional<DeletableMessage> findForDelete(Long messageId);
+
+  /** Sets {@code deleted_time} if not yet deleted; false if it already was. */
+  boolean markDeleted(Long messageId, Instant deletedTime);
 }

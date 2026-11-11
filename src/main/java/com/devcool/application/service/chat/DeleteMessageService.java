@@ -1,0 +1,34 @@
+package com.devcool.application.service.chat;
+
+import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
+import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
+import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.member.port.out.MemberPort;
+import java.time.Clock;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Soft delete by the sender or a group-channel admin; idempotent. */
+@Service
+public class DeleteMessageService implements DeleteMessageUseCase {
+
+  private final MessagePort messagePort;
+  private final MemberPort memberPort;
+  private final ChannelPort channelPort;
+  private final Clock clock;
+
+  public DeleteMessageService(
+      MessagePort messagePort, MemberPort memberPort, ChannelPort channelPort, Clock clock) {
+    this.messagePort = messagePort;
+    this.memberPort = memberPort;
+    this.channelPort = channelPort;
+    this.clock = clock;
+  }
+
+  @Override
+  @Transactional
+  public void delete(DeleteMessageCommand command) {
+    throw new UnsupportedOperationException();
+  }
+}
