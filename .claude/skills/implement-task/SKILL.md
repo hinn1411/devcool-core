@@ -44,8 +44,7 @@ Current branch and working tree:
 
 ## 6. Refactor and close
 - Apply the approved items and behaviour-preserving cleanups. Re-run the affected tests after each change, and keep them green. If an approved item changes behaviour, write its failing test first.
-- Run `./mvnw -q spotless:apply`, then the full unit + IT suite once: `./mvnw -q -Dit verify` (needs Docker; the JaCoCo floor applies). Don't disable, skip or weaken tests to make them pass.
-- Then SpotBugs: `./mvnw -B -q -DskipTests -DskipITs -Pstatic-analysis verify`. Fix new findings in code. Never add them to `spotbugs-exclude.xml` (remove-only baseline). A false positive on a constructor-injected Spring bean gets the class-level `@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = …)` used in `ChannelAuthorizer`. No `clean`; the rest of the build runs in CI.
+- Run `./mvnw -q spotless:apply`, then one Close run, the same as CI: `./mvnw -q -Dit -Pstatic-analysis verify` (unit + IT + JaCoCo floor + SpotBugs; needs Docker). Don't disable, skip or weaken tests to make them pass. Fix new SpotBugs findings in code. Never add them to `spotbugs-exclude.xml` (remove-only baseline). A false positive on a constructor-injected Spring bean gets the class-level `@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = …)` used in `ChannelAuthorizer`. No `clean`.
 - Tick `- [x] **$task**` in the phase file. If every task in the phase is now ticked, set that phase's status to `done` in `docs/plans/README.md`. If it was `todo`, set it to `in-progress` when you start.
 - If the implementation departed from the brief, update the matching row in the brief's **Decisions** table with the reason (add a row only for a new question), and keep the brief within 40 lines. If you made a decision the ADRs don't cover, suggest `/write-adr`.
 - Commit: `refactor($task): <what improved>`. If nothing was refactored, fold the tick into a `chore($task): close out` commit.
