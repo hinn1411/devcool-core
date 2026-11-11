@@ -5,11 +5,13 @@ import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.message.mapper.MessageMapper;
 import com.devcool.adapters.out.persistence.message.repository.MessageRepository;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -73,5 +75,28 @@ public class MessageAdapter implements MessagePort {
     return repo.findPageAfterSeq(channelId, afterSeq, PageRequest.of(0, size)).stream()
         .map(mapper::toItem)
         .toList();
+  }
+
+  @Override
+  public Optional<EditableMessage> findForEdit(Long messageId) {
+    return repo.findEditableRow(messageId)
+        .map(
+            row ->
+                new EditableMessage(
+                    row.id(),
+                    row.channelId(),
+                    row.seq(),
+                    row.senderId(),
+                    row.contentType(),
+                    row.content(),
+                    row.version(),
+                    row.createdTime(),
+                    row.editedTime()));
+  }
+
+  @Override
+  public boolean updateContent(
+      Long messageId, int expectedVersion, String content, Instant editedTime) {
+    return repo.updateContentIfVersion(messageId, expectedVersion, content, editedTime) == 1;
   }
 }

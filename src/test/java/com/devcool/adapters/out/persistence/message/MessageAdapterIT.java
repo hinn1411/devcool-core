@@ -10,6 +10,7 @@ import com.devcool.adapters.out.persistence.message.mapper.MessageMapperImpl;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
@@ -286,6 +287,102 @@ class MessageAdapterIT extends AbstractJpaIT {
         .seq(seq)
         .clientMsgId(key)
         .build();
+  }
+
+  // ---- edit (P3-T06) ---------------------------------------------------------------------------
+
+  @Test
+  void findForEdit_returnsTheEditableFields() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+
+    assertThat(messagePort.findForEdit(id))
+        .contains(
+            new EditableMessage(
+                id,
+                channelA.getId(),
+                (long) sequence,
+                alice.getId(),
+                ContentType.TEXT,
+                "hello",
+                0,
+                T0.plusSeconds(sequence),
+                null));
+  }
+
+  @Test
+  void findForEdit_excludesDeleted() {
+    Long id = deletedText(channelA, "gone");
+    resetPersistenceContext();
+
+    assertThat(messagePort.findForEdit(id)).isEmpty();
+  }
+
+  @Test
+  void updateContent_onCurrentVersion_bumpsAndSetsEditedTime() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+    Instant editedAt = T0.plusSeconds(3600);
+
+    assertThat(messagePort.updateContent(id, 0, "hello again", editedAt)).isTrue();
+
+    assertThat(storedRow(id)).containsExactly("hello again", 1, editedAt);
+  }
+
+  @Test
+  void updateContent_staleVersion_leavesRowUnchanged() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+
+    assertThat(messagePort.updateContent(id, 1, "lost update", T0.plusSeconds(3600))).isFalse();
+
+    assertThat(storedRow(id)).containsExactly("hello", 0, null);
+  }
+
+  @Test
+  void updateContent_onDeletedMessage_matchesNothing() {
+    Long id = deletedText(channelA, "gone");
+    resetPersistenceContext();
+
+    assertThat(messagePort.updateContent(id, 0, "back", T0.plusSeconds(3600))).isFalse();
+  }
+
+  @Test
+  void historyItems_carryVersionAndEditedTime() {
+    Long id = text(channelA, "hello");
+    resetPersistenceContext();
+    Instant editedAt = T0.plusSeconds(3600);
+    messagePort.updateContent(id, 0, "edited", editedAt);
+
+    assertThat(messagePort.findBeforeSeq(channelA.getId(), null, 1))
+        .singleElement()
+        .satisfies(
+            item -> {
+              assertThat(item.getVersion()).isEqualTo(1);
+              assertThat(item.getEditedTime()).isEqualTo(editedAt);
+            });
+  }
+
+  /** content, version, edited_time straight from Postgres (bypasses the entity mapping). */
+  private List<Object> storedRow(Long id) {
+    Object[] row =
+        (Object[])
+            em.getEntityManager()
+                .createNativeQuery(
+                    "select content, version, edited_time from message where id = :id")
+                .setParameter("id", id)
+                .getSingleResult();
+    return java.util.Arrays.asList(row[0], ((Number) row[1]).intValue(), toInstant(row[2]));
+  }
+
+  private static Instant toInstant(Object value) {
+    return switch (value) {
+      case null -> null;
+      case Instant instant -> instant;
+      case java.time.OffsetDateTime odt -> odt.toInstant();
+      case java.sql.Timestamp ts -> ts.toInstant();
+      default -> throw new IllegalStateException("Unexpected " + value.getClass());
+    };
   }
 
   // ---- seed helpers ----------------------------------------------------------------------------

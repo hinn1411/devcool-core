@@ -45,6 +45,10 @@ public class MessageEntity {
   @Column(name = "EDITED_TIME", nullable = true)
   private Instant editedTime;
 
+  /** Written only by the conditional update; not {@code @Version} (checks the client's version). */
+  @Column(name = "VERSION", nullable = false, insertable = false, updatable = false)
+  private Integer version;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
       name = "CHANNEL_ID",

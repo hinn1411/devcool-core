@@ -1,12 +1,15 @@
 package com.devcool.adapters.out.persistence.message.repository;
 
 import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
+import com.devcool.adapters.out.persistence.message.projection.EditableMessageRow;
 import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -70,4 +73,36 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       """)
   Optional<MessageKeyRow> findKeyRow(
       @Param("senderId") Long senderId, @Param("clientMsgId") UUID clientMsgId);
+
+  @Query(
+      """
+      SELECT new com.devcool.adapters.out.persistence.message.projection.EditableMessageRow(
+      ms.id,
+      ms.channel.id,
+      ms.seq,
+      ms.user.id,
+      ms.contentType,
+      ms.content,
+      ms.version,
+      ms.createdTime,
+      ms.editedTime
+      )
+      FROM MessageEntity ms
+      WHERE ms.id = :id AND ms.deletedTime IS NULL
+      """)
+  Optional<EditableMessageRow> findEditableRow(@Param("id") Long id);
+
+  /** Compare-and-set on the client's version: one edit per version wins. */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      """
+      UPDATE MessageEntity ms
+      SET ms.content = :content, ms.version = ms.version + 1, ms.editedTime = :editedTime
+      WHERE ms.id = :id AND ms.version = :expected AND ms.deletedTime IS NULL
+      """)
+  int updateContentIfVersion(
+      @Param("id") Long id,
+      @Param("expected") int expected,
+      @Param("content") String content,
+      @Param("editedTime") Instant editedTime);
 }

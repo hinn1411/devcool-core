@@ -56,6 +56,11 @@ public class ChannelAuthorizer {
     }
   }
 
+  /** For checks that must answer 404, not 403 (no oracle). */
+  public boolean isMember(Long channelId, Long userId) {
+    return memberPort.existMemberOfChannelByUserId(channelId, userId);
+  }
+
   /**
    * Channel exists → caller is a member → the action exists for this channel type → the caller's
    * role may perform it. Returns the channel's access info for the checks that follow.

@@ -8,8 +8,12 @@ public class HttpErrorMapper {
 
   public static HttpStatus toHttpStatus(ErrorCode code) {
     return switch (code) {
-      case USER_NOT_FOUND, CHANNEL_NOT_FOUND -> HttpStatus.NOT_FOUND;
-      case EMAIL_ALREADY_USED, USERNAME_ALREADY_USED, DUPLICATE_MEMBER, CLIENT_MSG_ID_REUSED ->
+      case USER_NOT_FOUND, CHANNEL_NOT_FOUND, MESSAGE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+      case EMAIL_ALREADY_USED,
+              USERNAME_ALREADY_USED,
+              DUPLICATE_MEMBER,
+              CLIENT_MSG_ID_REUSED,
+              MESSAGE_VERSION_CONFLICT ->
           HttpStatus.CONFLICT;
       case PASSWORD_WEAK,
               PASSWORD_INCORRECT,
@@ -25,7 +29,7 @@ public class HttpErrorMapper {
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;
       case REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS, UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
-      case MEMBER_NOT_FOUND, FORBIDDEN -> HttpStatus.FORBIDDEN;
+      case MEMBER_NOT_FOUND, FORBIDDEN, MESSAGE_EDIT_WINDOW_CLOSED -> HttpStatus.FORBIDDEN;
       case UNSUPPORTED_MEDIA_TYPE -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
       case TOO_LARGE_MEDIA -> HttpStatus.PAYLOAD_TOO_LARGE;
       case OK -> HttpStatus.OK;
