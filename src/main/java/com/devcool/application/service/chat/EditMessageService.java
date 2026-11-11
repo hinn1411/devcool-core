@@ -20,7 +20,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Sender-only edit within 24 h, guarded by the client's version (phase-3 Design notes, P3-T06). */
+/** Sender-only edit within 24 h, guarded by the client's version. */
 @Service
 public class EditMessageService implements EditMessageUseCase {
   static final Duration EDIT_WINDOW = Duration.ofHours(24);
@@ -58,7 +58,7 @@ public class EditMessageService implements EditMessageUseCase {
       throw new MessageEditWindowClosedException();
     }
     MessageContentPolicy.requireValidText(command.content());
-    // Null-safe: the WS EDIT frame (P4-T04) reaches this port without the REST @NotNull.
+    // Null-safe: the WS EDIT frame (P4-T04) has no @NotNull.
     if (!Objects.equals(command.version(), message.version())) {
       throw new MessageVersionConflictException();
     }

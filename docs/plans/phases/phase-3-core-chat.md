@@ -46,7 +46,7 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - [x] **P3-T03a** Contract for P3-T02, after P3-T03 is deployed: number the messages that arrived with a NULL `seq`, bump `last_seq`, then `message.seq SET NOT NULL`
 - [x] **P3-T04** Outbound WS event includes `messageId`, `seq`, `createdTime` (the minimum needed before P4)
 - [x] **P3-T05** History API: `GET /channels/{id}/messages?beforeSeq=&limit=` and `?afterSeq=&limit=`. Keep `cursorId` as a deprecated alias for one phase
-- [ ] **P3-T06** Edit message: `EditMessageUseCase`, `PATCH /messages/{id}`, sender-only, 24 h window, version check → 409 on conflict
+- [x] **P3-T06** Edit message: `EditMessageUseCase`, `PATCH /messages/{id}`, sender-only, 24 h window, version check → 409 on conflict
 - [ ] **P3-T07** Delete message: `DeleteMessageUseCase`, `DELETE /messages/{id}`, sender or channel admin, soft delete
 - [ ] **P3-T08** Replies: `reply_to_id` (same channel enforced) + a reply preview in `MessageItem`
 - [ ] **P3-T09** Reactions: table, `PUT/DELETE /messages/{id}/reactions/{emoji}`, aggregated counts in history responses (one grouped query per page, no N+1)

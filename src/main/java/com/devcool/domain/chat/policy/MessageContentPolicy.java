@@ -3,7 +3,7 @@ package com.devcool.domain.chat.policy;
 import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import java.util.Objects;
 
-/** Rules for content that is the message itself (TEXT, MARKDOWN): on send (P3-T15) and edit. */
+/** TEXT/MARKDOWN content rules, shared by send and edit. */
 public final class MessageContentPolicy {
 
   /** {@code message.content} is {@code varchar(1000)}: PG counts characters (code points). */

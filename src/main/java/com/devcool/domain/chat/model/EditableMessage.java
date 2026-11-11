@@ -3,7 +3,7 @@ package com.devcool.domain.chat.model;
 import com.devcool.domain.chat.model.enums.ContentType;
 import java.time.Instant;
 
-/** What an edit needs to check and answer, read from a message that is not deleted. */
+/** A non-deleted message, as an edit reads it. */
 public record EditableMessage(
     Long id,
     Long channelId,

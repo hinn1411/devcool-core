@@ -30,9 +30,6 @@ public interface MessagePort {
   /** The message unless it is unknown or deleted. */
   Optional<EditableMessage> findForEdit(Long messageId);
 
-  /**
-   * Replaces the content and bumps the version, only if the stored version is still {@code
-   * expectedVersion} and the message is not deleted. False if no row matched (conflict).
-   */
+  /** Replaces content and bumps version if still {@code expectedVersion}; false on conflict. */
   boolean updateContent(Long messageId, int expectedVersion, String content, Instant editedTime);
 }

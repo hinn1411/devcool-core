@@ -92,10 +92,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       """)
   Optional<EditableMessageRow> findEditableRow(@Param("id") Long id);
 
-  /**
-   * Compare-and-set on the client's version: under Read Committed a concurrent edit waits for the
-   * row lock, then re-checks the WHERE on the committed row, so only one edit per version wins.
-   */
+  /** Compare-and-set on the client's version: one edit per version wins. */
   @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       """

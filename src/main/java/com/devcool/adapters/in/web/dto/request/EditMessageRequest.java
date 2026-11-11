@@ -4,10 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * Both fields required: content is the only editable field, so ADR-0014's "missing = keep" has
- * nothing to keep.
- */
+/** Both required: content is the only editable field (ADR-0014 "missing = keep" n/a). */
 @Schema(description = "Edit a TEXT/MARKDOWN message. Both fields are required.")
 public record EditMessageRequest(
     @Schema(description = "The new content (1..1000 characters)") @NotNull String content,
