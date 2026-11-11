@@ -11,6 +11,7 @@ import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
@@ -19,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Soft delete by the sender or a group-channel admin; idempotent. */
 @Service
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Spring injects the ports; they are shared stateless beans, not owned state")
 public class DeleteMessageService implements DeleteMessageUseCase {
 
   private final MessagePort messagePort;

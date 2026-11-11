@@ -14,6 +14,7 @@ import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.common.ErrorCode;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -35,6 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Spring injects the ports; they are shared stateless beans, not owned state")
 public class MessageController {
   private final GetMessageQuery messageQuerier;
   private final EditMessageUseCase messageEditor;
