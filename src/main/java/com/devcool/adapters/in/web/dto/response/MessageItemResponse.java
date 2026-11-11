@@ -10,6 +10,7 @@ public record MessageItemResponse(
     Instant createdTime,
     Integer version,
     Instant editedTime,
+    Instant deletedTime,
     Long userId,
     String senderName,
     String senderAvatar) {}

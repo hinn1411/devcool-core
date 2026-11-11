@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,8 +22,10 @@ import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.model.enums.ContentType;
+import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
+import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.common.DomainException;
@@ -47,7 +50,10 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** History (P3-T05) and edit (P3-T06) endpoints: params, validation, error statuses. */
+/**
+ * History (P3-T05), edit (P3-T06) and delete (P3-T07) endpoints: params, validation, error
+ * statuses.
+ */
 @WebMvcTest(MessageController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(MessageDtoMapperImpl.class)
@@ -63,6 +69,7 @@ class MessageControllerTest {
 
   @MockitoBean private GetMessageQuery messageQuerier;
   @MockitoBean private EditMessageUseCase messageEditor;
+  @MockitoBean private DeleteMessageUseCase messageDeleter;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
@@ -191,6 +198,30 @@ class MessageControllerTest {
     mockMvc.perform(editRequest(body)).andExpect(status().isUnprocessableEntity());
 
     verifyNoInteractions(messageEditor);
+  }
+
+  // ---- delete (P3-T07) -------------------------------------------------------------------------
+
+  @Test
+  void delete_returns204_andSendsCallerAndMessage() throws Exception {
+    mockMvc.perform(delete(EDIT).principal(CALLER)).andExpect(status().isNoContent());
+
+    verify(messageDeleter).delete(new DeleteMessageCommand(7L, 500L));
+  }
+
+  @ParameterizedTest
+  @MethodSource("deleteFailures")
+  void delete_mapsDomainErrors(DomainException error, int status) throws Exception {
+    org.mockito.Mockito.doThrow(error).when(messageDeleter).delete(any());
+
+    mockMvc.perform(delete(EDIT).principal(CALLER)).andExpect(status().is(status));
+  }
+
+  static Stream<org.junit.jupiter.params.provider.Arguments> deleteFailures() {
+    return Stream.of(
+        org.junit.jupiter.params.provider.Arguments.of(
+            new ForbiddenException("Not the sender or an admin"), 403),
+        org.junit.jupiter.params.provider.Arguments.of(new MessageNotFoundException(500L), 404));
   }
 
   private org.springframework.test.web.servlet.RequestBuilder editRequest(String body) {
