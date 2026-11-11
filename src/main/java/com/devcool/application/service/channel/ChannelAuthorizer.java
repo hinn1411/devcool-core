@@ -58,7 +58,7 @@ public class ChannelAuthorizer {
 
   /** Whether the caller is a member, for checks that must not answer with 403 (no oracle). */
   public boolean isMember(Long channelId, Long userId) {
-    throw new UnsupportedOperationException();
+    return memberPort.existMemberOfChannelByUserId(channelId, userId);
   }
 
   /**

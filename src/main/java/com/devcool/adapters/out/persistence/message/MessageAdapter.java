@@ -79,12 +79,24 @@ public class MessageAdapter implements MessagePort {
 
   @Override
   public Optional<EditableMessage> findForEdit(Long messageId) {
-    throw new UnsupportedOperationException();
+    return repo.findEditableRow(messageId)
+        .map(
+            row ->
+                new EditableMessage(
+                    row.id(),
+                    row.channelId(),
+                    row.seq(),
+                    row.senderId(),
+                    row.contentType(),
+                    row.content(),
+                    row.version(),
+                    row.createdTime(),
+                    row.editedTime()));
   }
 
   @Override
   public boolean updateContent(
       Long messageId, int expectedVersion, String content, Instant editedTime) {
-    throw new UnsupportedOperationException();
+    return repo.updateContentIfVersion(messageId, expectedVersion, content, editedTime) == 1;
   }
 }

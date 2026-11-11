@@ -45,6 +45,14 @@ public class MessageEntity {
   @Column(name = "EDITED_TIME", nullable = true)
   private Instant editedTime;
 
+  /**
+   * Edit version (optimistic lock, P3-T06), bumped only by the conditional update in
+   * MessageRepository. Not {@code @Version}: the check is against the client's version. Not
+   * insertable: new rows take the column default 0.
+   */
+  @Column(name = "VERSION", nullable = false, insertable = false)
+  private Integer version;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(
       name = "CHANNEL_ID",
