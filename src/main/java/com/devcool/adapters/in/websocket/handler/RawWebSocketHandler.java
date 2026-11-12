@@ -103,7 +103,8 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
                       clientFrame.channelId(),
                       clientFrame.contentType(),
                       clientFrame.content(),
-                      clientMsgId));
+                      clientMsgId,
+                      clientFrame.replyToId()));
         } catch (DomainException ex) {
           // A rejected send is a frame-level error: report it, keep the socket open.
           sendError(session, clientMsgId.toString(), ex.getErrorCode().code());

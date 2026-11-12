@@ -48,7 +48,7 @@ public class WsSendMessageService implements SendMessageUseCase {
             saved.id(),
             saved.seq(),
             saved.createdTime(),
-            null); // TODO(P3-T08) Green: command.replyToId()
+            command.replyToId());
 
     String currentConnectionId = command.connectionId();
     for (String connectionId : connections) {
@@ -65,7 +65,8 @@ public class WsSendMessageService implements SendMessageUseCase {
         sendCommand.contentType(),
         sendCommand.channelId(),
         sendCommand.userId(),
-        sendCommand.clientMsgId());
+        sendCommand.clientMsgId(),
+        sendCommand.replyToId());
   }
 
   public record OutboundWsEvent(

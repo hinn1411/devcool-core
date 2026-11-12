@@ -9,6 +9,7 @@ import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.policy.MessageCreationStrategy;
@@ -86,7 +87,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     return Objects.requireNonNull(transactions.execute(work));
   }
 
-  /** authz → replay → seq bump → insert. Empty if the insert lost the key race. */
+  /** authz → replay → reply target → seq bump → insert. Empty if the insert lost the key race. */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
 
@@ -94,6 +95,8 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     if (replay.isPresent()) {
       return replay; // checked before the bump: a retry must not move last_seq
     }
+    // After the replay: a retry of a reply whose parent was deleted since is still the duplicate.
+    requireValidReplyTarget(command);
 
     // Row lock on the channel until commit (ADR-0012)
     long seq =
@@ -103,9 +106,50 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     Message message = strategy.buildMessage(command);
     message.setSeq(seq);
     message.setClientMsgId(command.clientMsgId());
+    message.setReplyToId(command.replyToId());
     return messagePort
         .save(message)
         .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
+  }
+
+  /**
+   * A reply's parent must exist, be in the same channel and not be deleted. All three failures give
+   * the client the same answer (no oracle on which ids exist).
+   */
+  private void requireValidReplyTarget(CreateMessageCommand command) {
+    if (Objects.isNull(command.replyToId())) {
+      return;
+    }
+    ReplyTarget parent =
+        messagePort
+            .findReplyTarget(command.replyToId())
+            .orElseThrow(
+                () -> {
+                  log.warn(
+                      "User {} replied to unknown message {} in channel {}",
+                      command.userId(),
+                      command.replyToId(),
+                      command.channelId());
+                  return new InvalidMessageConfigException("Invalid replyToId");
+                });
+    if (!Objects.equals(command.channelId(), parent.channelId())) {
+      log.warn(
+          "User {} replied in channel {} to message {} of channel {}",
+          command.userId(),
+          command.channelId(),
+          command.replyToId(),
+          parent.channelId());
+      throw new InvalidMessageConfigException("Invalid replyToId");
+    }
+    if (Objects.nonNull(parent.deletedTime())) {
+      // A normal race (deleted while the user typed), not a probe: INFO, not WARN.
+      log.info(
+          "User {} replied to deleted message {} in channel {}",
+          command.userId(),
+          command.replyToId(),
+          command.channelId());
+      throw new InvalidMessageConfigException("Invalid replyToId");
+    }
   }
 
   /** The original send for this key; reuse in another channel is rejected. */

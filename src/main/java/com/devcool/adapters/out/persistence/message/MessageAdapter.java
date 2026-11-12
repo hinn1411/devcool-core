@@ -38,6 +38,9 @@ public class MessageAdapter implements MessagePort {
     MessageEntity entity = mapper.toEntity(message);
     entity.setUser(em.getReference(UserEntity.class, message.getSenderId()));
     entity.setChannel(em.getReference(ChannelEntity.class, message.getChannelId()));
+    if (message.getReplyToId() != null) {
+      entity.setReplyTo(em.getReference(MessageEntity.class, message.getReplyToId()));
+    }
     if (entity.getMedia() != null) {
       entity.getMedia().setMessage(entity);
     }
@@ -114,6 +117,6 @@ public class MessageAdapter implements MessagePort {
 
   @Override
   public Optional<ReplyTarget> findReplyTarget(Long messageId) {
-    throw new UnsupportedOperationException("P3-T08 Green");
+    return repo.findReplyTarget(messageId);
   }
 }

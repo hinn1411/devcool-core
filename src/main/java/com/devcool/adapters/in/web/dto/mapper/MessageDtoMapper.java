@@ -10,7 +10,6 @@ import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
@@ -21,7 +20,6 @@ public interface MessageDtoMapper {
 
   GetMessagesResponse toGetResponse(MessageList messageList);
 
-  @Mapping(target = "replyTo", ignore = true) // TODO(P3-T08) Green: map the preview
   MessageItemResponse toItemResponse(MessageItem item);
 
   EditMessageCommand toEditCommand(Long userId, Long messageId, EditMessageRequest request);

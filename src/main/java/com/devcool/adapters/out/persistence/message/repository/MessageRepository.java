@@ -4,6 +4,7 @@ import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.message.projection.EditableMessageRow;
 import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
 import com.devcool.domain.chat.model.DeletableMessage;
+import com.devcool.domain.chat.model.ReplyTarget;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,9 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       FROM MessageEntity ms
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
+      LEFT JOIN FETCH ms.replyTo rt
+      LEFT JOIN FETCH rt.user
+      LEFT JOIN FETCH rt.media
       WHERE ms.channel.id = :channelId
         AND (:cursorId IS NULL OR ms.id < :cursorId)
       ORDER BY ms.id DESC
@@ -29,13 +33,16 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   List<MessageEntity> findByChannelId(
       @Param("channelId") Long channelId, @Param("cursorId") Long cursorId, Pageable pageable);
 
-  /** Range scan on uk_message_channel_seq, read backwards. */
+  /** Range scan on uk_message_channel_seq, read backwards. Parents join-fetched (no N+1). */
   @Query(
       """
       SELECT ms
       FROM MessageEntity ms
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
+      LEFT JOIN FETCH ms.replyTo rt
+      LEFT JOIN FETCH rt.user
+      LEFT JOIN FETCH rt.media
       WHERE ms.channel.id = :channelId
         AND (:beforeSeq IS NULL OR ms.seq < :beforeSeq)
       ORDER BY ms.seq DESC
@@ -50,6 +57,9 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       FROM MessageEntity ms
       LEFT JOIN FETCH ms.media
       JOIN FETCH ms.user
+      LEFT JOIN FETCH ms.replyTo rt
+      LEFT JOIN FETCH rt.user
+      LEFT JOIN FETCH rt.media
       WHERE ms.channel.id = :channelId
         AND ms.seq > :afterSeq
       ORDER BY ms.seq ASC
@@ -99,6 +109,15 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       WHERE ms.id = :id
       """)
   Optional<DeletableMessage> findDeletable(@Param("id") Long id);
+
+  /** Deleted rows included: the caller tells unknown, other channel and deleted apart. */
+  @Query(
+      """
+      SELECT new com.devcool.domain.chat.model.ReplyTarget(ms.channel.id, ms.deletedTime)
+      FROM MessageEntity ms
+      WHERE ms.id = :id
+      """)
+  Optional<ReplyTarget> findReplyTarget(@Param("id") Long id);
 
   /** Only the first delete matches, so its timestamp is the one kept. */
   @Modifying(flushAutomatically = true, clearAutomatically = true)
