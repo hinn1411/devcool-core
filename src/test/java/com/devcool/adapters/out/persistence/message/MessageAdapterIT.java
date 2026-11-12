@@ -15,6 +15,8 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.ReplyPreview;
+import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.user.model.enums.Role;
@@ -23,8 +25,12 @@ import com.devcool.support.AbstractJpaIT;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
@@ -455,6 +461,170 @@ class MessageAdapterIT extends AbstractJpaIT {
     };
   }
 
+  // ---- replies (P3-T08) ------------------------------------------------------------------------
+
+  /** The three history reads; each must carry the same reply preview. */
+  enum History {
+    CURSOR,
+    BEFORE_SEQ,
+    AFTER_SEQ
+  }
+
+  private List<MessageItem> page(History history) {
+    Long channel = channelA.getId();
+    return switch (history) {
+      case CURSOR -> messagePort.findMessages(channel, null, 20);
+      case BEFORE_SEQ -> messagePort.findBeforeSeq(channel, null, 20);
+      case AFTER_SEQ -> messagePort.findAfterSeq(channel, 0L, 20);
+    };
+  }
+
+  @Test
+  void save_storesReplyToId() {
+    Long parent = text(channelA, "question");
+    Message reply = domainText(alice, channelA, 50L, UUID.randomUUID());
+    reply.setReplyToId(parent);
+
+    Long id = messagePort.save(reply).orElseThrow();
+    resetPersistenceContext();
+
+    assertThat(storedReplyToId(id)).isEqualTo(parent);
+  }
+
+  @Test
+  void findReplyTarget_returnsChannelAndDeletedTime_evenIfDeleted() {
+    Long live = text(channelA, "live");
+    Long gone = deletedText(channelB, "gone");
+    resetPersistenceContext();
+
+    assertThat(messagePort.findReplyTarget(live)).contains(new ReplyTarget(channelA.getId(), null));
+    assertThat(messagePort.findReplyTarget(gone))
+        .hasValueSatisfying(
+            target -> {
+              assertThat(target.channelId()).isEqualTo(channelB.getId());
+              assertThat(target.deletedTime()).isNotNull();
+            });
+  }
+
+  @Test
+  void findReplyTarget_unknownId_isEmpty() {
+    assertThat(messagePort.findReplyTarget(-1L)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(History.class)
+  void history_plainMessage_hasNoReplyTo(History history) {
+    text(channelA, "hello");
+    resetPersistenceContext();
+
+    assertThat(page(history)).singleElement().extracting(MessageItem::getReplyTo).isNull();
+  }
+
+  @ParameterizedTest
+  @EnumSource(History.class)
+  void history_reply_carriesThePreviewOfItsParent(History history) {
+    Long parent = text(channelA, "question");
+    Long parentSeq = seqOf(parent);
+    Long reply = reply(channelA, parent, "answer");
+    resetPersistenceContext();
+
+    assertThat(replyToOf(page(history), reply))
+        .isEqualTo(
+            new ReplyPreview(
+                parent, parentSeq, alice.getId(), "Alice", ContentType.TEXT, "question", false));
+  }
+
+  @Test
+  void history_replyToLongParent_previewIsCutTo100Chars() {
+    Long parent = text(channelA, "x".repeat(150));
+    Long reply = reply(channelA, parent, "answer");
+    resetPersistenceContext();
+
+    assertThat(replyToOf(page(History.BEFORE_SEQ), reply))
+        .extracting(ReplyPreview::preview)
+        .isEqualTo("x".repeat(100));
+  }
+
+  @Test
+  void history_replyToImage_hasNoPreviewText_butKeepsTheContentType() {
+    Long parent = image(channelA, "channels/1/cat.png");
+    Long reply = reply(channelA, parent, "nice cat");
+    resetPersistenceContext();
+
+    assertThat(replyToOf(page(History.BEFORE_SEQ), reply))
+        .isNotNull()
+        .extracting(ReplyPreview::contentType, ReplyPreview::preview, ReplyPreview::deleted)
+        .containsExactly(ContentType.IMAGE, null, false);
+  }
+
+  @ParameterizedTest
+  @EnumSource(History.class)
+  void history_parentDeletedAfterTheReply_previewIsATombstone(History history) {
+    Long parent = text(channelA, "oops");
+    Long parentSeq = seqOf(parent);
+    Long reply = reply(channelA, parent, "answer");
+    resetPersistenceContext();
+    messagePort.markDeleted(parent, T0.plusSeconds(3600));
+
+    assertThat(replyToOf(page(history), reply))
+        .isNotNull()
+        .extracting(
+            ReplyPreview::id, ReplyPreview::seq, ReplyPreview::deleted, ReplyPreview::preview)
+        .containsExactly(parent, parentSeq, true, null);
+  }
+
+  @ParameterizedTest
+  @EnumSource(History.class)
+  void history_pageOfReplies_isOneSqlStatement(History history) {
+    // Parents with and without media: the inverse @OneToOne media can't be lazy, so a parent
+    // loaded without a join fetch costs one extra SELECT each (N+1).
+    Long p1 = text(channelA, "one");
+    Long p2 = image(channelA, "channels/1/two.png");
+    Long p3 = text(channelA, "three");
+    List<Long> replies =
+        List.of(reply(channelA, p1, "r1"), reply(channelA, p2, "r2"), reply(channelA, p3, "r3"));
+    resetPersistenceContext();
+    Statistics stats = statistics();
+
+    List<MessageItem> page = page(history);
+
+    assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+    assertThat(replies).allSatisfy(id -> assertThat(replyToOf(page, id)).isNotNull());
+  }
+
+  private static ReplyPreview replyToOf(List<MessageItem> page, Long id) {
+    return page.stream()
+        .filter(item -> item.getId().equals(id))
+        .findFirst()
+        .orElseThrow()
+        .getReplyTo();
+  }
+
+  private Long seqOf(Long id) {
+    return em.find(MessageEntity.class, id).getSeq();
+  }
+
+  /** Enabled and reset now: counts only the statements that follow. */
+  private Statistics statistics() {
+    Statistics stats =
+        em.getEntityManager()
+            .getEntityManagerFactory()
+            .unwrap(SessionFactory.class)
+            .getStatistics();
+    stats.setStatisticsEnabled(true);
+    stats.clear();
+    return stats;
+  }
+
+  private Long storedReplyToId(Long id) {
+    Object value =
+        em.getEntityManager()
+            .createNativeQuery("select reply_to_id from message where id = :id")
+            .setParameter("id", id)
+            .getSingleResult();
+    return value == null ? null : ((Number) value).longValue();
+  }
+
   // ---- seed helpers ----------------------------------------------------------------------------
 
   private int sequence;
@@ -511,6 +681,12 @@ class MessageAdapterIT extends AbstractJpaIT {
 
   private Long text(ChannelEntity channel, String content) {
     return em.persist(message(channel, ContentType.TEXT, content)).getId();
+  }
+
+  private Long reply(ChannelEntity channel, Long parentId, String content) {
+    MessageEntity message = message(channel, ContentType.TEXT, content);
+    message.setReplyTo(em.getEntityManager().getReference(MessageEntity.class, parentId));
+    return em.persist(message).getId();
   }
 
   private Long deletedText(ChannelEntity channel, String content) {

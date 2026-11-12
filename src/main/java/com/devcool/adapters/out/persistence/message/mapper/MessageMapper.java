@@ -18,9 +18,11 @@ public interface MessageMapper {
    */
   @Mapping(target = "user", ignore = true)
   @Mapping(target = "channel", ignore = true)
+  @Mapping(target = "replyTo", ignore = true)
   MessageEntity toEntity(Message message);
 
   /** A deleted message is a tombstone: seq and sender stay, content and media path don't. */
+  @Mapping(target = "replyTo", ignore = true) // TODO(P3-T08) Green: build the preview
   @Mapping(target = "userId", source = "user.id")
   @Mapping(target = "senderName", source = "user.name")
   @Mapping(target = "senderAvatar", source = "user.avatar")

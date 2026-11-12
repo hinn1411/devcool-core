@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -21,6 +22,7 @@ import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
@@ -52,7 +54,7 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /**
  * Seq assignment and idempotent send (P3-T03, ADR-0012); history paging (P3-T05); markdown and
- * content rules (P3-T15).
+ * content rules (P3-T15); replies (P3-T08).
  */
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
@@ -172,6 +174,105 @@ class MessageServiceTest {
     assertThatThrownBy(() -> service.save(markdown))
         .isInstanceOf(InvalidMessageConfigException.class);
     verifyNoInteractions(messagePort, channelPort);
+  }
+
+  // ---- replies (P3-T08) ------------------------------------------------------------------------
+
+  private static final long PARENT = 77L;
+  private static final Instant PARENT_DELETED = ORIGINAL_TIME.plusSeconds(60);
+
+  @Test
+  void send_withoutReplyTo_savesNullReplyTo_andLooksNothingUp() {
+    aliceIsMember();
+    freshKeyAndSeq();
+
+    service.save(text(CHANNEL));
+
+    assertThat(storedMessage().getReplyToId()).isNull();
+    verify(messagePort, never()).findReplyTarget(anyLong());
+  }
+
+  @Test
+  void reply_toLiveParentInTheSameChannel_savesReplyToId() {
+    aliceIsMember();
+    freshKeyAndSeq();
+    // Lenient: Red has no lookup yet, so a strict stub would fail on setup instead of the assert.
+    lenient()
+        .when(messagePort.findReplyTarget(PARENT))
+        .thenReturn(Optional.of(new ReplyTarget(CHANNEL, null)));
+
+    service.save(reply(PARENT));
+
+    assertThat(storedMessage().getReplyToId()).isEqualTo(PARENT);
+  }
+
+  @Test
+  void reply_toUnknownParent_isRejected_beforeAnyBump() {
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    lenient().when(messagePort.findReplyTarget(PARENT)).thenReturn(Optional.empty());
+
+    assertRejectedWithoutBump(reply(PARENT));
+  }
+
+  @Test
+  void reply_toParentInAnotherChannel_isRejected_beforeAnyBump() {
+    // Otherwise any member could pull a preview of a channel they can't read (BOLA).
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    lenient()
+        .when(messagePort.findReplyTarget(PARENT))
+        .thenReturn(Optional.of(new ReplyTarget(OTHER_CHANNEL, null)));
+
+    assertRejectedWithoutBump(reply(PARENT));
+  }
+
+  @Test
+  void reply_toDeletedParent_isRejected_beforeAnyBump() {
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    lenient()
+        .when(messagePort.findReplyTarget(PARENT))
+        .thenReturn(Optional.of(new ReplyTarget(CHANNEL, PARENT_DELETED)));
+
+    assertRejectedWithoutBump(reply(PARENT));
+  }
+
+  @Test
+  void retry_afterTheParentWasDeleted_isStillTheDuplicate_notRejected() {
+    // The original reply was saved while the parent was live; the replay wins over the check.
+    aliceIsMember();
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.of(existing(CHANNEL)));
+
+    SavedMessage saved = service.save(reply(PARENT));
+
+    assertThat(saved.duplicate()).isTrue();
+    verify(messagePort, never()).findReplyTarget(anyLong());
+  }
+
+  private void freshKeyAndSeq() {
+    when(messagePort.findByClientMsgId(ALICE, KEY)).thenReturn(Optional.empty());
+    when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(42L));
+    when(messagePort.save(any())).thenReturn(Optional.of(100L));
+  }
+
+  private Message storedMessage() {
+    ArgumentCaptor<Message> stored = ArgumentCaptor.forClass(Message.class);
+    verify(messagePort).save(stored.capture());
+    return stored.getValue();
+  }
+
+  /** One answer for unknown, other channel and deleted: no oracle on which ids exist. */
+  private void assertRejectedWithoutBump(CreateMessageCommand command) {
+    assertThatThrownBy(() -> service.save(command))
+        .isInstanceOf(InvalidMessageConfigException.class)
+        .hasMessage("Invalid replyToId");
+    verify(channelPort, never()).getNextSequence(anyLong());
+    verify(messagePort, never()).save(any());
+  }
+
+  private static CreateMessageCommand reply(long parentId) {
+    return new CreateMessageCommand("re", ContentType.TEXT, CHANNEL, ALICE, KEY, parentId);
   }
 
   // ---- markdown + content rules (P3-T15) ------------------------------------------------------

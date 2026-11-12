@@ -10,6 +10,7 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
@@ -109,5 +110,10 @@ public class MessageAdapter implements MessagePort {
   @Override
   public boolean markDeleted(Long messageId, Instant deletedTime) {
     return repo.markDeletedIfLive(messageId, deletedTime) == 1;
+  }
+
+  @Override
+  public Optional<ReplyTarget> findReplyTarget(Long messageId) {
+    throw new UnsupportedOperationException("P3-T08 Green");
   }
 }

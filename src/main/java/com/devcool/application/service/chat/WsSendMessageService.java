@@ -47,7 +47,8 @@ public class WsSendMessageService implements SendMessageUseCase {
             command.content(),
             saved.id(),
             saved.seq(),
-            saved.createdTime());
+            saved.createdTime(),
+            null); // TODO(P3-T08) Green: command.replyToId()
 
     String currentConnectionId = command.connectionId();
     for (String connectionId : connections) {
@@ -75,5 +76,6 @@ public class WsSendMessageService implements SendMessageUseCase {
       String content,
       Long messageId,
       Long seq,
-      Instant createdTime) {}
+      Instant createdTime,
+      Long replyToId) {}
 }

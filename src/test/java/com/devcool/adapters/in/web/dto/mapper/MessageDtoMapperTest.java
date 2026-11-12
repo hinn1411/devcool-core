@@ -6,9 +6,11 @@ import com.devcool.adapters.in.web.dto.request.EditMessageRequest;
 import com.devcool.adapters.in.web.dto.response.EditMessageResponse;
 import com.devcool.adapters.in.web.dto.response.GetMessagesResponse;
 import com.devcool.adapters.in.web.dto.response.MessageItemResponse;
+import com.devcool.adapters.in.web.dto.response.ReplyPreviewResponse;
 import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReplyPreview;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
@@ -73,7 +75,8 @@ class MessageDtoMapperTest {
                 null,
                 9L,
                 "Alice",
-                "https://cdn.devcool.com/avatars/alice.png"));
+                "https://cdn.devcool.com/avatars/alice.png",
+                null));
     assertThat(response.getCursorId()).isEqualTo(5);
     assertThat(response.isHasMore()).isTrue();
   }
@@ -94,6 +97,18 @@ class MessageDtoMapperTest {
     assertThat(response.deletedTime()).isEqualTo(deleted);
     assertThat(response.content()).isNull();
     assertThat(response.seq()).isEqualTo(7L);
+  }
+
+  @Test
+  void toGetResponse_reply_mapsThePreview() {
+    MessageItem reply = item(ContentType.TEXT);
+    reply.setReplyTo(new ReplyPreview(4L, 6L, 8L, "Bob", ContentType.MARKDOWN, "# hi", false));
+
+    MessageItemResponse response =
+        mapper.toGetResponse(new MessageList(List.of(reply), null, false)).getItems().getFirst();
+
+    assertThat(response.replyTo())
+        .isEqualTo(new ReplyPreviewResponse(4L, 6L, 8L, "Bob", "MARKDOWN", "# hi", false));
   }
 
   @ParameterizedTest

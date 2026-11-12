@@ -9,4 +9,17 @@ public record SendMessageCommand(
     Long channelId,
     ContentType contentType,
     String content,
-    UUID clientMsgId) {}
+    UUID clientMsgId,
+    Long replyToId) {
+
+  /** Not a reply. */
+  public SendMessageCommand(
+      String connectionId,
+      Long userId,
+      Long channelId,
+      ContentType contentType,
+      String content,
+      UUID clientMsgId) {
+    this(connectionId, userId, channelId, contentType, content, clientMsgId, null);
+  }
+}
