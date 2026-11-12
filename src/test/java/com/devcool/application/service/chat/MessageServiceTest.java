@@ -128,8 +128,9 @@ class MessageServiceTest {
     void nonMember_isRejectedBeforeAnyBump() {
       aliceIsNotMember();
 
-      assertThatThrownBy(() -> service.save(text(CHANNEL)))
-          .isInstanceOf(MemberNotFoundException.class);
+      CreateMessageCommand send = text(CHANNEL);
+
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(MemberNotFoundException.class);
       verify(channelPort, never()).getNextSequence(anyLong());
       verifyNoInteractions(messagePort);
     }
@@ -140,8 +141,8 @@ class MessageServiceTest {
       when(memberPort.existMemberOfChannelByUserId(OTHER_CHANNEL, ALICE)).thenReturn(false);
 
       // A distinct "channel not found" would let any user map which channel ids exist.
-      assertThatThrownBy(() -> service.save(text(OTHER_CHANNEL)))
-          .isInstanceOf(MemberNotFoundException.class);
+      CreateMessageCommand send = text(OTHER_CHANNEL);
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(MemberNotFoundException.class);
       verifyNoInteractions(channelPort, messagePort);
     }
 
@@ -150,14 +151,16 @@ class MessageServiceTest {
       aliceIsMember();
       alreadyStored(OTHER_CHANNEL);
 
-      assertThatThrownBy(() -> service.save(text(CHANNEL)))
-          .isInstanceOf(ClientMsgIdReusedException.class);
+      CreateMessageCommand send = text(CHANNEL);
+
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(ClientMsgIdReusedException.class);
       assertNothingBumped();
     }
 
     @Test
     void contentTypeWithoutStrategy_isRejectedBeforeAnyBump() {
-      assertThatThrownBy(() -> service.save(command(ContentType.MARKDOWN, "# hi")))
+      CreateMessageCommand send = command(ContentType.MARKDOWN, "# hi");
+      assertThatThrownBy(() -> service.save(send))
           .isInstanceOf(InvalidMessageConfigException.class);
       verifyNoInteractions(messagePort, channelPort);
     }
@@ -225,8 +228,9 @@ class MessageServiceTest {
       // Membership first: otherwise an outsider learns whether a message id exists.
       aliceIsNotMember();
 
-      assertThatThrownBy(() -> service.save(reply(PARENT)))
-          .isInstanceOf(MemberNotFoundException.class);
+      CreateMessageCommand send = reply(PARENT);
+
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(MemberNotFoundException.class);
       verifyNoInteractions(messagePort);
     }
 
@@ -286,8 +290,9 @@ class MessageServiceTest {
     void markdownSend_byNonMember_isRejectedBeforeAnyBump() {
       aliceIsNotMember();
 
-      assertThatThrownBy(() -> service.save(command(ContentType.MARKDOWN, "# hi")))
-          .isInstanceOf(MemberNotFoundException.class);
+      CreateMessageCommand send = command(ContentType.MARKDOWN, "# hi");
+
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(MemberNotFoundException.class);
       verify(channelPort, never()).getNextSequence(anyLong());
       verifyNoInteractions(messagePort);
     }
@@ -295,7 +300,8 @@ class MessageServiceTest {
     @ParameterizedTest
     @MethodSource("invalidContent")
     void invalidContent_isRejectedBeforeAnyPortCall(ContentType type, String content) {
-      assertThatThrownBy(() -> service.save(command(type, content)))
+      CreateMessageCommand send = command(type, content);
+      assertThatThrownBy(() -> service.save(send))
           .isInstanceOf(InvalidMessageConfigException.class);
       verifyNoInteractions(messagePort, channelPort, memberPort);
       assertThat(transactions.started).isZero();
@@ -391,7 +397,8 @@ class MessageServiceTest {
     @ParameterizedTest
     @CsvSource({"100, 2, ", "100, , 2", ", 9, 2", "100, 9, 2"})
     void twoCursors_throws_andReadsNothing(Long cursorId, Long beforeSeq, Long afterSeq) {
-      assertThatThrownBy(() -> service.getMessages(history(cursorId, beforeSeq, afterSeq, 20)))
+      GetMessageCommand query = history(cursorId, beforeSeq, afterSeq, 20);
+      assertThatThrownBy(() -> service.getMessages(query))
           .isInstanceOf(InvalidHistoryCursorException.class);
       verifyNoInteractions(messagePort);
     }
@@ -401,7 +408,9 @@ class MessageServiceTest {
       when(channelPort.existById(CHANNEL)).thenReturn(true);
       aliceIsNotMember();
 
-      assertThatThrownBy(() -> service.getMessages(history(null, null, null, 20)))
+      GetMessageCommand query = history(null, null, null, 20);
+
+      assertThatThrownBy(() -> service.getMessages(query))
           .isInstanceOf(MemberNotFoundException.class);
       verifyNoInteractions(messagePort);
     }
@@ -410,7 +419,9 @@ class MessageServiceTest {
     void missingChannel_readsNothing() {
       when(channelPort.existById(CHANNEL)).thenReturn(false);
 
-      assertThatThrownBy(() -> service.getMessages(history(null, null, null, 20)))
+      GetMessageCommand query = history(null, null, null, 20);
+
+      assertThatThrownBy(() -> service.getMessages(query))
           .isInstanceOf(ChannelNotFoundException.class);
       verifyNoInteractions(messagePort);
     }

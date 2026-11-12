@@ -546,7 +546,7 @@ class MessageAdapterIT extends AbstractJpaIT {
       List<MessageItem> page = page(query);
 
       assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
-      assertThat(replies).allSatisfy(id -> assertThat(replyToOf(page, id)).isNotNull());
+      assertThat(replies).hasSize(3).allSatisfy(id -> assertThat(replyToOf(page, id)).isNotNull());
     }
   }
 
