@@ -12,6 +12,7 @@ import com.devcool.application.service.chat.WsSendMessageService.OutboundWsEvent
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.SaveMessageUseCase;
+import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
@@ -76,6 +77,23 @@ class WsSendMessageServiceTest {
     assertThat((OutboundWsEvent) payload.getValue())
         .extracting(OutboundWsEvent::contentType, OutboundWsEvent::content)
         .containsExactly("MARKDOWN", "# hi **x**");
+  }
+
+  @Test
+  void reply_isSavedAsAReply_andThePushCarriesReplyToId() {
+    when(saveMessageUseCase.save(any())).thenReturn(new SavedMessage(100L, 42L, CREATED, false));
+    when(connectionRegistryPort.getConnectionsByChannel(10L)).thenReturn(Set.of("conn-2"));
+
+    service.sendMessage(
+        new SendMessageCommand("conn-1", 1L, 10L, ContentType.TEXT, "re", UUID.randomUUID(), 77L));
+
+    ArgumentCaptor<CreateMessageCommand> saved =
+        ArgumentCaptor.forClass(CreateMessageCommand.class);
+    verify(saveMessageUseCase).save(saved.capture());
+    assertThat(saved.getValue().replyToId()).isEqualTo(77L);
+    ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
+    verify(realtimeEmitterPort).sendMessageToConnection(eq("conn-2"), payload.capture());
+    assertThat(((OutboundWsEvent) payload.getValue()).replyToId()).isEqualTo(77L);
   }
 
   private static SendMessageCommand command() {

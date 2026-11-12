@@ -10,6 +10,7 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
@@ -37,6 +38,9 @@ public class MessageAdapter implements MessagePort {
     MessageEntity entity = mapper.toEntity(message);
     entity.setUser(em.getReference(UserEntity.class, message.getSenderId()));
     entity.setChannel(em.getReference(ChannelEntity.class, message.getChannelId()));
+    if (message.getReplyToId() != null) {
+      entity.setReplyTo(em.getReference(MessageEntity.class, message.getReplyToId()));
+    }
     if (entity.getMedia() != null) {
       entity.getMedia().setMessage(entity);
     }
@@ -109,5 +113,10 @@ public class MessageAdapter implements MessagePort {
   @Override
   public boolean markDeleted(Long messageId, Instant deletedTime) {
     return repo.markDeletedIfLive(messageId, deletedTime) == 1;
+  }
+
+  @Override
+  public Optional<ReplyTarget> findReplyTarget(Long messageId) {
+    return repo.findReplyTarget(messageId);
   }
 }

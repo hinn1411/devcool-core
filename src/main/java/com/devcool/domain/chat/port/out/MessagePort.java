@@ -5,6 +5,7 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.ReplyTarget;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,4 +40,7 @@ public interface MessagePort {
 
   /** Sets {@code deleted_time} if not yet deleted; false if it already was. */
   boolean markDeleted(Long messageId, Instant deletedTime);
+
+  /** The would-be parent of a reply, deleted or not; empty if unknown. */
+  Optional<ReplyTarget> findReplyTarget(Long messageId);
 }

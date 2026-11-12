@@ -22,5 +22,6 @@ public class Message {
   private Long channelId;
   private Long seq;
   private UUID clientMsgId;
+  private Long replyToId;
   private Media media;
 }

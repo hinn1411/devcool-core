@@ -104,6 +104,17 @@ class RawWebSocketHandlerTest {
     assertThat(command.getValue().clientMsgId()).isEqualTo(UUID.fromString(KEY));
   }
 
+  @Test
+  void send_passesReplyToIdToTheUseCase() throws Exception {
+    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
+    handler.handleTextMessage(
+        session, sendFrame("\"clientMsgId\":\"" + KEY + "\",\"replyToId\":77"));
+
+    ArgumentCaptor<SendMessageCommand> command = ArgumentCaptor.forClass(SendMessageCommand.class);
+    verify(sendMessageUseCase).sendMessage(command.capture());
+    assertThat(command.getValue().replyToId()).isEqualTo(77L);
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"", "\"clientMsgId\":null", "\"clientMsgId\":\"not-a-uuid\""})
   void sendWithMissingOrInvalidClientMsgId_repliesErrorAndSavesNothing(String keyField)

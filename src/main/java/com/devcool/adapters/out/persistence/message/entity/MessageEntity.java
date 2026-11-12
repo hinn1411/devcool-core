@@ -64,6 +64,14 @@ public class MessageEntity {
   @Column(name = "CLIENT_MSG_ID")
   private UUID clientMsgId;
 
+  /** The message this one replies to; same channel (P3-T08). */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "REPLY_TO_ID",
+      referencedColumnName = "ID",
+      foreignKey = @ForeignKey(name = "fk_message_reply_to"))
+  private MessageEntity replyTo;
+
   @OneToOne(
       mappedBy = "message",
       fetch = FetchType.LAZY,

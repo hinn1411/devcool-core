@@ -13,4 +13,5 @@ public record MessageItemResponse(
     Instant deletedTime,
     Long userId,
     String senderName,
-    String senderAvatar) {}
+    String senderAvatar,
+    ReplyPreviewResponse replyTo) {}
