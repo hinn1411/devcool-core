@@ -9,6 +9,7 @@ import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReactionSummary;
 import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -196,7 +197,20 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     List<MessageItem> fetched = queryMessages(command, fetchSize);
     boolean hasMore = fetched.size() > command.limit();
     List<MessageItem> items = hasMore ? fetched.subList(0, command.limit()) : fetched;
+    attachReactions(items, command.userId());
     return new MessageList(items, hasMore ? items.getLast().getId() : null, hasMore);
+  }
+
+  /** One summary query for the whole page (no N+1); a tombstone shows no reactions. */
+  private void attachReactions(List<MessageItem> items, Long viewerId) {
+    List<Long> messageIds = items.stream().map(MessageItem::getId).toList();
+    Map<Long, List<ReactionSummary>> byMessage = reactionPort.summarize(messageIds, viewerId);
+    for (MessageItem item : items) {
+      item.setReactions(
+          item.getDeletedTime() != null
+              ? List.of()
+              : byMessage.getOrDefault(item.getId(), List.of()));
+    }
   }
 
   private static long countCursors(GetMessageCommand command) {
