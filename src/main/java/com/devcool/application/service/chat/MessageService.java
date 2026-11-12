@@ -18,6 +18,7 @@ import com.devcool.domain.chat.port.in.SaveMessageUseCase;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.chat.port.out.ReactionPort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   private static final Logger log = LoggerFactory.getLogger(MessageService.class);
   private final Map<ContentType, MessageCreationStrategy> creationStrategies;
   private final MessagePort messagePort;
+  private final ReactionPort reactionPort;
   private final ChannelPort channelPort;
   private final ChannelAuthorizer channelAuthorizer;
   private final TransactionOperations transactions;
@@ -43,6 +45,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   public MessageService(
       List<MessageCreationStrategy> creationStrategies,
       MessagePort messagePort,
+      ReactionPort reactionPort,
       ChannelPort channelPort,
       ChannelAuthorizer channelAuthorizer,
       TransactionOperations transactions) {
@@ -50,6 +53,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     creationStrategies.forEach(
         strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
     this.messagePort = messagePort;
+    this.reactionPort = reactionPort;
     this.channelPort = channelPort;
     this.channelAuthorizer = channelAuthorizer;
     this.transactions = transactions;

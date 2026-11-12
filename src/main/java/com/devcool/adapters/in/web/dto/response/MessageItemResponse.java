@@ -1,6 +1,7 @@
 package com.devcool.adapters.in.web.dto.response;
 
 import java.time.Instant;
+import java.util.List;
 
 public record MessageItemResponse(
     Long id,
@@ -14,4 +15,5 @@ public record MessageItemResponse(
     Long userId,
     String senderName,
     String senderAvatar,
-    ReplyPreviewResponse replyTo) {}
+    ReplyPreviewResponse replyTo,
+    List<ReactionSummaryResponse> reactions) {}
