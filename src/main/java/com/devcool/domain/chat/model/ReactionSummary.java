@@ -1,4 +1,4 @@
 package com.devcool.domain.chat.model;
 
-/** One emoji on one message: how many members used it, and whether the viewer is one of them. */
+/** One emoji on one message: its count, and whether the viewer used it. */
 public record ReactionSummary(String emoji, long count, boolean reactedByMe) {}

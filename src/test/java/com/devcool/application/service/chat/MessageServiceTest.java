@@ -429,7 +429,7 @@ class MessageServiceTest {
       verifyNoInteractions(messagePort);
     }
 
-    /** P3-T09: one summarize call per page, for the returned items only (not the extra row). */
+    /** P3-T09: one summarize per page, for page items only. */
     @ParameterizedTest
     @CsvSource({"CURSOR", "BEFORE_SEQ", "AFTER_SEQ"})
     void everyCursor_summarizesThePageOnce_andAttachesTheReactions(String cursor) {

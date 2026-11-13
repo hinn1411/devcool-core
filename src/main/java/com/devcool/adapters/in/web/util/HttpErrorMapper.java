@@ -13,7 +13,8 @@ public class HttpErrorMapper {
               USERNAME_ALREADY_USED,
               DUPLICATE_MEMBER,
               CLIENT_MSG_ID_REUSED,
-              MESSAGE_VERSION_CONFLICT ->
+              MESSAGE_VERSION_CONFLICT,
+              REACTION_LIMIT_REACHED ->
           HttpStatus.CONFLICT;
       case PASSWORD_WEAK,
               PASSWORD_INCORRECT,

@@ -1,6 +1,7 @@
 package com.devcool.adapters.in.web.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -23,12 +24,11 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Reactions through the real filter chain, real tokens and committed transactions (P3-T09). */
+/** Reactions over HTTP with real tokens and commits (P3-T09). */
 class MessageReactionIT extends AbstractIntegrationTest {
 
   private static final String THUMBS = "👍";
@@ -58,12 +58,27 @@ class MessageReactionIT extends AbstractIntegrationTest {
     react(alice, message, THUMBS).andExpect(status().isNoContent());
     react(alice, message, THUMBS).andExpect(status().isNoContent());
 
-    mvc.perform(
-            get("/api/v1/channels/{id}/messages", channel).header(auth(alice)[0], auth(alice)[1]))
+    mvc.perform(get("/api/v1/channels/{id}/messages", channel).header(AUTHORIZATION, bearer(alice)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.items[0].reactions[0].emoji").value(THUMBS))
         .andExpect(jsonPath("$.data.items[0].reactions[0].count").value(1))
         .andExpect(jsonPath("$.data.items[0].reactions[0].reactedByMe").value(true));
+  }
+
+  @Test
+  void beyondTheDistinctEmojiCap_is409_butAnExistingEmojiStillWorks() throws Exception {
+    long bob = user();
+    jdbc.update(
+        "insert into member (id, user_id, channel_id, role, joined_time)"
+            + " values (nextval('member_seq'), ?, ?, 'MEMBER', now())",
+        bob,
+        channel);
+    for (int i = 0; i < 20; i++) {
+      react(alice, message, Character.toString(0x1F600 + i)).andExpect(status().isNoContent());
+    }
+
+    react(alice, message, THUMBS).andExpect(status().isConflict());
+    react(bob, message, Character.toString(0x1F600)).andExpect(status().isNoContent());
   }
 
   @Test
@@ -124,25 +139,21 @@ class MessageReactionIT extends AbstractIntegrationTest {
   // ---- helpers ---------------------------------------------------------------------------------
 
   private ResultActions react(long user, long messageId, String emoji) throws Exception {
-    String[] header = auth(user);
     return mvc.perform(
         put("/api/v1/messages/{id}/reactions/{emoji}", messageId, emoji)
-            .header(header[0], header[1]));
+            .header(AUTHORIZATION, bearer(user)));
   }
 
   private ResultActions unreact(long user, long messageId, String emoji) throws Exception {
-    String[] header = auth(user);
     return mvc.perform(
         delete("/api/v1/messages/{id}/reactions/{emoji}", messageId, emoji)
-            .header(header[0], header[1]));
+            .header(AUTHORIZATION, bearer(user)));
   }
 
-  private String[] auth(long user) {
-    String token = tokenIssuer.issue(userPort.findById(user).orElseThrow()).accessToken();
-    return new String[] {HttpHeaders.AUTHORIZATION, "Bearer " + token};
+  private String bearer(long user) {
+    return "Bearer " + tokenIssuer.issue(userPort.findById(user).orElseThrow()).accessToken();
   }
 
-  /** Counted with SQL only after the call under test, so the table is the stub's problem. */
   private int rows(long messageId) {
     return jdbc.queryForObject(
         "select count(*) from message_reaction where message_id = ?", Integer.class, messageId);

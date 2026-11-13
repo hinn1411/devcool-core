@@ -13,7 +13,7 @@ import org.springframework.data.repository.query.Param;
 public interface MessageReactionRepository
     extends JpaRepository<MessageReactionEntity, MessageReactionEntity.Key> {
 
-  /** A concurrent duplicate waits for the winner, then matches the PK and does nothing. */
+  /** Idempotent via the PK, also under concurrent duplicates. */
   @Modifying
   @Query(
       value =
@@ -29,6 +29,11 @@ public interface MessageReactionRepository
       @Param("emoji") String emoji,
       @Param("createdTime") Instant createdTime);
 
+  @Query(
+      value = "select distinct emoji from message_reaction where message_id = :messageId",
+      nativeQuery = true)
+  List<String> findDistinctEmojis(@Param("messageId") Long messageId);
+
   @Modifying
   @Query(
       value =
@@ -42,7 +47,7 @@ public interface MessageReactionRepository
       @Param("userId") Long userId,
       @Param("emoji") String emoji);
 
-  /** One statement per history page; emojis in the order they were first used. */
+  /** One statement per page; emojis by first use. */
   @Query(
       value =
           """

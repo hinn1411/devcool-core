@@ -49,7 +49,7 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - [x] **P3-T06** Edit message: `EditMessageUseCase`, `PATCH /messages/{id}`, sender-only, 24 h window, version check → 409 on conflict
 - [x] **P3-T07** Delete message: `DeleteMessageUseCase`, `DELETE /messages/{id}`, sender or channel admin, soft delete
 - [x] **P3-T08** Replies: `reply_to_id` (same channel enforced) + a reply preview in `MessageItem`
-- [ ] **P3-T09** Reactions: table, `PUT/DELETE /messages/{id}/reactions/{emoji}`, aggregated counts in history responses (one grouped query per page, no N+1)
+- [x] **P3-T09** Reactions: table, `PUT/DELETE /messages/{id}/reactions/{emoji}`, aggregated counts in history responses (one grouped query per page, no N+1)
 - [ ] **P3-T10** Read state: `PUT /channels/{id}/read`; the channel list returns `unreadCount` and `lastMessage` preview
 - [ ] **P3-T11** Member management: remove member (admin), leave channel (self), transfer leader (Forum). Membership checks everywhere
 - [ ] **P3-T12** DM convenience: `POST /channels/direct {userId}` returns the existing PRIVATE_CHAT or creates it (unique pair constraint)

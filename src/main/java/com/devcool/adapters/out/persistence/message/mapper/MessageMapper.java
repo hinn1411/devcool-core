@@ -28,7 +28,7 @@ public interface MessageMapper {
   @Mapping(target = "senderAvatar", source = "user.avatar")
   @Mapping(target = "content", source = "entity", qualifiedByName = "visibleContent")
   @Mapping(target = "replyTo", source = "entity", qualifiedByName = "replyPreview")
-  @Mapping(target = "reactions", ignore = true) // merged by MessageService from ReactionPort
+  @Mapping(target = "reactions", ignore = true) // set by MessageService
   MessageItem toItem(MessageEntity entity);
 
   /** A deleted message is a tombstone: seq and sender stay, content and media path don't. */

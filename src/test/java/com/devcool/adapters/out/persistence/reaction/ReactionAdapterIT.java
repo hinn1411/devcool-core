@@ -26,7 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
-/** ReactionPort against real Postgres (P3-T09). Seeds reactions through the port itself. */
+/** ReactionPort on real Postgres (P3-T09); seeds via the port. */
 @Import(ReactionAdapter.class)
 class ReactionAdapterIT extends AbstractJpaIT {
 
@@ -90,6 +90,16 @@ class ReactionAdapterIT extends AbstractJpaIT {
 
     assertThat(byMessage).containsOnlyKeys(reacted);
     assertThat(byMessage.get(reacted)).containsExactly(new ReactionSummary("👍", 1, false));
+  }
+
+  @Test
+  void distinctEmojis_listsEachEmojiOnce() {
+    Long message = message();
+    reactions.add(message, alice.getId(), THUMBS, T0);
+    reactions.add(message, bob.getId(), THUMBS, T0);
+    reactions.add(message, bob.getId(), PARTY, T0);
+
+    assertThat(reactions.distinctEmojis(message)).containsExactlyInAnyOrder("👍", "🎉");
   }
 
   @Test

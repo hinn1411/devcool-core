@@ -201,10 +201,14 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     return new MessageList(items, hasMore ? items.getLast().getId() : null, hasMore);
   }
 
-  /** One summary query for the whole page (no N+1); a tombstone shows no reactions. */
+  /** One query per page (no N+1); tombstones aren't asked for and show none. */
   private void attachReactions(List<MessageItem> items, Long viewerId) {
-    List<Long> messageIds = items.stream().map(MessageItem::getId).toList();
-    Map<Long, List<ReactionSummary>> byMessage = reactionPort.summarize(messageIds, viewerId);
+    List<Long> liveIds =
+        items.stream()
+            .filter(item -> item.getDeletedTime() == null)
+            .map(MessageItem::getId)
+            .toList();
+    Map<Long, List<ReactionSummary>> byMessage = reactionPort.summarize(liveIds, viewerId);
     for (MessageItem item : items) {
       item.setReactions(
           item.getDeletedTime() != null

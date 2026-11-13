@@ -16,4 +16,9 @@ public record MessageItemResponse(
     String senderName,
     String senderAvatar,
     ReplyPreviewResponse replyTo,
-    List<ReactionSummaryResponse> reactions) {}
+    List<ReactionSummaryResponse> reactions) {
+
+  public MessageItemResponse {
+    reactions = reactions == null ? List.of() : List.copyOf(reactions);
+  }
+}

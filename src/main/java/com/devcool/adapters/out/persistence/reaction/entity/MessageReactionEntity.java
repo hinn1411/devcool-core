@@ -10,7 +10,7 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Mapped for {@code ddl-auto=validate}; writes go through the repository's native queries. */
+/** Mapped for ddl validation; writes use the native queries. */
 @Entity
 @Table(name = "MESSAGE_REACTION")
 @IdClass(MessageReactionEntity.Key.class)

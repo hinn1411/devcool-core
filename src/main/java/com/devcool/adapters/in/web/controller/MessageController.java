@@ -110,8 +110,8 @@ public class MessageController {
   @Operation(
       summary = "React to a message",
       description =
-          "Adds the caller's emoji reaction (URL-encoded path segment). Any channel member;"
-              + " repeating it is a no-op. Unknown, deleted or not your channel: 404.")
+          "Any member; repeating is a no-op. Max 20 distinct emojis per message (409)."
+              + " Unknown, deleted or not your channel: 404.")
   @PutMapping("/messages/{messageId}/reactions/{emoji}")
   public ResponseEntity<Void> react(
       @PathVariable Long messageId, @PathVariable String emoji, Authentication auth) {
@@ -121,7 +121,7 @@ public class MessageController {
 
   @Operation(
       summary = "Remove a reaction",
-      description = "Removes only the caller's own reaction; removing an absent one is a no-op.")
+      description = "Removes the caller's own reaction; an absent one is a no-op.")
   @DeleteMapping("/messages/{messageId}/reactions/{emoji}")
   public ResponseEntity<Void> unreact(
       @PathVariable Long messageId, @PathVariable String emoji, Authentication auth) {

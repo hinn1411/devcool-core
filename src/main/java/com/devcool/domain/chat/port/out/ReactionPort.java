@@ -6,17 +6,18 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface ReactionPort {
-  /** Inserts the row unless it exists (then a no-op, also under a concurrent insert). */
+  /** No-op if the row exists, also under concurrent inserts. */
   void add(Long messageId, Long userId, Emoji emoji, Instant reactedAt);
+
+  /** The emojis already on the message. */
+  Set<String> distinctEmojis(Long messageId);
 
   /** Deletes the row if present. */
   void remove(Long messageId, Long userId, Emoji emoji);
 
-  /**
-   * Per message, its emojis ordered by first reaction, with {@code reactedByMe} for {@code
-   * viewerId}. One query for the whole collection; messages without reactions are absent.
-   */
+  /** One query: per message, emojis by first use; messages without any are absent. */
   Map<Long, List<ReactionSummary>> summarize(Collection<Long> messageIds, Long viewerId);
 }

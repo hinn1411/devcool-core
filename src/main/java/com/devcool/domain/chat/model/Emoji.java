@@ -4,19 +4,16 @@ import com.devcool.domain.chat.exception.InvalidEmojiException;
 import java.util.Objects;
 import java.util.Set;
 
-/** A reaction emoji as the client sent it; the constructor rejects anything else (400). */
+/** A reaction emoji, kept as sent; anything else is a 400. */
 public record Emoji(String value) {
 
-  /** Long enough for ZWJ sequences such as a family, short enough to bound the column. */
+  /** Fits ZWJ sequences; matches the varchar(16) column. */
   public static final int MAX_CODE_POINTS = 16;
 
-  /** Glue, not emoji on their own: ZWJ, variation selector 16, combining keycap. */
+  /** ZWJ, VS16, keycap: valid only next to an emoji. */
   private static final Set<Integer> COMPONENTS = Set.of(0x200D, 0xFE0F, 0x20E3);
 
-  /**
-   * Every code point is an emoji or a component, and at least one is an emoji (a lone ZWJ is not).
-   * A bare digit, '#' or '*' passes: {@link Character#isEmoji} counts them, harmless here.
-   */
+  /** Emoji or component code points, at least one emoji. A bare digit, '#' or '*' passes. */
   public Emoji {
     if (Objects.isNull(value)
         || value.isEmpty()

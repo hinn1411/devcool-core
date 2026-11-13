@@ -9,7 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** What a reaction may be (P3-T09): emoji code points, joiners and modifiers; ≤ 16 code points. */
+/** The reaction emoji rule (P3-T09). */
 class EmojiTest {
 
   @ParameterizedTest
