@@ -16,6 +16,7 @@ import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
+import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
@@ -56,6 +57,7 @@ class ChannelControllerTest {
   @MockitoBean private UpdateChannelUseCase channelUpdater;
   @MockitoBean private CreateChannelUseCase channelCreator;
   @MockitoBean private GetChannelQuery channelQuerier;
+  @MockitoBean private MarkChannelReadUseCase channelReader;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;

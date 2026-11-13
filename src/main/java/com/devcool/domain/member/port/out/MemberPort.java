@@ -15,4 +15,10 @@ public interface MemberPort {
   Optional<MemberType> findRoleOfMember(Long channelId, Long userId);
 
   boolean addMembers(Long channelId, Set<Long> memberIds);
+
+  /**
+   * {@code last_read_seq = GREATEST(last_read_seq, LEAST(seq, channel.last_seq))}. False when the
+   * user is not a member of the channel (no row matched).
+   */
+  boolean advanceLastReadSeq(Long channelId, Long userId, long seq);
 }

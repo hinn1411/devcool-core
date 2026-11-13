@@ -3,6 +3,7 @@ package com.devcool.adapters.in.web.controller;
 import com.devcool.adapters.in.web.dto.mapper.ChannelDtoMapper;
 import com.devcool.adapters.in.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
+import com.devcool.adapters.in.web.dto.request.MarkReadRequest;
 import com.devcool.adapters.in.web.dto.request.UpdateChannelRequest;
 import com.devcool.adapters.in.web.dto.response.AddMembersResponse;
 import com.devcool.adapters.in.web.dto.response.CreateChannelResponse;
@@ -13,12 +14,15 @@ import com.devcool.adapters.in.web.util.ApiResponseFactory;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
+import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
+import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.common.ErrorCode;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,7 @@ public class ChannelController {
   private final CreateChannelUseCase channelCreator;
   private final UpdateChannelUseCase channelUpdater;
   private final GetChannelQuery channelQuerier;
+  private final MarkChannelReadUseCase channelReader;
 
   @PostMapping
   ResponseEntity<ApiSuccessResponse<CreateChannelResponse>> createChannel(
@@ -92,5 +97,20 @@ public class ChannelController {
     return ResponseEntity.ok(
         ApiResponseFactory.success(
             HttpStatus.OK, ErrorCode.OK.code(), "Get channels by userId successfully", response));
+  }
+
+  @Operation(
+      summary = "Mark a channel read up to a seq",
+      description =
+          "Forward-only and idempotent; a seq above the channel's last seq is clamped."
+              + " Not a member or unknown channel: 404.")
+  @PutMapping("/{channelId}/read")
+  ResponseEntity<Void> markRead(
+      @Valid @RequestBody MarkReadRequest request,
+      @PathVariable Long channelId,
+      Authentication auth) {
+    Long callerId = Long.valueOf(auth.getName());
+    channelReader.markRead(new MarkChannelReadCommand(channelId, callerId, request.seq()));
+    return ResponseEntity.noContent().build();
   }
 }
