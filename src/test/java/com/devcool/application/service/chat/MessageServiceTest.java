@@ -2,8 +2,7 @@ package com.devcool.application.service.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -21,6 +20,7 @@ import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReactionSummary;
 import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -28,11 +28,13 @@ import com.devcool.domain.chat.policy.MessageCreationStrategy;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.chat.port.out.ReactionPort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.port.out.MemberPort;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -61,6 +63,7 @@ class MessageServiceTest {
   private static final Instant ORIGINAL_TIME = Instant.parse("2026-11-01T10:00:00Z");
 
   @Mock private MessagePort messagePort;
+  @Mock private ReactionPort reactionPort;
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
 
@@ -426,6 +429,67 @@ class MessageServiceTest {
       verifyNoInteractions(messagePort);
     }
 
+    /** P3-T09: one summarize per page, for page items only. */
+    @ParameterizedTest
+    @CsvSource({"CURSOR", "BEFORE_SEQ", "AFTER_SEQ"})
+    void everyCursor_summarizesThePageOnce_andAttachesTheReactions(String cursor) {
+      aliceCanRead();
+      GetMessageCommand query =
+          switch (cursor) {
+            case "CURSOR" -> {
+              when(messagePort.findMessages(CHANNEL, idOf(9), 3)).thenReturn(seqs(3, 2, 1));
+              yield history(idOf(9), null, null, 2);
+            }
+            case "BEFORE_SEQ" -> {
+              when(messagePort.findBeforeSeq(CHANNEL, 9L, 3)).thenReturn(seqs(3, 2, 1));
+              yield history(null, 9L, null, 2);
+            }
+            default -> {
+              when(messagePort.findAfterSeq(CHANNEL, 0L, 3)).thenReturn(seqs(1, 2, 3));
+              yield history(null, null, 0L, 2);
+            }
+          };
+      ReactionSummary thumbs = new ReactionSummary("👍", 2, true);
+      Long first = idOf(cursor.equals("AFTER_SEQ") ? 1 : 3);
+      when(reactionPort.summarize(any(), any())).thenReturn(Map.of(first, List.of(thumbs)));
+
+      MessageList page = service.getMessages(query);
+
+      ArgumentCaptor<List<Long>> ids = ArgumentCaptor.captor();
+      verify(reactionPort).summarize(ids.capture(), eq(ALICE));
+      assertThat(ids.getValue())
+          .containsExactlyInAnyOrderElementsOf(
+              page.items().stream().map(MessageItem::getId).toList());
+      assertThat(page.items().getFirst().getReactions()).containsExactly(thumbs);
+      assertThat(page.items().getLast().getReactions()).isEmpty();
+    }
+
+    @Test
+    void tombstone_showsNoReactions_evenIfRowsRemain() {
+      aliceCanRead();
+      MessageItem deleted =
+          MessageItem.builder().id(idOf(1)).seq(1L).deletedTime(ORIGINAL_TIME).build();
+      when(messagePort.findBeforeSeq(CHANNEL, null, 21)).thenReturn(List.of(deleted));
+      when(reactionPort.summarize(any(), any()))
+          .thenReturn(Map.of(idOf(1), List.of(new ReactionSummary("👍", 1, false))));
+
+      MessageList page = service.getMessages(history(null, null, null, 20));
+
+      assertThat(page.items().getFirst().getReactions()).isEmpty();
+    }
+
+    @Test
+    void nonMember_neverSummarizes() {
+      when(channelPort.existById(CHANNEL)).thenReturn(true);
+      aliceIsNotMember();
+
+      GetMessageCommand query = history(null, null, null, 20);
+
+      assertThatThrownBy(() -> service.getMessages(query))
+          .isInstanceOf(MemberNotFoundException.class);
+      verifyNoInteractions(reactionPort);
+    }
+
     private void aliceCanRead() {
       when(channelPort.existById(CHANNEL)).thenReturn(true);
       aliceIsMember();
@@ -454,6 +518,7 @@ class MessageServiceTest {
     return new MessageService(
         List.of(strategies),
         messagePort,
+        reactionPort,
         channelPort,
         new ChannelAuthorizer(channelPort, memberPort),
         transactions);

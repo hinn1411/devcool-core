@@ -6,10 +6,12 @@ import com.devcool.adapters.in.web.dto.request.EditMessageRequest;
 import com.devcool.adapters.in.web.dto.response.EditMessageResponse;
 import com.devcool.adapters.in.web.dto.response.GetMessagesResponse;
 import com.devcool.adapters.in.web.dto.response.MessageItemResponse;
+import com.devcool.adapters.in.web.dto.response.ReactionSummaryResponse;
 import com.devcool.adapters.in.web.dto.response.ReplyPreviewResponse;
 import com.devcool.domain.chat.model.EditedMessage;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReactionSummary;
 import com.devcool.domain.chat.model.ReplyPreview;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
@@ -76,7 +78,8 @@ class MessageDtoMapperTest {
                 9L,
                 "Alice",
                 "https://cdn.devcool.com/avatars/alice.png",
-                null));
+                null,
+                List.of()));
     assertThat(response.getCursorId()).isEqualTo(5);
     assertThat(response.isHasMore()).isTrue();
   }
@@ -109,6 +112,21 @@ class MessageDtoMapperTest {
 
     assertThat(response.replyTo())
         .isEqualTo(new ReplyPreviewResponse(4L, 6L, 8L, "Bob", "MARKDOWN", "# hi", false));
+  }
+
+  @Test
+  void toGetResponse_reactions_keepOrderCountAndReactedByMe() {
+    MessageItem reacted = item(ContentType.TEXT);
+    reacted.setReactions(
+        List.of(new ReactionSummary("👍", 3, true), new ReactionSummary("🎉", 1, false)));
+
+    MessageItemResponse response =
+        mapper.toGetResponse(new MessageList(List.of(reacted), null, false)).getItems().getFirst();
+
+    assertThat(response.reactions())
+        .containsExactly(
+            new ReactionSummaryResponse("👍", 3, true),
+            new ReactionSummaryResponse("🎉", 1, false));
   }
 
   @ParameterizedTest

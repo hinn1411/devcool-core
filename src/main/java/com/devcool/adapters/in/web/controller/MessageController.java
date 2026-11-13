@@ -10,9 +10,11 @@ import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
+import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
+import com.devcool.domain.chat.port.in.command.ReactionCommand;
 import com.devcool.domain.common.ErrorCode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,6 +46,7 @@ public class MessageController {
   private final GetMessageQuery messageQuerier;
   private final EditMessageUseCase messageEditor;
   private final DeleteMessageUseCase messageDeleter;
+  private final ReactToMessageUseCase messageReactor;
   private final MessageDtoMapper mapper;
 
   @GetMapping("/channels/{channelId}/messages")
@@ -100,6 +104,28 @@ public class MessageController {
   @DeleteMapping("/messages/{messageId}")
   public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId, Authentication auth) {
     messageDeleter.delete(new DeleteMessageCommand(Long.valueOf(auth.getName()), messageId));
+    return ResponseEntity.noContent().build();
+  }
+
+  @Operation(
+      summary = "React to a message",
+      description =
+          "Any member; repeating is a no-op. Max 20 distinct emojis per message (409)."
+              + " Unknown, deleted or not your channel: 404.")
+  @PutMapping("/messages/{messageId}/reactions/{emoji}")
+  public ResponseEntity<Void> react(
+      @PathVariable Long messageId, @PathVariable String emoji, Authentication auth) {
+    messageReactor.react(new ReactionCommand(Long.valueOf(auth.getName()), messageId, emoji));
+    return ResponseEntity.noContent().build();
+  }
+
+  @Operation(
+      summary = "Remove a reaction",
+      description = "Removes the caller's own reaction; an absent one is a no-op.")
+  @DeleteMapping("/messages/{messageId}/reactions/{emoji}")
+  public ResponseEntity<Void> unreact(
+      @PathVariable Long messageId, @PathVariable String emoji, Authentication auth) {
+    messageReactor.unreact(new ReactionCommand(Long.valueOf(auth.getName()), messageId, emoji));
     return ResponseEntity.noContent().build();
   }
 }

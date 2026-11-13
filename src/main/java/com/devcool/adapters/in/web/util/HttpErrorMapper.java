@@ -13,7 +13,8 @@ public class HttpErrorMapper {
               USERNAME_ALREADY_USED,
               DUPLICATE_MEMBER,
               CLIENT_MSG_ID_REUSED,
-              MESSAGE_VERSION_CONFLICT ->
+              MESSAGE_VERSION_CONFLICT,
+              REACTION_LIMIT_REACHED ->
           HttpStatus.CONFLICT;
       case PASSWORD_WEAK,
               PASSWORD_INCORRECT,
@@ -26,6 +27,7 @@ public class HttpErrorMapper {
               INVALID_MEDIA_CONTENT,
               INVALID_MESSAGE_CONFIG,
               INVALID_HISTORY_CURSOR,
+              INVALID_EMOJI,
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;
       case REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS, UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;

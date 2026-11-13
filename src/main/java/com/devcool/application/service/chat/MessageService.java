@@ -9,6 +9,7 @@ import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.ReactionSummary;
 import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -18,6 +19,7 @@ import com.devcool.domain.chat.port.in.SaveMessageUseCase;
 import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
+import com.devcool.domain.chat.port.out.ReactionPort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   private static final Logger log = LoggerFactory.getLogger(MessageService.class);
   private final Map<ContentType, MessageCreationStrategy> creationStrategies;
   private final MessagePort messagePort;
+  private final ReactionPort reactionPort;
   private final ChannelPort channelPort;
   private final ChannelAuthorizer channelAuthorizer;
   private final TransactionOperations transactions;
@@ -43,6 +46,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   public MessageService(
       List<MessageCreationStrategy> creationStrategies,
       MessagePort messagePort,
+      ReactionPort reactionPort,
       ChannelPort channelPort,
       ChannelAuthorizer channelAuthorizer,
       TransactionOperations transactions) {
@@ -50,6 +54,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     creationStrategies.forEach(
         strategy -> this.creationStrategies.put(strategy.getSupportedType(), strategy));
     this.messagePort = messagePort;
+    this.reactionPort = reactionPort;
     this.channelPort = channelPort;
     this.channelAuthorizer = channelAuthorizer;
     this.transactions = transactions;
@@ -192,7 +197,24 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     List<MessageItem> fetched = queryMessages(command, fetchSize);
     boolean hasMore = fetched.size() > command.limit();
     List<MessageItem> items = hasMore ? fetched.subList(0, command.limit()) : fetched;
+    attachReactions(items, command.userId());
     return new MessageList(items, hasMore ? items.getLast().getId() : null, hasMore);
+  }
+
+  /** One query per page (no N+1); tombstones aren't asked for and show none. */
+  private void attachReactions(List<MessageItem> items, Long viewerId) {
+    List<Long> liveIds =
+        items.stream()
+            .filter(item -> item.getDeletedTime() == null)
+            .map(MessageItem::getId)
+            .toList();
+    Map<Long, List<ReactionSummary>> byMessage = reactionPort.summarize(liveIds, viewerId);
+    for (MessageItem item : items) {
+      item.setReactions(
+          item.getDeletedTime() != null
+              ? List.of()
+              : byMessage.getOrDefault(item.getId(), List.of()));
+    }
   }
 
   private static long countCursors(GetMessageCommand command) {
