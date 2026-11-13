@@ -49,7 +49,7 @@ public class ChannelAdapter implements ChannelPort {
             .map(
                 row ->
                     new ChannelListItem(
-                        row.id(), row.name(), row.channelType(), row.boundaryType()))
+                        row.id(), row.name(), row.channelType(), row.boundaryType(), 0L, null))
             .toList(),
         nextCursor,
         hasMore);
