@@ -25,6 +25,7 @@ import com.devcool.domain.auth.port.in.RefreshTokenUseCase;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
+import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.in.ChangePasswordUseCase;
@@ -74,6 +75,7 @@ class SecurityConfigTest {
   @MockitoBean private UpdateChannelUseCase channelUpdater;
   @MockitoBean private CreateChannelUseCase channelCreator;
   @MockitoBean private GetChannelQuery channelQuerier;
+  @MockitoBean private MarkChannelReadUseCase channelReader;
   @MockitoBean private AuthenticateUserUseCase authenticate;
   @MockitoBean private RegisterUserUseCase registerUser;
   @MockitoBean private ChangePasswordUseCase changePassword;
