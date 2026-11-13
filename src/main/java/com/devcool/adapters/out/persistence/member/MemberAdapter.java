@@ -56,4 +56,9 @@ public class MemberAdapter implements MemberPort {
             .toList();
     return !repo.saveAll(memberEntities).isEmpty();
   }
+
+  @Override
+  public boolean advanceLastReadSeq(Long channelId, Long userId, long seq) {
+    throw new UnsupportedOperationException();
+  }
 }
