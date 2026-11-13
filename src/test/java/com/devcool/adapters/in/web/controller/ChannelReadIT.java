@@ -66,14 +66,14 @@ class ChannelReadIT extends AbstractIntegrationTest {
   }
 
   @Test
-  void missingSeq_is400() throws Exception {
-    markRead(alice, channel, "{}").andExpect(status().isBadRequest());
+  void missingSeq_is422() throws Exception {
+    markRead(alice, channel, "{}").andExpect(status().isUnprocessableEntity());
     assertThat(lastReadSeq(alice)).isZero();
   }
 
   @Test
-  void negativeSeq_is400() throws Exception {
-    markRead(alice, channel, "{\"seq\": -1}").andExpect(status().isBadRequest());
+  void negativeSeq_is422() throws Exception {
+    markRead(alice, channel, "{\"seq\": -1}").andExpect(status().isUnprocessableEntity());
     assertThat(lastReadSeq(alice)).isZero();
   }
 

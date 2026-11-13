@@ -22,6 +22,7 @@ import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
 import com.devcool.domain.common.ErrorCode;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
@@ -98,9 +99,16 @@ public class ChannelController {
             HttpStatus.OK, ErrorCode.OK.code(), "Get channels by userId successfully", response));
   }
 
+  @Operation(
+      summary = "Mark a channel read up to a seq",
+      description =
+          "Forward-only and idempotent; a seq above the channel's last seq is clamped."
+              + " Not a member or unknown channel: 404.")
   @PutMapping("/{channelId}/read")
   ResponseEntity<Void> markRead(
-      @RequestBody MarkReadRequest request, @PathVariable Long channelId, Authentication auth) {
+      @Valid @RequestBody MarkReadRequest request,
+      @PathVariable Long channelId,
+      Authentication auth) {
     Long callerId = Long.valueOf(auth.getName());
     channelReader.markRead(new MarkChannelReadCommand(channelId, callerId, request.seq()));
     return ResponseEntity.noContent().build();

@@ -59,6 +59,6 @@ public class MemberAdapter implements MemberPort {
 
   @Override
   public boolean advanceLastReadSeq(Long channelId, Long userId, long seq) {
-    throw new UnsupportedOperationException();
+    return repo.advanceLastReadSeq(channelId, userId, seq) > 0;
   }
 }
