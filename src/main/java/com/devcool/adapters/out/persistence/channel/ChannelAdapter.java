@@ -52,11 +52,7 @@ public class ChannelAdapter implements ChannelPort {
 
   /** A row without a joined message (empty channel) has every {@code last*} column null. */
   private static ChannelListItem toListItem(ChannelListRow row) {
-    ReplyPreview lastMessage =
-        Optional.ofNullable(row)
-            .filter(item -> item.lastMessageId() != null)
-            .map(item -> toLastMessage(item))
-            .orElse(null);
+    ReplyPreview lastMessage = row.lastMessageId() == null ? null : toLastMessage(row);
 
     return new ChannelListItem(
         row.id(),
