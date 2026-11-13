@@ -35,6 +35,10 @@ public class ChannelEntity {
   @Column(name = "EXPIRED_TIME")
   private Instant expiredTime;
 
+  /** Read-only here: only the native bump in {@code ChannelRepository} writes it (ADR-0012). */
+  @Column(name = "LAST_SEQ", nullable = false, insertable = false, updatable = false)
+  private Long lastSeq;
+
   @Column(name = "CHANNEL_TYPE", nullable = false)
   @Enumerated(EnumType.STRING)
   private ChannelType channelType;

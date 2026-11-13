@@ -9,7 +9,9 @@ import com.devcool.domain.channel.model.ChannelAccessInfo;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.model.ReplyPreview;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -45,14 +47,20 @@ public class ChannelAdapter implements ChannelPort {
             .orElse(null);
 
     return new ChannelListPage(
-        page.stream()
-            .map(
-                row ->
-                    new ChannelListItem(
-                        row.id(), row.name(), row.channelType(), row.boundaryType()))
-            .toList(),
-        nextCursor,
-        hasMore);
+        page.stream().map(ChannelAdapter::toListItem).toList(), nextCursor, hasMore);
+  }
+
+  /** A row without a joined message (empty channel) has every {@code last*} column null. */
+  private static ChannelListItem toListItem(ChannelListRow row) {
+    ReplyPreview lastMessage = row.lastMessageId() == null ? null : toLastMessage(row);
+
+    return new ChannelListItem(
+        row.id(),
+        row.name(),
+        row.channelType(),
+        row.boundaryType(),
+        row.unreadCount(),
+        lastMessage);
   }
 
   @Override
@@ -93,5 +101,16 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public Optional<Long> getNextSequence(Long channelId) {
     return repo.bumpLastSeq(channelId);
+  }
+
+  private static ReplyPreview toLastMessage(ChannelListRow row) {
+    return ReplyPreview.of(
+        row.lastMessageId(),
+        row.lastMessageSeq(),
+        row.lastSenderId(),
+        row.lastSenderName(),
+        row.lastContentType(),
+        row.lastContent(),
+        Objects.nonNull(row.lastDeletedTime()));
   }
 }

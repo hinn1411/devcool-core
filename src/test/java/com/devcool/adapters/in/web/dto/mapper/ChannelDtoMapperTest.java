@@ -9,6 +9,7 @@ import com.devcool.adapters.in.web.dto.response.AddMembersResponse;
 import com.devcool.adapters.in.web.dto.response.ChannelListItemResponse;
 import com.devcool.adapters.in.web.dto.response.CreateChannelResponse;
 import com.devcool.adapters.in.web.dto.response.GetChannelResponse;
+import com.devcool.adapters.in.web.dto.response.ReplyPreviewResponse;
 import com.devcool.adapters.in.web.dto.response.UpdateChannelResponse;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
@@ -18,6 +19,8 @@ import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
+import com.devcool.domain.chat.model.ReplyPreview;
+import com.devcool.domain.chat.model.enums.ContentType;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -133,9 +136,10 @@ class ChannelDtoMapperTest {
     ChannelListPage page =
         new ChannelListPage(
             List.of(
-                new ChannelListItem(1L, "general-room", ChannelType.LOUNGE, BoundaryType.PUBLIC),
                 new ChannelListItem(
-                    2L, "secret-room", ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE)),
+                    1L, "general-room", ChannelType.LOUNGE, BoundaryType.PUBLIC, 0, null),
+                new ChannelListItem(
+                    2L, "secret-room", ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE, 0, null)),
             2L,
             true);
 
@@ -143,8 +147,8 @@ class ChannelDtoMapperTest {
 
     assertThat(response.getChannels())
         .containsExactly(
-            new ChannelListItemResponse(1L, "general-room", "LOUNGE", "PUBLIC"),
-            new ChannelListItemResponse(2L, "secret-room", "PRIVATE_CHAT", "PRIVATE"));
+            new ChannelListItemResponse(1L, "general-room", "LOUNGE", "PUBLIC", 0, null),
+            new ChannelListItemResponse(2L, "secret-room", "PRIVATE_CHAT", "PRIVATE", 0, null));
     assertThat(response.getNextCursorId()).isEqualTo(2);
     assertThat(response.isHasMore()).isTrue();
   }
@@ -157,5 +161,27 @@ class ChannelDtoMapperTest {
     assertThat(response.getChannels()).isEmpty();
     assertThat(response.getNextCursorId()).isNull();
     assertThat(response.isHasMore()).isFalse();
+  }
+
+  @Test
+  void toChannelListItemResponse_mapsUnreadCountAndLastMessage() {
+    ChannelListItem item =
+        new ChannelListItem(
+            3L,
+            "busy-room",
+            ChannelType.LOUNGE,
+            BoundaryType.PUBLIC,
+            4,
+            new ReplyPreview(90L, 7L, 11L, "Bob", ContentType.TEXT, "see you", false));
+
+    assertThat(mapper.toChannelListItemResponse(item))
+        .isEqualTo(
+            new ChannelListItemResponse(
+                3L,
+                "busy-room",
+                "LOUNGE",
+                "PUBLIC",
+                4,
+                new ReplyPreviewResponse(90L, 7L, 11L, "Bob", "TEXT", "see you", false)));
   }
 }
