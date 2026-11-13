@@ -20,6 +20,7 @@ import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.chat.port.out.ReactionPort;
+import com.devcool.domain.member.port.out.MemberPort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   private final MessagePort messagePort;
   private final ReactionPort reactionPort;
   private final ChannelPort channelPort;
+  private final MemberPort memberPort;
   private final ChannelAuthorizer channelAuthorizer;
   private final TransactionOperations transactions;
 
@@ -48,6 +50,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
       MessagePort messagePort,
       ReactionPort reactionPort,
       ChannelPort channelPort,
+      MemberPort memberPort,
       ChannelAuthorizer channelAuthorizer,
       TransactionOperations transactions) {
     this.creationStrategies = new EnumMap<>(ContentType.class);
@@ -56,6 +59,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     this.messagePort = messagePort;
     this.reactionPort = reactionPort;
     this.channelPort = channelPort;
+    this.memberPort = memberPort;
     this.channelAuthorizer = channelAuthorizer;
     this.transactions = transactions;
   }
