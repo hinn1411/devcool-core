@@ -42,16 +42,30 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       @Param("boundaryType") BoundaryType boundaryType,
       @Param("expiredTime") Instant expiredTime);
 
+  /**
+   * One statement per page (P3-T10): unread is a subtraction, and the newest message is found by
+   * {@code seq = last_seq} through {@code UNIQUE(channel_id, seq)}. LEFT joins keep empty channels.
+   */
   @Query(
       """
-      SELECT DISTINCT new com.devcool.adapters.out.persistence.channel.projection.ChannelListRow(
+      SELECT new com.devcool.adapters.out.persistence.channel.projection.ChannelListRow(
       c.id,
       c.name,
       c.channelType,
-      c.boundaryType
+      c.boundaryType,
+      c.lastSeq - m.lastReadSeq,
+      msg.id,
+      msg.seq,
+      sender.id,
+      sender.name,
+      msg.contentType,
+      msg.content,
+      msg.deletedTime
       )
       FROM ChannelEntity c
       JOIN c.members m
+      LEFT JOIN MessageEntity msg ON msg.channel = c AND msg.seq = c.lastSeq
+      LEFT JOIN msg.user sender
       WHERE m.user.id = :memberId AND (:cursorId IS NULL OR c.id < :cursorId)
       ORDER BY c.id DESC
       """)

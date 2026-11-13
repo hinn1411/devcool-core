@@ -47,4 +47,8 @@ public class MemberEntity {
 
   @Column(name = "JOINED_TIME", nullable = false)
   private Instant joinedTime;
+
+  /** Read-only here: only the guarded native UPDATE in {@code MemberRepository} writes it. */
+  @Column(name = "LAST_READ_SEQ", nullable = false, insertable = false, updatable = false)
+  private Long lastReadSeq;
 }
