@@ -93,7 +93,6 @@ class MemberAdapterIT extends AbstractJpaIT {
     String unique = UUID.randomUUID().toString().substring(0, 8);
     user.setUsername("u-" + unique);
     user.setEmail(unique + "@test.dev");
-    user.setPassword("not-used");
     user.setName("User " + unique);
     user.setRole(Role.USER);
     user.setStatus(UserStatus.ACTIVE);
