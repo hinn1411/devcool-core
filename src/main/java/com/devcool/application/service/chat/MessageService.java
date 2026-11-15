@@ -96,7 +96,10 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     return Objects.requireNonNull(transactions.execute(work));
   }
 
-  /** authz → replay → reply target → seq bump → insert. Empty if the insert lost the key race. */
+  /**
+   * authz → replay → reply target → seq bump → insert → sender's read marker. Empty if the insert
+   * lost the key race.
+   */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
 
@@ -116,9 +119,14 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     message.setSeq(seq);
     message.setClientMsgId(command.clientMsgId());
     message.setReplyToId(command.replyToId());
-    return messagePort
-        .save(message)
-        .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
+    Optional<SavedMessage> saved =
+        messagePort
+            .save(message)
+            .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
+    // Only on a real insert: after a lost key race the tx is already aborted (P3-T10).
+    saved.ifPresent(
+        sent -> memberPort.advanceLastReadSeq(command.channelId(), command.userId(), seq));
+    return saved;
   }
 
   /**

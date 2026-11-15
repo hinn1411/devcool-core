@@ -41,4 +41,20 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
       nativeQuery = true)
   int advanceLastReadSeq(
       @Param("channelId") Long channelId, @Param("userId") Long userId, @Param("seq") long seq);
+
+  /**
+   * New members start caught up: copies {@code channel.last_seq} into their marker. Flushes first,
+   * so the rows just queued by {@code saveAll} exist when this native UPDATE runs.
+   */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      value =
+          """
+          UPDATE member SET last_read_seq = channel.last_seq
+          FROM channel
+          WHERE channel.id = :channelId AND member.channel_id = channel.id AND member.user_id IN (:userIds)
+          """,
+      nativeQuery = true)
+  int catchUpMembers(
+      @Param("channelId") Long channelId, @Param("userIds") Collection<Long> userIds);
 }

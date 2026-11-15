@@ -14,6 +14,7 @@ public interface MemberPort {
   /** The user's role in the channel, or empty when the user is not a member. */
   Optional<MemberType> findRoleOfMember(Long channelId, Long userId);
 
+  /** New members start caught up */
   boolean addMembers(Long channelId, Set<Long> memberIds);
 
   /**

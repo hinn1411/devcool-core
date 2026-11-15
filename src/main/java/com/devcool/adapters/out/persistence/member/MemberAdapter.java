@@ -54,7 +54,10 @@ public class MemberAdapter implements MemberPort {
                         .user(em.getReference(UserEntity.class, memberId))
                         .build())
             .toList();
-    return !repo.saveAll(memberEntities).isEmpty();
+    boolean added = !repo.saveAll(memberEntities).isEmpty();
+    // last_read_seq is read-only on the entity, so the starting marker is set in SQL.
+    repo.catchUpMembers(channelId, memberIds);
+    return added;
   }
 
   @Override
