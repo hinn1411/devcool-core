@@ -14,6 +14,7 @@ import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.support.AbstractJpaIT;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,18 @@ class MemberAdapterIT extends AbstractJpaIT {
 
     assertThat(members.advanceLastReadSeq(channel.getId(), outsider.getId(), 5)).isFalse();
     assertThat(lastReadSeq(alice, channel)).isZero();
+  }
+
+  /** P3-T10: a member added to a channel with history starts with 0 unread. */
+  @Test
+  void addMembers_startCaughtUpAtLastSeq() {
+    UserEntity bob = user();
+    UserEntity carol = user();
+
+    members.addMembers(channel.getId(), Set.of(bob.getId(), carol.getId()));
+
+    assertThat(lastReadSeq(bob, channel)).isEqualTo(LAST_SEQ);
+    assertThat(lastReadSeq(carol, channel)).isEqualTo(LAST_SEQ);
   }
 
   // ---- seed helpers ----------------------------------------------------------------------------

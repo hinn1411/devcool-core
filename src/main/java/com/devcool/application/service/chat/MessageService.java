@@ -20,6 +20,7 @@ import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.chat.port.out.ReactionPort;
+import com.devcool.domain.member.port.out.MemberPort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
   private final MessagePort messagePort;
   private final ReactionPort reactionPort;
   private final ChannelPort channelPort;
+  private final MemberPort memberPort;
   private final ChannelAuthorizer channelAuthorizer;
   private final TransactionOperations transactions;
 
@@ -48,6 +50,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
       MessagePort messagePort,
       ReactionPort reactionPort,
       ChannelPort channelPort,
+      MemberPort memberPort,
       ChannelAuthorizer channelAuthorizer,
       TransactionOperations transactions) {
     this.creationStrategies = new EnumMap<>(ContentType.class);
@@ -56,6 +59,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     this.messagePort = messagePort;
     this.reactionPort = reactionPort;
     this.channelPort = channelPort;
+    this.memberPort = memberPort;
     this.channelAuthorizer = channelAuthorizer;
     this.transactions = transactions;
   }
@@ -92,7 +96,10 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     return Objects.requireNonNull(transactions.execute(work));
   }
 
-  /** authz → replay → reply target → seq bump → insert. Empty if the insert lost the key race. */
+  /**
+   * authz → replay → reply target → seq bump → insert → sender's read marker. Empty if the insert
+   * lost the key race.
+   */
   private Optional<SavedMessage> saveOnce(
       MessageCreationStrategy strategy, CreateMessageCommand command) {
 
@@ -112,9 +119,15 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     message.setSeq(seq);
     message.setClientMsgId(command.clientMsgId());
     message.setReplyToId(command.replyToId());
-    return messagePort
-        .save(message)
-        .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
+    Optional<SavedMessage> saved =
+        messagePort
+            .save(message)
+            .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
+    // Only on a real insert: after a lost key race the tx is already aborted (P3-T10).
+    // Result ignored: the sender passed requireMembership, so their member row exists.
+    saved.ifPresent(
+        sent -> memberPort.advanceLastReadSeq(command.channelId(), command.userId(), seq));
+    return saved;
   }
 
   /**

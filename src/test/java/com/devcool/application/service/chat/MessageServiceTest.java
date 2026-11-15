@@ -127,6 +127,41 @@ class MessageServiceTest {
       assertThat(transactions.rolledBack).isEqualTo(1);
     }
 
+    /** P3-T10: your own message is never unread for you. */
+    @Test
+    void firstSend_advancesTheSendersMarkerToTheNewSeq() {
+      aliceIsMember();
+      freshSend(42L);
+
+      service.save(text(CHANNEL));
+
+      verify(memberPort).advanceLastReadSeq(CHANNEL, ALICE, 42L);
+    }
+
+    @Test
+    void retriedSend_leavesTheMarkerAlone() {
+      aliceIsMember();
+      alreadyStored(CHANNEL);
+
+      service.save(text(CHANNEL));
+
+      verify(memberPort, never()).advanceLastReadSeq(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void lostKeyRace_leavesTheMarkerAlone() {
+      aliceIsMember();
+      when(messagePort.findByClientMsgId(ALICE, KEY))
+          .thenReturn(Optional.empty())
+          .thenReturn(Optional.of(existing(CHANNEL)));
+      when(channelPort.getNextSequence(CHANNEL)).thenReturn(Optional.of(43L));
+      when(messagePort.save(any())).thenReturn(Optional.empty());
+
+      service.save(text(CHANNEL));
+
+      verify(memberPort, never()).advanceLastReadSeq(anyLong(), anyLong(), anyLong());
+    }
+
     @Test
     void nonMember_isRejectedBeforeAnyBump() {
       aliceIsNotMember();
@@ -520,6 +555,7 @@ class MessageServiceTest {
         messagePort,
         reactionPort,
         channelPort,
+        memberPort,
         new ChannelAuthorizer(channelPort, memberPort),
         transactions);
   }

@@ -128,6 +128,33 @@ class SendMessageSeqIT extends AbstractIntegrationTest {
 
   // ---- helpers ---------------------------------------------------------------------------------
 
+  /** P3-T10: the send advances only the sender's marker, in the same transaction. */
+  @Test
+  void send_leavesTheSenderCaughtUp_andOtherMembersUnread() {
+    long bob = user();
+    jdbc.update(
+        """
+        insert into member (id, user_id, channel_id, role, joined_time)
+        values (nextval('member_seq'), ?, ?, 'MEMBER', now())
+        """,
+        bob,
+        channel);
+
+    saveMessage.save(send(alice, UUID.randomUUID()));
+    SavedMessage second = saveMessage.save(send(alice, UUID.randomUUID()));
+
+    assertThat(lastReadSeqOf(alice)).isEqualTo(second.seq());
+    assertThat(lastReadSeqOf(bob)).isZero();
+  }
+
+  private long lastReadSeqOf(long user) {
+    return jdbc.queryForObject(
+        "select last_read_seq from member where user_id = ? and channel_id = ?",
+        Long.class,
+        user,
+        channel);
+  }
+
   /** Runs THREADS sends released together by one latch; returns every result. */
   private List<SavedMessage> inParallel(IntFunction<CreateMessageCommand> command)
       throws Exception {
