@@ -127,7 +127,6 @@ class ChannelAdapterIT extends AbstractJpaIT {
         .allSatisfy(item -> assertThat(item.lastMessage()).isNotNull());
   }
 
-  /** P3-T10 loop 4: newest activity first, empty channels last, ties broken by id DESC. */
   @Test
   void list_isNewestActivityFirst_emptyChannelsLast_tiesByIdDesc() {
     ChannelEntity old = active(T0);
@@ -154,10 +153,13 @@ class ChannelAdapterIT extends AbstractJpaIT {
     List<Long> walked = new ArrayList<>();
     ChannelCursor cursor = null;
     ChannelListPage page;
+    int pages = 0;
     do {
       page = channels.loadChannels(alice.getId(), cursor, 2);
       walked.addAll(ids(page));
       cursor = page.nextCursor();
+      // Fail fast if a wrong keyset repeats rows.
+      assertThat(++pages).as("pages walked so far: %s", walked).isLessThanOrEqualTo(10);
     } while (page.hasMore());
 
     assertThat(walked)

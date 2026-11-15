@@ -52,7 +52,7 @@ public interface ChannelDtoMapper {
 
   ChannelListItemResponse toChannelListItemResponse(ChannelListItem item);
 
-  /** No token = first page; anything else must be a cursor this server issued. */
+  /** Null = first page. */
   default ChannelCursor toChannelCursor(String token) {
     return token == null ? null : ChannelCursorCodec.decode(token);
   }

@@ -45,6 +45,8 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
   /**
    * One statement per page (P3-T10): unread is a subtraction, and the newest message is found by
    * {@code seq = last_seq} through {@code UNIQUE(channel_id, seq)}. LEFT joins keep empty channels.
+   *
+   * <p>{@code :datedCursor} replaces {@code :cursorAt IS NULL}, which Postgres can't type.
    */
   @Query(
       """
@@ -54,6 +56,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       c.channelType,
       c.boundaryType,
       c.lastSeq - m.lastReadSeq,
+      c.lastMessageAt,
       msg.id,
       msg.seq,
       sender.id,
@@ -66,11 +69,25 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       JOIN c.members m
       LEFT JOIN MessageEntity msg ON msg.channel = c AND msg.seq = c.lastSeq
       LEFT JOIN msg.user sender
-      WHERE m.user.id = :memberId AND (:cursorId IS NULL OR c.id < :cursorId)
-      ORDER BY c.id DESC
+      WHERE m.user.id = :memberId
+        AND (
+              :cursorId IS NULL
+           OR (:datedCursor = TRUE
+               AND (c.lastMessageAt < :cursorAt
+                    OR (c.lastMessageAt = :cursorAt AND c.id < :cursorId)
+                    OR c.lastMessageAt IS NULL))
+           OR (:datedCursor = FALSE
+               AND c.lastMessageAt IS NULL
+               AND c.id < :cursorId)
+        )
+      ORDER BY c.lastMessageAt DESC NULLS LAST, c.id DESC
       """)
   List<ChannelListRow> findChannelPageByMemberId(
-      @Param("memberId") Long memberId, @Param("cursorId") Long cursorId, Pageable pageable);
+      @Param("memberId") Long memberId,
+      @Param("cursorAt") Instant cursorAt,
+      @Param("cursorId") Long cursorId,
+      @Param("datedCursor") boolean datedCursor,
+      Pageable pageable);
 
   @Query(
       """

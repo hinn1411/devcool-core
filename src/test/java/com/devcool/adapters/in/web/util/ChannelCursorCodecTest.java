@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** The channel-list cursor is opaque to clients but must survive a round trip (P3-T10). */
+/** P3-T10 channel-list cursor codec. */
 class ChannelCursorCodecTest {
 
   @Test

@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface ChannelPort {
   Optional<Channel> findById(Long id);
 
-  /** Newest activity first; {@code cursor} is null for the first page (P3-T10). */
+  /** Newest activity first; null cursor = first page. */
   ChannelListPage loadChannels(Long userId, ChannelCursor cursor, Integer limit);
 
   boolean existById(Long id);

@@ -35,14 +35,21 @@ public class ChannelAdapter implements ChannelPort {
 
   @Override
   public ChannelListPage loadChannels(Long memberId, ChannelCursor cursor, Integer limit) {
-    Long currentCursor = cursor == null ? null : cursor.id();
     // Use limit + 1 trick to check next data block
     Pageable pagination = PageRequest.of(0, limit + 1);
     List<ChannelListRow> channelRows =
-        repo.findChannelPageByMemberId(memberId, currentCursor, pagination);
+        repo.findChannelPageByMemberId(
+            memberId,
+            Objects.isNull(cursor) ? null : cursor.lastMessageAt(),
+            Objects.isNull(cursor) ? null : cursor.id(),
+            Objects.nonNull(cursor) && Objects.nonNull(cursor.lastMessageAt()),
+            pagination);
     boolean hasMore = channelRows.size() > limit;
     List<ChannelListRow> page = hasMore ? channelRows.subList(0, limit) : channelRows;
-    ChannelCursor nextCursor = page.isEmpty() ? null : new ChannelCursor(null, page.getLast().id());
+    ChannelCursor nextCursor =
+        page.isEmpty()
+            ? null
+            : new ChannelCursor(page.getLast().lastMessageAt(), page.getLast().id());
 
     return new ChannelListPage(
         page.stream().map(ChannelAdapter::toListItem).toList(), nextCursor, hasMore);
