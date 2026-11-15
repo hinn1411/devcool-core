@@ -14,7 +14,12 @@ public interface MemberPort {
   /** The user's role in the channel, or empty when the user is not a member. */
   Optional<MemberType> findRoleOfMember(Long channelId, Long userId);
 
-  /** New members start caught up */
+  /**
+   * Inserts {@code memberIds} as {@code MEMBER}s, each starting caught up ({@code last_read_seq =
+   * channel.last_seq}, so 0 unread). Gap-free only if the caller already holds the channel row lock
+   * in this transaction (as {@code increaseTotalMembers} does), so no send commits between the read
+   * of {@code last_seq} and the commit. Returns false for an empty set (nothing written).
+   */
   boolean addMembers(Long channelId, Set<Long> memberIds);
 
   /**

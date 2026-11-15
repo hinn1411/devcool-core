@@ -42,6 +42,9 @@ public class MemberAdapter implements MemberPort {
 
   @Override
   public boolean addMembers(Long channelId, Set<Long> memberIds) {
+    if (memberIds.isEmpty()) {
+      return false; // IN () is a syntax error in Postgres
+    }
     ChannelEntity channelRef = em.getReference(ChannelEntity.class, channelId);
     List<MemberEntity> memberEntities =
         memberIds.stream()
@@ -54,10 +57,15 @@ public class MemberAdapter implements MemberPort {
                         .user(em.getReference(UserEntity.class, memberId))
                         .build())
             .toList();
-    boolean added = !repo.saveAll(memberEntities).isEmpty();
+    int saved = repo.saveAll(memberEntities).size();
     // last_read_seq is read-only on the entity, so the starting marker is set in SQL.
-    repo.catchUpMembers(channelId, memberIds);
-    return added;
+    int caughtUp = repo.catchUpMembers(channelId, memberIds);
+    if (caughtUp != saved) {
+      // Throwing rolls back the caller's transaction: no member is left starting at 0.
+      throw new IllegalStateException(
+          "Caught up " + caughtUp + " of " + saved + " new members in channel " + channelId);
+    }
+    return saved > 0;
   }
 
   @Override

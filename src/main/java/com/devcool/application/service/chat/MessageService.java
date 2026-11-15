@@ -124,6 +124,7 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
             .save(message)
             .map(id -> new SavedMessage(id, seq, message.getCreatedTime(), false));
     // Only on a real insert: after a lost key race the tx is already aborted (P3-T10).
+    // Result ignored: the sender passed requireMembership, so their member row exists.
     saved.ifPresent(
         sent -> memberPort.advanceLastReadSeq(command.channelId(), command.userId(), seq));
     return saved;
