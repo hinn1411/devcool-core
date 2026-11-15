@@ -27,7 +27,7 @@ public final class ChannelCursorCodec {
     try {
       String payload = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
       String[] parts = payload.split("\\" + SEPARATOR, -1);
-      if (token.isEmpty() || parts.length != 2) {
+      if (parts.length != 2) {
         throw new InvalidChannelCursorException();
       }
       Instant time = parts[0].isEmpty() ? null : Instant.parse(parts[0]);

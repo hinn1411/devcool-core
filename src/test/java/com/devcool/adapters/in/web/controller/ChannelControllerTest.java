@@ -194,4 +194,15 @@ class ChannelControllerTest {
 
     verifyNoInteractions(channelQuerier);
   }
+
+  /** {@code ?cursor=} is not "no cursor": only an absent param means the first page. */
+  @Test
+  void getChannels_emptyCursor_is400() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/channels").param("cursor", "").principal(CALLER))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CHANNEL_403"));
+
+    verifyNoInteractions(channelQuerier);
+  }
 }
