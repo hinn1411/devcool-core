@@ -135,6 +135,6 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   public ChannelListPage getChannels(GetChannelCommand command) {
     log.info("Get Channels by member Id");
-    return channelPort.loadChannels(command.memberId(), command.cursorId(), command.limit());
+    return channelPort.loadChannels(command.memberId(), command.cursor(), command.limit());
   }
 }

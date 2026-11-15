@@ -2,13 +2,15 @@ package com.devcool.domain.channel.port.out;
 
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.ChannelAccessInfo;
+import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListPage;
 import java.util.Optional;
 
 public interface ChannelPort {
   Optional<Channel> findById(Long id);
 
-  ChannelListPage loadChannels(Long userId, Long cursorId, Integer limit);
+  /** Newest activity first; null cursor = first page. */
+  ChannelListPage loadChannels(Long userId, ChannelCursor cursor, Integer limit);
 
   boolean existById(Long id);
 
