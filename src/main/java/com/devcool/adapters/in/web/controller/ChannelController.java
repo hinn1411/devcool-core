@@ -87,11 +87,11 @@ public class ChannelController {
 
   @GetMapping
   ResponseEntity<ApiSuccessResponse<GetChannelResponse>> getChannels(
-      @RequestParam(required = false) Long cursorId,
+      @RequestParam(required = false) String cursor,
       @RequestParam(defaultValue = "20") int limit,
       Authentication auth) {
     Long userId = Long.valueOf(auth.getName());
-    GetChannelCommand command = mapper.toGetChannelCommand(userId, cursorId, limit);
+    GetChannelCommand command = mapper.toGetChannelCommand(userId, cursor, limit);
     ChannelListPage channels = channelQuerier.getChannels(command);
     GetChannelResponse response = mapper.toGetChannelResponse(channels);
     return ResponseEntity.ok(

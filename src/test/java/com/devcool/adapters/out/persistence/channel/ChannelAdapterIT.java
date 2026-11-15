@@ -8,6 +8,7 @@ import com.devcool.adapters.out.persistence.member.entity.MemberEntity;
 import com.devcool.adapters.out.persistence.member.mapper.MemberMapperImpl;
 import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
+import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -20,6 +21,8 @@ import com.devcool.domain.user.model.enums.Role;
 import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.support.AbstractJpaIT;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -124,7 +127,61 @@ class ChannelAdapterIT extends AbstractJpaIT {
         .allSatisfy(item -> assertThat(item.lastMessage()).isNotNull());
   }
 
+  /** P3-T10 loop 4: newest activity first, empty channels last, ties broken by id DESC. */
+  @Test
+  void list_isNewestActivityFirst_emptyChannelsLast_tiesByIdDesc() {
+    ChannelEntity old = active(T0);
+    ChannelEntity empty = channelOf(alice);
+    ChannelEntity newest = active(T0.plusSeconds(20));
+    ChannelEntity tieA = active(T0.plusSeconds(10));
+    ChannelEntity tieB = active(T0.plusSeconds(10));
+    resetPersistenceContext();
+
+    assertThat(ids(channels.loadChannels(alice.getId(), null, 20)))
+        .containsExactly(newest.getId(), tieB.getId(), tieA.getId(), old.getId(), empty.getId());
+  }
+
+  @Test
+  void paging_walksEveryChannelExactlyOnce_acrossTiesAndTheEmptyGroup() {
+    ChannelEntity newest = active(T0.plusSeconds(30));
+    ChannelEntity tieA = active(T0.plusSeconds(20));
+    ChannelEntity tieB = active(T0.plusSeconds(20));
+    ChannelEntity old = active(T0.plusSeconds(10));
+    ChannelEntity emptyA = channelOf(alice);
+    ChannelEntity emptyB = channelOf(alice);
+    resetPersistenceContext();
+
+    List<Long> walked = new ArrayList<>();
+    ChannelCursor cursor = null;
+    ChannelListPage page;
+    do {
+      page = channels.loadChannels(alice.getId(), cursor, 2);
+      walked.addAll(ids(page));
+      cursor = page.nextCursor();
+    } while (page.hasMore());
+
+    assertThat(walked)
+        .containsExactly(
+            newest.getId(),
+            tieB.getId(),
+            tieA.getId(),
+            old.getId(),
+            emptyB.getId(),
+            emptyA.getId());
+  }
+
   // ---- helpers ---------------------------------------------------------------------------------
+
+  private ChannelEntity active(Instant lastMessageAt) {
+    ChannelEntity channel = channelOf(alice);
+    native_(
+        "update channel set last_message_at = ?1 where id = ?2", lastMessageAt, channel.getId());
+    return channel;
+  }
+
+  private static List<Long> ids(ChannelListPage page) {
+    return page.items().stream().map(ChannelListItem::id).toList();
+  }
 
   private ChannelListItem itemFor(ChannelEntity channel) {
     resetPersistenceContext();

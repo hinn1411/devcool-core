@@ -27,6 +27,7 @@ public class HttpErrorMapper {
               INVALID_MEDIA_CONTENT,
               INVALID_MESSAGE_CONFIG,
               INVALID_HISTORY_CURSOR,
+              INVALID_CHANNEL_CURSOR,
               INVALID_EMOJI,
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;

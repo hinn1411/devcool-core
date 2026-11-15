@@ -18,6 +18,8 @@ public class GetChannelResponse {
   @Schema(description = "returned channels", example = "[]")
   private List<ChannelListItemResponse> channels;
 
-  private Long nextCursorId;
+  @Schema(description = "Opaque; pass back as ?cursor= for the next page. Null on an empty page")
+  private String nextCursor;
+
   private boolean hasMore;
 }

@@ -11,6 +11,8 @@ import com.devcool.adapters.in.web.dto.response.CreateChannelResponse;
 import com.devcool.adapters.in.web.dto.response.GetChannelResponse;
 import com.devcool.adapters.in.web.dto.response.ReplyPreviewResponse;
 import com.devcool.adapters.in.web.dto.response.UpdateChannelResponse;
+import com.devcool.adapters.in.web.util.ChannelCursorCodec;
+import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -116,11 +118,14 @@ class ChannelDtoMapperTest {
   }
 
   @Test
-  void toGetChannelCommand_keepsEachArgumentInItsOwnField() {
-    GetChannelCommand command = mapper.toGetChannelCommand(11L, 22L, 33);
+  void toGetChannelCommand_decodesTheCursorToken() {
+    ChannelCursor cursor = new ChannelCursor(Instant.parse("2026-11-13T10:00:00Z"), 22L);
+
+    GetChannelCommand command =
+        mapper.toGetChannelCommand(11L, ChannelCursorCodec.encode(cursor), 33);
 
     assertThat(command.memberId()).isEqualTo(11);
-    assertThat(command.cursorId()).isEqualTo(22);
+    assertThat(command.cursor()).isEqualTo(cursor);
     assertThat(command.limit()).isEqualTo(33);
   }
 
@@ -128,7 +133,7 @@ class ChannelDtoMapperTest {
   void toGetChannelCommand_firstPage_hasNullCursor() {
     GetChannelCommand command = mapper.toGetChannelCommand(11L, null, 33);
 
-    assertThat(command.cursorId()).isNull();
+    assertThat(command.cursor()).isNull();
   }
 
   @Test
@@ -140,7 +145,7 @@ class ChannelDtoMapperTest {
                     1L, "general-room", ChannelType.LOUNGE, BoundaryType.PUBLIC, 0, null),
                 new ChannelListItem(
                     2L, "secret-room", ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE, 0, null)),
-            2L,
+            new ChannelCursor(Instant.parse("2026-11-13T10:00:00Z"), 2L),
             true);
 
     GetChannelResponse response = mapper.toGetChannelResponse(page);
@@ -149,7 +154,8 @@ class ChannelDtoMapperTest {
         .containsExactly(
             new ChannelListItemResponse(1L, "general-room", "LOUNGE", "PUBLIC", 0, null),
             new ChannelListItemResponse(2L, "secret-room", "PRIVATE_CHAT", "PRIVATE", 0, null));
-    assertThat(response.getNextCursorId()).isEqualTo(2);
+    assertThat(ChannelCursorCodec.decode(response.getNextCursor()))
+        .isEqualTo(new ChannelCursor(Instant.parse("2026-11-13T10:00:00Z"), 2L));
     assertThat(response.isHasMore()).isTrue();
   }
 
@@ -159,7 +165,7 @@ class ChannelDtoMapperTest {
         mapper.toGetChannelResponse(new ChannelListPage(List.of(), null, false));
 
     assertThat(response.getChannels()).isEmpty();
-    assertThat(response.getNextCursorId()).isNull();
+    assertThat(response.getNextCursor()).isNull();
     assertThat(response.isHasMore()).isFalse();
   }
 
