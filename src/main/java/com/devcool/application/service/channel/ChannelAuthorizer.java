@@ -12,6 +12,7 @@ import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,11 +67,23 @@ public class ChannelAuthorizer {
    * role may perform it. Returns the channel's access info for the checks that follow.
    */
   public ChannelAccessInfo requireAllowed(Long channelId, Long callerId, ChannelAction action) {
+    return checkAllowed(channelPort.findAccessInfo(channelId), channelId, callerId, action);
+  }
 
+  /**
+   * {@link #requireAllowed}, with the channel row locked until commit. For writes whose checks read
+   * the member count or the leader: the lock keeps them true until the write commits.
+   */
+  public ChannelAccessInfo requireAllowedForUpdate(
+      Long channelId, Long callerId, ChannelAction action) {
+    return checkAllowed(
+        channelPort.findAccessInfoForUpdate(channelId), channelId, callerId, action);
+  }
+
+  private ChannelAccessInfo checkAllowed(
+      Optional<ChannelAccessInfo> found, Long channelId, Long callerId, ChannelAction action) {
     ChannelAccessInfo channelInfo =
-        channelPort
-            .findAccessInfo(channelId)
-            .orElseThrow(() -> new ChannelNotFoundException(channelId));
+        found.orElseThrow(() -> new ChannelNotFoundException(channelId));
     ChannelType type = channelInfo.channelType();
     MemberType callerRole =
         memberPort

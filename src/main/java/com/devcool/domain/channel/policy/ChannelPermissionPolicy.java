@@ -24,16 +24,21 @@ public final class ChannelPermissionPolicy {
     };
   }
 
-  /** Whether a member with this role may perform the action in a channel of this type. */
+  /**
+   * Whether a member with this role may perform the action in a channel of this type. Role only:
+   * the service adds the state checks (TRANSFER_LEADER: the caller must be {@code leader_id}).
+   */
   public static boolean allows(ChannelType type, MemberType role, ChannelAction action) {
     if (!supports(type, action)) {
       return false;
     }
-    return switch (type) {
-      case ChannelType.PRIVATE_CHAT -> true;
-      case ChannelType.LOUNGE ->
-          action != ChannelAction.REMOVE_MEMBER || role == MemberType.CREATOR;
-      case ChannelType.FORUM -> action == ChannelAction.LEAVE_CHANNEL || isForumAdmin(role);
+    // Exhaustive, no default: a new ChannelAction fails the compile until its rule is decided
+    return switch (action) {
+      case UPDATE_CHANNEL, ADD_MEMBERS -> type != ChannelType.FORUM || isForumAdmin(role);
+      case REMOVE_MEMBER ->
+          type == ChannelType.FORUM ? isForumAdmin(role) : role == MemberType.CREATOR;
+      case LEAVE_CHANNEL -> true;
+      case TRANSFER_LEADER -> isForumAdmin(role);
     };
   }
 

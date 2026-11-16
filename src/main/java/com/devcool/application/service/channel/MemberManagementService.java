@@ -24,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Remove a member, leave, transfer the FORUM leader (P3-T11). A FORUM always keeps exactly one
- * leader: the leader can be neither removed nor leave until the role is transferred.
+ * leader: the leader can be neither removed nor leave until the role is transferred. Every method
+ * locks the channel row first, so the leader and count it checks hold until commit, and locks are
+ * always taken channel row → member rows (the same order as a send).
  */
 @Service
 @SuppressFBWarnings(
@@ -52,7 +54,7 @@ public class MemberManagementService
     Long channelId = command.channelId();
     Long targetId = command.targetUserId();
     ChannelAccessInfo channel =
-        channelAuthorizer.requireAllowed(
+        channelAuthorizer.requireAllowedForUpdate(
             channelId, command.callerId(), ChannelAction.REMOVE_MEMBER);
     if (Objects.equals(targetId, command.callerId())) {
       throw new InvalidChannelConfigException("Use leave to remove yourself");
@@ -71,7 +73,7 @@ public class MemberManagementService
   @Transactional
   public void leave(LeaveChannelCommand command) {
     ChannelAccessInfo channel =
-        channelAuthorizer.requireAllowed(
+        channelAuthorizer.requireAllowedForUpdate(
             command.channelId(), command.userId(), ChannelAction.LEAVE_CHANNEL);
     if (isForumLeader(channel, command.userId())) {
       throw new InvalidChannelConfigException("Transfer the leader role before leaving");
@@ -86,7 +88,8 @@ public class MemberManagementService
     Long callerId = command.callerId();
     Long newLeaderId = command.newLeaderId();
     ChannelAccessInfo channel =
-        channelAuthorizer.requireAllowed(channelId, callerId, ChannelAction.TRANSFER_LEADER);
+        channelAuthorizer.requireAllowedForUpdate(
+            channelId, callerId, ChannelAction.TRANSFER_LEADER);
     if (!Objects.equals(channel.leaderId(), callerId)) {
       throw new ForbiddenException("Only the current leader can transfer the role");
     }
@@ -95,17 +98,17 @@ public class MemberManagementService
     }
     MemberType newLeaderRole = roleOf(channelId, newLeaderId);
     MemberType callerRole = roleOf(channelId, callerId);
-    // Compare-and-set on leader_id: a concurrent transfer that won first leaves this one at 0 rows
+    // The channel lock makes this CAS a backstop; it still guards a direct SQL change of leader_id
     if (!channelPort.updateLeader(channelId, callerId, newLeaderId)) {
       log.warn("User {} lost a concurrent leader transfer in channel {}", callerId, channelId);
       throw new ForbiddenException("Only the current leader can transfer the role");
     }
     // A CREATOR row stays CREATOR on either side; only LEADER/MEMBER rows swap
     if (callerRole == MemberType.LEADER) {
-      memberPort.updateRole(channelId, callerId, MemberType.MEMBER);
+      setRole(channelId, callerId, MemberType.MEMBER);
     }
     if (newLeaderRole == MemberType.MEMBER) {
-      memberPort.updateRole(channelId, newLeaderId, MemberType.LEADER);
+      setRole(channelId, newLeaderId, MemberType.LEADER);
     }
   }
 
@@ -113,6 +116,13 @@ public class MemberManagementService
     return memberPort
         .findRoleOfMember(channelId, userId)
         .orElseThrow(() -> new MemberNotFoundException(userId));
+  }
+
+  /** No row matched: throwing rolls back the leader_id change made earlier in this transaction. */
+  private void setRole(Long channelId, Long userId, MemberType role) {
+    if (!memberPort.updateRole(channelId, userId, role)) {
+      throw new MemberNotFoundException(userId);
+    }
   }
 
   private static boolean isForumLeader(ChannelAccessInfo channel, Long userId) {

@@ -17,6 +17,12 @@ public interface ChannelPort {
   /** Type and member count of the channel, or empty when the channel does not exist. */
   Optional<ChannelAccessInfo> findAccessInfo(Long id);
 
+  /**
+   * {@link #findAccessInfo} read under the channel row lock ({@code FOR NO KEY UPDATE}) until
+   * commit. Member changes take it first, so checks on the count or the leader can't go stale.
+   */
+  Optional<ChannelAccessInfo> findAccessInfoForUpdate(Long id);
+
   Long save(Channel channel);
 
   boolean update(Channel channel);

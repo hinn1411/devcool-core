@@ -1,6 +1,7 @@
 package com.devcool.adapters.out.persistence.channel.repository;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessLockedRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -114,6 +115,21 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       WHERE c.id = :id
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
+
+  /**
+   * Locks the channel row until commit. {@code NO KEY UPDATE} conflicts with every other channel
+   * UPDATE (count, leader, seq bump) but not with the key-share locks that FK inserts take.
+   */
+  @Query(
+      value =
+          """
+          SELECT channel_type AS channelType, total_of_members AS totalOfMembers,
+                 leader_id AS leaderId
+          FROM channel WHERE id = :id
+          FOR NO KEY UPDATE
+          """,
+      nativeQuery = true)
+  Optional<ChannelAccessLockedRow> lockAccessRowById(@Param("id") Long id);
 
   /**
    * ADR-0012 bump; locks the channel row until commit. Not {@code @Modifying}: it returns a row.

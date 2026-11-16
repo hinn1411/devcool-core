@@ -3,6 +3,8 @@ package com.devcool.application.service.channel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -156,6 +158,51 @@ class ChannelAuthorizerTest {
 
       assertThatThrownBy(
               () -> authorizer.requireAllowed(CHANNEL_ID, USER_ID, ChannelAction.UPDATE_CHANNEL))
+          .isInstanceOf(ForbiddenException.class);
+    }
+  }
+
+  /** P3-T11 review: the same checks, on the row read under the channel lock. */
+  @Nested
+  class RequireAllowedForUpdate {
+
+    @Test
+    void readsTheLockedRow_andReturnsIt() {
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
+          .thenReturn(Optional.of(new ChannelAccessInfo(ChannelType.FORUM, 3, USER_ID)));
+      when(memberPort.findRoleOfMember(CHANNEL_ID, USER_ID))
+          .thenReturn(Optional.of(MemberType.LEADER));
+
+      ChannelAccessInfo info =
+          authorizer.requireAllowedForUpdate(CHANNEL_ID, USER_ID, ChannelAction.TRANSFER_LEADER);
+
+      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3, USER_ID));
+      verify(channelPort, never()).findAccessInfo(CHANNEL_ID);
+    }
+
+    @Test
+    void missingChannel_throwsChannelNotFoundBeforeCheckingMembership() {
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
+
+      assertThatThrownBy(
+              () ->
+                  authorizer.requireAllowedForUpdate(
+                      CHANNEL_ID, USER_ID, ChannelAction.REMOVE_MEMBER))
+          .isInstanceOf(ChannelNotFoundException.class);
+      verifyNoInteractions(memberPort);
+    }
+
+    @Test
+    void wrongRole_throwsForbidden() {
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
+          .thenReturn(Optional.of(new ChannelAccessInfo(ChannelType.LOUNGE, 3, null)));
+      when(memberPort.findRoleOfMember(CHANNEL_ID, USER_ID))
+          .thenReturn(Optional.of(MemberType.MEMBER));
+
+      assertThatThrownBy(
+              () ->
+                  authorizer.requireAllowedForUpdate(
+                      CHANNEL_ID, USER_ID, ChannelAction.REMOVE_MEMBER))
           .isInstanceOf(ForbiddenException.class);
     }
   }

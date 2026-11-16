@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,7 +50,7 @@ class MemberManagementServiceTest {
   }
 
   private void channelIs(ChannelType type, Long leaderId) {
-    when(channelPort.findAccessInfo(CHANNEL_ID))
+    when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
         .thenReturn(Optional.of(new ChannelAccessInfo(type, 3, leaderId)));
   }
 
@@ -59,6 +60,10 @@ class MemberManagementServiceTest {
 
   private void notAMember(long userId) {
     when(memberPort.findRoleOfMember(CHANNEL_ID, userId)).thenReturn(Optional.empty());
+  }
+
+  private void rolesUpdate() {
+    lenient().when(memberPort.updateRole(anyLong(), anyLong(), any())).thenReturn(true);
   }
 
   private void assertNothingWritten() {
@@ -159,7 +164,7 @@ class MemberManagementServiceTest {
 
     @Test
     void unknownChannel_isNotFound() {
-      when(channelPort.findAccessInfo(CHANNEL_ID)).thenReturn(Optional.empty());
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(ChannelNotFoundException.class);
       assertNothingWritten();
@@ -228,7 +233,7 @@ class MemberManagementServiceTest {
 
     @Test
     void unknownChannel_isNotFound() {
-      when(channelPort.findAccessInfo(CHANNEL_ID)).thenReturn(Optional.empty());
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
 
       assertThatThrownBy(this::leave).isInstanceOf(ChannelNotFoundException.class);
       assertNothingWritten();
@@ -248,6 +253,7 @@ class MemberManagementServiceTest {
       roleOf(CALLER_ID, MemberType.LEADER);
       roleOf(TARGET_ID, MemberType.MEMBER);
       when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
+      rolesUpdate();
 
       transfer(TARGET_ID);
 
@@ -262,6 +268,7 @@ class MemberManagementServiceTest {
       roleOf(CALLER_ID, MemberType.CREATOR);
       roleOf(TARGET_ID, MemberType.MEMBER);
       when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
+      rolesUpdate();
 
       transfer(TARGET_ID);
 
@@ -275,11 +282,24 @@ class MemberManagementServiceTest {
       roleOf(CALLER_ID, MemberType.LEADER);
       roleOf(TARGET_ID, MemberType.CREATOR);
       when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
+      rolesUpdate();
 
       transfer(TARGET_ID);
 
       verify(memberPort).updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER);
       verify(memberPort, never()).updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER);
+    }
+
+    @Test
+    void newLeaderRowGone_throwsSoTheLeaderIdChangeRollsBack() {
+      channelIs(ChannelType.FORUM, CALLER_ID);
+      roleOf(CALLER_ID, MemberType.LEADER);
+      roleOf(TARGET_ID, MemberType.MEMBER);
+      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
+      when(memberPort.updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER)).thenReturn(true);
+      when(memberPort.updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER)).thenReturn(false);
+
+      assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
     }
 
     @Test
