@@ -17,11 +17,17 @@ public interface ChannelPort {
   /** Type and member count of the channel, or empty when the channel does not exist. */
   Optional<ChannelAccessInfo> findAccessInfo(Long id);
 
+  /** {@link #findAccessInfo}, locking the channel row until commit. */
+  Optional<ChannelAccessInfo> findAccessInfoForUpdate(Long id);
+
   Long save(Channel channel);
 
   boolean update(Channel channel);
 
   boolean increaseTotalMembers(Long channelId, Integer newMembers);
+
+  /** Compare-and-set on {@code leader_id}; false when the leader isn't {@code expectedLeaderId}. */
+  boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId);
 
   /**
    * Bumps and returns {@code last_seq}; locks the channel row until commit. Empty if no channel.

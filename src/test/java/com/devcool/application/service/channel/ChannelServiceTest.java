@@ -65,7 +65,17 @@ class ChannelServiceTest {
 
   private void channelIs(ChannelType type, int totalOfMembers) {
     when(channelPort.findAccessInfo(CHANNEL_ID))
-        .thenReturn(Optional.of(new ChannelAccessInfo(type, totalOfMembers)));
+        .thenReturn(Optional.of(new ChannelAccessInfo(type, totalOfMembers, null)));
+  }
+
+  /** AddMember reads the count under the channel row lock (P3-T11 review). */
+  private void lockedChannelIs(ChannelType type, int totalOfMembers) {
+    when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
+        .thenReturn(Optional.of(new ChannelAccessInfo(type, totalOfMembers, null)));
+  }
+
+  private void lockedChannelIsMissing() {
+    when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
   }
 
   private void channelIsMissing() {
@@ -282,7 +292,7 @@ class ChannelServiceTest {
       "LOUNGE, CREATOR",
     })
     void allowedCaller_addsMembersAndIncreasesTheCount(ChannelType type, MemberType role) {
-      channelIs(type, 3);
+      lockedChannelIs(type, 3);
       callerIs(role);
       newUsersExistAndAreNotMembers();
       when(memberPort.addMembers(CHANNEL_ID, NEW_USER_IDS)).thenReturn(true);
@@ -296,7 +306,7 @@ class ChannelServiceTest {
 
     @Test
     void missingChannel_throwsChannelNotFoundBeforeAnyOtherLookup() {
-      channelIsMissing();
+      lockedChannelIsMissing();
 
       assertThatThrownBy(() -> newService().addMember(CHANNEL_ID, command()))
           .isInstanceOf(ChannelNotFoundException.class);
@@ -307,7 +317,7 @@ class ChannelServiceTest {
     // The escalation chain from the audit: a stranger adding themselves to a channel.
     @Test
     void nonMember_throwsMemberNotFoundBeforeLookingUpUsers() {
-      channelIs(ChannelType.PRIVATE_CHAT, 2);
+      lockedChannelIs(ChannelType.PRIVATE_CHAT, 2);
       callerIsNotAMember();
 
       assertThatThrownBy(() -> newService().addMember(CHANNEL_ID, command()))
@@ -320,7 +330,7 @@ class ChannelServiceTest {
 
     @Test
     void forumMember_throwsForbiddenAndWritesNothing() {
-      channelIs(ChannelType.FORUM, 3);
+      lockedChannelIs(ChannelType.FORUM, 3);
       callerIs(MemberType.MEMBER);
 
       assertThatThrownBy(() -> newService().addMember(CHANNEL_ID, command()))
@@ -333,7 +343,7 @@ class ChannelServiceTest {
     @ParameterizedTest
     @EnumSource(MemberType.class)
     void privateChat_rejectsAddingMembersForEveryRole(MemberType role) {
-      channelIs(ChannelType.PRIVATE_CHAT, 2);
+      lockedChannelIs(ChannelType.PRIVATE_CHAT, 2);
       callerIs(role);
 
       assertThatThrownBy(() -> newService().addMember(CHANNEL_ID, command()))
@@ -345,7 +355,7 @@ class ChannelServiceTest {
 
     @Test
     void lounge_fillingExactlyToElevenPeople_isAllowed() {
-      channelIs(ChannelType.LOUNGE, 9);
+      lockedChannelIs(ChannelType.LOUNGE, 9);
       callerIs(MemberType.MEMBER);
       newUsersExistAndAreNotMembers();
       when(memberPort.addMembers(CHANNEL_ID, NEW_USER_IDS)).thenReturn(true);
@@ -355,7 +365,7 @@ class ChannelServiceTest {
 
     @Test
     void lounge_exceedingElevenPeople_isRejectedAndWritesNothing() {
-      channelIs(ChannelType.LOUNGE, 10);
+      lockedChannelIs(ChannelType.LOUNGE, 10);
       callerIs(MemberType.MEMBER);
       newUsersExistAndAreNotMembers();
 
@@ -368,7 +378,7 @@ class ChannelServiceTest {
 
     @Test
     void forum_hasNoTotalCap() {
-      channelIs(ChannelType.FORUM, 500);
+      lockedChannelIs(ChannelType.FORUM, 500);
       callerIs(MemberType.LEADER);
       newUsersExistAndAreNotMembers();
       when(memberPort.addMembers(CHANNEL_ID, NEW_USER_IDS)).thenReturn(true);

@@ -3,6 +3,8 @@ package com.devcool.application.service.channel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -100,7 +102,7 @@ class ChannelAuthorizerTest {
 
     private void channelIs(ChannelType type) {
       when(channelPort.findAccessInfo(CHANNEL_ID))
-          .thenReturn(Optional.of(new ChannelAccessInfo(type, 3)));
+          .thenReturn(Optional.of(new ChannelAccessInfo(type, 3, null)));
     }
 
     private void callerIs(MemberType role) {
@@ -115,7 +117,7 @@ class ChannelAuthorizerTest {
       ChannelAccessInfo info =
           authorizer.requireAllowed(CHANNEL_ID, USER_ID, ChannelAction.ADD_MEMBERS);
 
-      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3));
+      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3, null));
     }
 
     @Test
@@ -157,6 +159,24 @@ class ChannelAuthorizerTest {
       assertThatThrownBy(
               () -> authorizer.requireAllowed(CHANNEL_ID, USER_ID, ChannelAction.UPDATE_CHANNEL))
           .isInstanceOf(ForbiddenException.class);
+    }
+  }
+
+  @Nested
+  class RequireAllowedForUpdate {
+
+    @Test
+    void readsTheLockedRow_andReturnsIt() {
+      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
+          .thenReturn(Optional.of(new ChannelAccessInfo(ChannelType.FORUM, 3, USER_ID)));
+      when(memberPort.findRoleOfMember(CHANNEL_ID, USER_ID))
+          .thenReturn(Optional.of(MemberType.LEADER));
+
+      ChannelAccessInfo info =
+          authorizer.requireAllowedForUpdate(CHANNEL_ID, USER_ID, ChannelAction.TRANSFER_LEADER);
+
+      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3, USER_ID));
+      verify(channelPort, never()).findAccessInfo(CHANNEL_ID);
     }
   }
 }

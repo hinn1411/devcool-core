@@ -174,7 +174,7 @@ class DeleteMessageServiceTest {
     when(memberPort.findRoleOfMember(CHANNEL, userId)).thenReturn(Optional.of(role));
     lenient()
         .when(channelPort.findAccessInfo(CHANNEL))
-        .thenReturn(Optional.of(new ChannelAccessInfo(type, 2)));
+        .thenReturn(Optional.of(new ChannelAccessInfo(type, 2, null)));
   }
 
   private static DeleteMessageCommand delete(long userId) {

@@ -1,6 +1,7 @@
 package com.devcool.adapters.out.persistence.channel.repository;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessLockedRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -23,6 +24,20 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       WHERE id = :channelId
       """)
   int increaseTotalMembers(@Param("channelId") Long channelId, @Param("delta") int delta);
+
+  /** Compare-and-set: 0 rows when the leader already changed. */
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE channel SET leader_id = :newLeaderId
+          WHERE id = :channelId AND leader_id = :expectedLeaderId
+          """,
+      nativeQuery = true)
+  int updateLeader(
+      @Param("channelId") Long channelId,
+      @Param("expectedLeaderId") Long expectedLeaderId,
+      @Param("newLeaderId") Long newLeaderId);
 
   /** A null argument keeps the stored value. */
   @Modifying
@@ -93,12 +108,25 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """
       SELECT new com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow(
       c.channelType,
-      c.totalOfMembers
+      c.totalOfMembers,
+      c.leader.id
       )
       FROM ChannelEntity c
       WHERE c.id = :id
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
+
+  /** NO KEY UPDATE: blocks other channel UPDATEs, not FK inserts. */
+  @Query(
+      value =
+          """
+          SELECT channel_type AS channelType, total_of_members AS totalOfMembers,
+                 leader_id AS leaderId
+          FROM channel WHERE id = :id
+          FOR NO KEY UPDATE
+          """,
+      nativeQuery = true)
+  Optional<ChannelAccessLockedRow> lockAccessRowById(@Param("id") Long id);
 
   /**
    * ADR-0012 bump; locks the channel row until commit. Not {@code @Modifying}: it returns a row.

@@ -9,6 +9,7 @@ import com.devcool.domain.channel.model.ChannelAccessInfo;
 import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
+import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.model.ReplyPreview;
 import java.util.List;
@@ -76,7 +77,18 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public Optional<ChannelAccessInfo> findAccessInfo(Long id) {
     return repo.findAccessRowById(id)
-        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers()));
+        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers(), row.leaderId()));
+  }
+
+  @Override
+  public Optional<ChannelAccessInfo> findAccessInfoForUpdate(Long id) {
+    return repo.lockAccessRowById(id)
+        .map(
+            row ->
+                new ChannelAccessInfo(
+                    ChannelType.valueOf(row.getChannelType()),
+                    row.getTotalOfMembers(),
+                    row.getLeaderId()));
   }
 
   @Override
@@ -101,6 +113,11 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean increaseTotalMembers(Long channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
+  }
+
+  @Override
+  public boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId) {
+    return repo.updateLeader(channelId, expectedLeaderId, newLeaderId) > 0;
   }
 
   @Override
