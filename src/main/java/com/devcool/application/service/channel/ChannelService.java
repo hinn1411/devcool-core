@@ -101,7 +101,6 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Transactional
   public boolean addMember(Long channelId, AddMembersCommand command) {
     ChannelAccessInfo channel =
-        // Locked read: the lounge cap below is checked against a count no other add can change
         channelAuthorizer.requireAllowedForUpdate(
             channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
 

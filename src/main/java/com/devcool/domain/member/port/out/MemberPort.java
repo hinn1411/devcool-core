@@ -28,9 +28,9 @@ public interface MemberPort {
    */
   boolean advanceLastReadSeq(Long channelId, Long userId, long seq);
 
-  /** Deletes the user's member row; their messages stay. False when there was no row. */
+  /** False when there was no row. */
   boolean removeMember(Long channelId, Long userId);
 
-  /** Sets the user's role in the channel. False when the user is not a member. */
+  /** False when the user is not a member. */
   boolean updateRole(Long channelId, Long userId, MemberType role);
 }

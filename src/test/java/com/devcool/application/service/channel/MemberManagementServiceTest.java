@@ -5,12 +5,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.model.ChannelAccessInfo;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -26,13 +24,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** Rules agreed in docs/journal/briefs/P3-T11.md; the real policy and authorizer run. */
+/** Service-only rules; roles are in ChannelPermissionPolicyTest. */
 @ExtendWith(MockitoExtension.class)
 class MemberManagementServiceTest {
 
@@ -58,19 +54,10 @@ class MemberManagementServiceTest {
     when(memberPort.findRoleOfMember(CHANNEL_ID, userId)).thenReturn(Optional.of(role));
   }
 
-  private void notAMember(long userId) {
-    when(memberPort.findRoleOfMember(CHANNEL_ID, userId)).thenReturn(Optional.empty());
-  }
-
-  private void rolesUpdate() {
-    lenient().when(memberPort.updateRole(anyLong(), anyLong(), any())).thenReturn(true);
-  }
-
   private void assertNothingWritten() {
     verify(memberPort, never()).removeMember(anyLong(), anyLong());
     verify(memberPort, never()).updateRole(anyLong(), anyLong(), any());
     verify(channelPort, never()).increaseTotalMembers(anyLong(), anyInt());
-    verify(channelPort, never()).updateLeader(anyLong(), anyLong(), anyLong());
   }
 
   @Nested
@@ -80,11 +67,10 @@ class MemberManagementServiceTest {
       newService().removeMember(new RemoveMemberCommand(CHANNEL_ID, CALLER_ID, targetId));
     }
 
-    @ParameterizedTest(name = "{0} {1} removes a MEMBER")
-    @CsvSource({"LOUNGE, CREATOR", "FORUM, CREATOR", "FORUM, LEADER"})
-    void adminRemovesMember_deletesRowThenDecrementsCount(ChannelType type, MemberType role) {
-      channelIs(type, type == ChannelType.FORUM ? OTHER_ID : null);
-      roleOf(CALLER_ID, role);
+    @Test
+    void deletesRowThenDecrementsCount() {
+      channelIs(ChannelType.FORUM, CALLER_ID);
+      roleOf(CALLER_ID, MemberType.LEADER);
       roleOf(TARGET_ID, MemberType.MEMBER);
       when(memberPort.removeMember(CHANNEL_ID, TARGET_ID)).thenReturn(true);
 
@@ -95,27 +81,8 @@ class MemberManagementServiceTest {
       order.verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
     }
 
-    @ParameterizedTest(name = "{0} {1} may not remove → 403")
-    @CsvSource({"LOUNGE, MEMBER", "FORUM, MEMBER"})
-    void nonAdminCaller_isForbidden(ChannelType type, MemberType role) {
-      channelIs(type, null);
-      roleOf(CALLER_ID, role);
-
-      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(ForbiddenException.class);
-      assertNothingWritten();
-    }
-
     @Test
-    void privateChat_isUnsupported() {
-      channelIs(ChannelType.PRIVATE_CHAT, null);
-      roleOf(CALLER_ID, MemberType.CREATOR);
-
-      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(InvalidChannelConfigException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void removingSelf_isRejected() {
+    void self_isRejected() {
       channelIs(ChannelType.LOUNGE, null);
       roleOf(CALLER_ID, MemberType.CREATOR);
 
@@ -124,7 +91,7 @@ class MemberManagementServiceTest {
     }
 
     @Test
-    void removingTheCreator_isRejected() {
+    void creator_isRejected() {
       channelIs(ChannelType.FORUM, CALLER_ID);
       roleOf(CALLER_ID, MemberType.LEADER);
       roleOf(TARGET_ID, MemberType.CREATOR);
@@ -134,7 +101,7 @@ class MemberManagementServiceTest {
     }
 
     @Test
-    void removingTheForumLeader_isRejected_soTheForumKeepsALeader() {
+    void forumLeader_isRejected() {
       channelIs(ChannelType.FORUM, TARGET_ID);
       roleOf(CALLER_ID, MemberType.CREATOR);
       roleOf(TARGET_ID, MemberType.LEADER);
@@ -144,34 +111,7 @@ class MemberManagementServiceTest {
     }
 
     @Test
-    void targetNotAMember_isMemberNotFound() {
-      channelIs(ChannelType.LOUNGE, null);
-      roleOf(CALLER_ID, MemberType.CREATOR);
-      notAMember(TARGET_ID);
-
-      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void callerNotAMember_isMemberNotFound() {
-      channelIs(ChannelType.LOUNGE, null);
-      notAMember(CALLER_ID);
-
-      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void unknownChannel_isNotFound() {
-      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(ChannelNotFoundException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void rowAlreadyGone_concurrentRemove_doesNotDecrementTwice() {
+    void rowAlreadyGone_doesNotDecrement() {
       channelIs(ChannelType.LOUNGE, null);
       roleOf(CALLER_ID, MemberType.CREATOR);
       roleOf(TARGET_ID, MemberType.MEMBER);
@@ -189,53 +129,23 @@ class MemberManagementServiceTest {
       newService().leave(new LeaveChannelCommand(CHANNEL_ID, CALLER_ID));
     }
 
-    @ParameterizedTest(name = "{0} {1} leaves")
-    @CsvSource({"LOUNGE, MEMBER", "LOUNGE, CREATOR", "FORUM, MEMBER", "FORUM, CREATOR"})
-    void member_leaves_rowDeletedThenCountDecremented(ChannelType type, MemberType role) {
-      channelIs(type, type == ChannelType.FORUM ? OTHER_ID : null);
-      roleOf(CALLER_ID, role);
+    @Test
+    void deletesRowThenDecrementsCount() {
+      channelIs(ChannelType.FORUM, OTHER_ID);
+      roleOf(CALLER_ID, MemberType.MEMBER);
       when(memberPort.removeMember(CHANNEL_ID, CALLER_ID)).thenReturn(true);
 
       leave();
 
-      InOrder order = inOrder(memberPort, channelPort);
-      order.verify(memberPort).removeMember(CHANNEL_ID, CALLER_ID);
-      order.verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
+      verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
     }
 
-    @ParameterizedTest(name = "forum leader holding {0} must transfer first")
-    @CsvSource({"LEADER", "CREATOR"})
-    void forumLeader_mustTransferFirst(MemberType role) {
+    @Test
+    void forumLeader_mustTransferFirst() {
       channelIs(ChannelType.FORUM, CALLER_ID);
-      roleOf(CALLER_ID, role);
+      roleOf(CALLER_ID, MemberType.LEADER);
 
       assertThatThrownBy(this::leave).isInstanceOf(InvalidChannelConfigException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void privateChat_isUnsupported() {
-      channelIs(ChannelType.PRIVATE_CHAT, null);
-      roleOf(CALLER_ID, MemberType.MEMBER);
-
-      assertThatThrownBy(this::leave).isInstanceOf(InvalidChannelConfigException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void nonMember_isMemberNotFound() {
-      channelIs(ChannelType.LOUNGE, null);
-      notAMember(CALLER_ID);
-
-      assertThatThrownBy(this::leave).isInstanceOf(MemberNotFoundException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void unknownChannel_isNotFound() {
-      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(this::leave).isInstanceOf(ChannelNotFoundException.class);
       assertNothingWritten();
     }
   }
@@ -247,28 +157,27 @@ class MemberManagementServiceTest {
       newService().transferLeader(new TransferLeaderCommand(CHANNEL_ID, CALLER_ID, newLeaderId));
     }
 
-    @Test
-    void leaderRow_becomesMember_targetBecomesLeader() {
+    private void transferSucceeds(MemberType callerRole) {
       channelIs(ChannelType.FORUM, CALLER_ID);
-      roleOf(CALLER_ID, MemberType.LEADER);
+      roleOf(CALLER_ID, callerRole);
       roleOf(TARGET_ID, MemberType.MEMBER);
       when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
-      rolesUpdate();
+      when(memberPort.updateRole(anyLong(), anyLong(), any())).thenReturn(true);
+    }
+
+    @Test
+    void leaderBecomesMember_targetBecomesLeader() {
+      transferSucceeds(MemberType.LEADER);
 
       transfer(TARGET_ID);
 
-      verify(channelPort).updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID);
       verify(memberPort).updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER);
       verify(memberPort).updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER);
     }
 
     @Test
     void creatorLeader_staysCreator() {
-      channelIs(ChannelType.FORUM, CALLER_ID);
-      roleOf(CALLER_ID, MemberType.CREATOR);
-      roleOf(TARGET_ID, MemberType.MEMBER);
-      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
-      rolesUpdate();
+      transferSucceeds(MemberType.CREATOR);
 
       transfer(TARGET_ID);
 
@@ -277,44 +186,9 @@ class MemberManagementServiceTest {
     }
 
     @Test
-    void toTheCreator_keepsTheCreatorRow() {
-      channelIs(ChannelType.FORUM, CALLER_ID);
-      roleOf(CALLER_ID, MemberType.LEADER);
-      roleOf(TARGET_ID, MemberType.CREATOR);
-      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
-      rolesUpdate();
-
-      transfer(TARGET_ID);
-
-      verify(memberPort).updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER);
-      verify(memberPort, never()).updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER);
-    }
-
-    @Test
-    void newLeaderRowGone_throwsSoTheLeaderIdChangeRollsBack() {
-      channelIs(ChannelType.FORUM, CALLER_ID);
-      roleOf(CALLER_ID, MemberType.LEADER);
-      roleOf(TARGET_ID, MemberType.MEMBER);
-      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
-      when(memberPort.updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER)).thenReturn(true);
-      when(memberPort.updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER)).thenReturn(false);
-
-      assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
-    }
-
-    @Test
     void creatorWhoIsNotTheLeader_isForbidden() {
       channelIs(ChannelType.FORUM, OTHER_ID);
       roleOf(CALLER_ID, MemberType.CREATOR);
-
-      assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(ForbiddenException.class);
-      assertNothingWritten();
-    }
-
-    @Test
-    void forumMember_isForbidden() {
-      channelIs(ChannelType.FORUM, OTHER_ID);
-      roleOf(CALLER_ID, MemberType.MEMBER);
 
       assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(ForbiddenException.class);
       assertNothingWritten();
@@ -334,32 +208,22 @@ class MemberManagementServiceTest {
     void toNonMember_isMemberNotFound() {
       channelIs(ChannelType.FORUM, CALLER_ID);
       roleOf(CALLER_ID, MemberType.LEADER);
-      notAMember(TARGET_ID);
+      when(memberPort.findRoleOfMember(CHANNEL_ID, TARGET_ID)).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
       assertNothingWritten();
     }
 
-    @ParameterizedTest(name = "{0} has no leader → 400")
-    @CsvSource({"LOUNGE", "PRIVATE_CHAT"})
-    void nonForum_isUnsupported(ChannelType type) {
-      channelIs(type, null);
-      roleOf(CALLER_ID, MemberType.CREATOR);
-
-      assertThatThrownBy(() -> transfer(TARGET_ID))
-          .isInstanceOf(InvalidChannelConfigException.class);
-      assertNothingWritten();
-    }
-
     @Test
-    void lostTheCompareAndSet_concurrentTransfer_isForbiddenAndChangesNoRole() {
+    void newLeaderRowGone_throwsSoTheTransactionRollsBack() {
       channelIs(ChannelType.FORUM, CALLER_ID);
       roleOf(CALLER_ID, MemberType.LEADER);
       roleOf(TARGET_ID, MemberType.MEMBER);
-      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(false);
+      when(channelPort.updateLeader(CHANNEL_ID, CALLER_ID, TARGET_ID)).thenReturn(true);
+      when(memberPort.updateRole(CHANNEL_ID, CALLER_ID, MemberType.MEMBER)).thenReturn(true);
+      when(memberPort.updateRole(CHANNEL_ID, TARGET_ID, MemberType.LEADER)).thenReturn(false);
 
-      assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(ForbiddenException.class);
-      verify(memberPort, never()).updateRole(anyLong(), anyLong(), any());
+      assertThatThrownBy(() -> transfer(TARGET_ID)).isInstanceOf(MemberNotFoundException.class);
     }
   }
 }

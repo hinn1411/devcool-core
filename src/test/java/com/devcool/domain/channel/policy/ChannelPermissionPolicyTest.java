@@ -18,7 +18,6 @@ class ChannelPermissionPolicyTest {
     "FORUM, ADD_MEMBERS, true",
     "PRIVATE_CHAT, UPDATE_CHANNEL, true",
     "PRIVATE_CHAT, ADD_MEMBERS, false",
-    // P3-T11: a DM keeps both people; only a forum has a leader to transfer.
     "LOUNGE, REMOVE_MEMBER, true",
     "LOUNGE, LEAVE_CHANNEL, true",
     "LOUNGE, TRANSFER_LEADER, false",
@@ -56,7 +55,7 @@ class ChannelPermissionPolicyTest {
     "PRIVATE_CHAT, MEMBER, ADD_MEMBERS, false",
     "PRIVATE_CHAT, CREATOR, ADD_MEMBERS, false",
     "PRIVATE_CHAT, LEADER, ADD_MEMBERS, false",
-    // P3-T11 remove: a lounge's creator only; a forum's creator or leader.
+    // P3-T11
     "LOUNGE, MEMBER, REMOVE_MEMBER, false",
     "LOUNGE, CREATOR, REMOVE_MEMBER, true",
     "LOUNGE, LEADER, REMOVE_MEMBER, false",
@@ -64,14 +63,12 @@ class ChannelPermissionPolicyTest {
     "FORUM, CREATOR, REMOVE_MEMBER, true",
     "FORUM, LEADER, REMOVE_MEMBER, true",
     "PRIVATE_CHAT, CREATOR, REMOVE_MEMBER, false",
-    // P3-T11 leave: every role (the service stops a forum leader who hasn't transferred).
     "LOUNGE, MEMBER, LEAVE_CHANNEL, true",
     "LOUNGE, CREATOR, LEAVE_CHANNEL, true",
     "FORUM, MEMBER, LEAVE_CHANNEL, true",
     "FORUM, CREATOR, LEAVE_CHANNEL, true",
     "FORUM, LEADER, LEAVE_CHANNEL, true",
     "PRIVATE_CHAT, MEMBER, LEAVE_CHANNEL, false",
-    // P3-T11 transfer: a forum admin role (the service then checks leader_id).
     "FORUM, MEMBER, TRANSFER_LEADER, false",
     "FORUM, CREATOR, TRANSFER_LEADER, true",
     "FORUM, LEADER, TRANSFER_LEADER, true",

@@ -126,9 +126,7 @@ public class ChannelController {
 
   @Operation(
       summary = "Remove a member",
-      description =
-          "LOUNGE: the creator; FORUM: the creator or leader; PRIVATE_CHAT: 400. The creator, the"
-              + " forum leader and the caller can't be removed (400). Their messages stay.")
+      description = "Lounge creator or Forum admin. Creator, Forum leader and self: 400.")
   @DeleteMapping("/{channelId}/members/{userId}")
   ResponseEntity<Void> removeMember(
       @PathVariable Long channelId, @PathVariable Long userId, Authentication auth) {
@@ -139,8 +137,7 @@ public class ChannelController {
 
   @Operation(
       summary = "Leave a channel",
-      description =
-          "Any member; a FORUM leader must transfer first and a PRIVATE_CHAT can't be left (400).")
+      description = "Forum leader (transfer first) and private chat: 400.")
   @DeleteMapping("/{channelId}/members/me")
   ResponseEntity<Void> leave(@PathVariable Long channelId, Authentication auth) {
     Long callerId = Long.valueOf(auth.getName());
@@ -150,9 +147,7 @@ public class ChannelController {
 
   @Operation(
       summary = "Transfer the forum leader role",
-      description =
-          "Current leader only (403). The target must be a member (403). A LEADER row becomes"
-              + " MEMBER; a CREATOR row stays CREATOR. FORUM only (400).")
+      description = "Current Forum leader only; the target must be a member.")
   @PutMapping("/{channelId}/leader")
   ResponseEntity<Void> transferLeader(
       @Valid @RequestBody TransferLeaderRequest request,

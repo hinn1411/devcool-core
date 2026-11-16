@@ -25,7 +25,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """)
   int increaseTotalMembers(@Param("channelId") Long channelId, @Param("delta") int delta);
 
-  /** Compare-and-set on the leader (P3-T11): 0 rows when the leader already changed. */
+  /** Compare-and-set: 0 rows when the leader already changed. */
   @Modifying
   @Query(
       value =
@@ -116,10 +116,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
 
-  /**
-   * Locks the channel row until commit. {@code NO KEY UPDATE} conflicts with every other channel
-   * UPDATE (count, leader, seq bump) but not with the key-share locks that FK inserts take.
-   */
+  /** NO KEY UPDATE: blocks other channel UPDATEs, not FK inserts. */
   @Query(
       value =
           """

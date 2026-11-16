@@ -17,10 +17,7 @@ public interface ChannelPort {
   /** Type and member count of the channel, or empty when the channel does not exist. */
   Optional<ChannelAccessInfo> findAccessInfo(Long id);
 
-  /**
-   * {@link #findAccessInfo} read under the channel row lock ({@code FOR NO KEY UPDATE}) until
-   * commit. Member changes take it first, so checks on the count or the leader can't go stale.
-   */
+  /** {@link #findAccessInfo}, locking the channel row until commit. */
   Optional<ChannelAccessInfo> findAccessInfoForUpdate(Long id);
 
   Long save(Channel channel);
@@ -29,10 +26,7 @@ public interface ChannelPort {
 
   boolean increaseTotalMembers(Long channelId, Integer newMembers);
 
-  /**
-   * Compare-and-set: {@code leader_id = newLeaderId WHERE leader_id = expectedLeaderId}. Locks the
-   * channel row until commit. False when the current leader is not {@code expectedLeaderId}.
-   */
+  /** Compare-and-set on {@code leader_id}; false when the leader isn't {@code expectedLeaderId}. */
   boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId);
 
   /**

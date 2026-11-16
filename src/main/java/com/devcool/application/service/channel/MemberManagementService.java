@@ -22,12 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Remove a member, leave, transfer the FORUM leader (P3-T11). A FORUM always keeps exactly one
- * leader: the leader can be neither removed nor leave until the role is transferred. Every method
- * locks the channel row first, so the leader and count it checks hold until commit, and locks are
- * always taken channel row → member rows (the same order as a send).
- */
+/** Remove, leave, transfer leader. Locks the channel row first; a FORUM keeps one leader. */
 @Service
 @SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
@@ -98,12 +93,11 @@ public class MemberManagementService
     }
     MemberType newLeaderRole = roleOf(channelId, newLeaderId);
     MemberType callerRole = roleOf(channelId, callerId);
-    // The channel lock makes this CAS a backstop; it still guards a direct SQL change of leader_id
     if (!channelPort.updateLeader(channelId, callerId, newLeaderId)) {
       log.warn("User {} lost a concurrent leader transfer in channel {}", callerId, channelId);
       throw new ForbiddenException("Only the current leader can transfer the role");
     }
-    // A CREATOR row stays CREATOR on either side; only LEADER/MEMBER rows swap
+    // CREATOR rows keep their role
     if (callerRole == MemberType.LEADER) {
       setRole(channelId, callerId, MemberType.MEMBER);
     }
@@ -118,7 +112,6 @@ public class MemberManagementService
         .orElseThrow(() -> new MemberNotFoundException(userId));
   }
 
-  /** No row matched: throwing rolls back the leader_id change made earlier in this transaction. */
   private void setRole(Long channelId, Long userId, MemberType role) {
     if (!memberPort.updateRole(channelId, userId, role)) {
       throw new MemberNotFoundException(userId);
@@ -129,7 +122,6 @@ public class MemberManagementService
     return channel.channelType() == ChannelType.FORUM && Objects.equals(channel.leaderId(), userId);
   }
 
-  /** Delete first: only the transaction that really deleted the row lowers the count. */
   private void deleteMemberRow(Long channelId, Long userId) {
     if (!memberPort.removeMember(channelId, userId)) {
       throw new MemberNotFoundException(userId);

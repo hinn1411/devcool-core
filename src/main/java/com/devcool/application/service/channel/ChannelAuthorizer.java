@@ -70,10 +70,7 @@ public class ChannelAuthorizer {
     return checkAllowed(channelPort.findAccessInfo(channelId), channelId, callerId, action);
   }
 
-  /**
-   * {@link #requireAllowed}, with the channel row locked until commit. For writes whose checks read
-   * the member count or the leader: the lock keeps them true until the write commits.
-   */
+  /** {@link #requireAllowed} with the channel row locked until commit. */
   public ChannelAccessInfo requireAllowedForUpdate(
       Long channelId, Long callerId, ChannelAction action) {
     return checkAllowed(

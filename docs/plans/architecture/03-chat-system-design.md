@@ -225,11 +225,11 @@ Heartbeat: the client sends `PING` every 25 s and the server answers `PONG` and 
 ## 12. Security specifics
 
 - **Authenticated is not authorized.** Every channel read/write path checks membership in the service (lesson from `docs/improvements/lessons.md`). The WebSocket `SUBSCRIBE` and `RESUME` handlers check it too.
-- Roles: channel management follows the role table in `ChannelPermissionPolicy` (P1-T06, P3-T11). Any member can leave a Lounge or Forum, except the Forum leader, who must transfer the role first; a private chat can't be left.
+- Roles: channel management follows the role table in `ChannelPermissionPolicy` (P1-T06, P3-T11). Any member can leave, except the Forum leader (transfer first) and private-chat members.
   - Forum: only `CREATOR`/`LEADER` can update the channel or add members.
   - Lounge: any member can update the channel or add members, up to 11 people.
   - Private chat: either participant can update the channel; nobody can add members.
-  - Remove a member (P3-T11): Lounge creator; Forum creator or leader. The creator and the Forum leader can't be removed. Transfer leader: the current Forum leader only. Member changes lock the channel row first.
+  - Remove (P3-T11): Lounge creator, Forum creator/leader; never the creator or the Forum leader. Only the Forum leader transfers the role.
 - Per-user rate limits: `SEND` 10/s burst 20, `TYPING` 1/2 s, `ASK` 20/hour.
 - Message content is length-limited (4 KB text) and rendered as sanitized markdown on the client, with no raw HTML.
 

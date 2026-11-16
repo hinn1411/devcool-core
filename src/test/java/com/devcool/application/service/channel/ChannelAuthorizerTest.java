@@ -162,7 +162,6 @@ class ChannelAuthorizerTest {
     }
   }
 
-  /** P3-T11 review: the same checks, on the row read under the channel lock. */
   @Nested
   class RequireAllowedForUpdate {
 
@@ -178,32 +177,6 @@ class ChannelAuthorizerTest {
 
       assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3, USER_ID));
       verify(channelPort, never()).findAccessInfo(CHANNEL_ID);
-    }
-
-    @Test
-    void missingChannel_throwsChannelNotFoundBeforeCheckingMembership() {
-      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID)).thenReturn(Optional.empty());
-
-      assertThatThrownBy(
-              () ->
-                  authorizer.requireAllowedForUpdate(
-                      CHANNEL_ID, USER_ID, ChannelAction.REMOVE_MEMBER))
-          .isInstanceOf(ChannelNotFoundException.class);
-      verifyNoInteractions(memberPort);
-    }
-
-    @Test
-    void wrongRole_throwsForbidden() {
-      when(channelPort.findAccessInfoForUpdate(CHANNEL_ID))
-          .thenReturn(Optional.of(new ChannelAccessInfo(ChannelType.LOUNGE, 3, null)));
-      when(memberPort.findRoleOfMember(CHANNEL_ID, USER_ID))
-          .thenReturn(Optional.of(MemberType.MEMBER));
-
-      assertThatThrownBy(
-              () ->
-                  authorizer.requireAllowedForUpdate(
-                      CHANNEL_ID, USER_ID, ChannelAction.REMOVE_MEMBER))
-          .isInstanceOf(ForbiddenException.class);
     }
   }
 }

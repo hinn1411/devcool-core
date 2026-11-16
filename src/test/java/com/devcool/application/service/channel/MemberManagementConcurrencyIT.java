@@ -22,10 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/**
- * P3-T11 review: member changes lock the channel row first, so the checks they make on the member
- * count and the forum leader still hold at commit. Not @Transactional: every call commits.
- */
+/** Member changes lock the channel row first. Not @Transactional: every call commits. */
 class MemberManagementConcurrencyIT extends AbstractIntegrationTest {
 
   private static final int THREADS = 20;
@@ -55,7 +52,6 @@ class MemberManagementConcurrencyIT extends AbstractIntegrationTest {
 
     List<Boolean> succeeded = inParallel(adds);
 
-    // Ten people, room for one more: exactly one add wins, and the count matches the rows
     assertThat(succeeded).filteredOn(Boolean::booleanValue).hasSize(1);
     assertThat(total(lounge)).isEqualTo(LOUNGE_MAX_PEOPLE);
     assertThat(rows(lounge)).isEqualTo(LOUNGE_MAX_PEOPLE);
@@ -63,7 +59,7 @@ class MemberManagementConcurrencyIT extends AbstractIntegrationTest {
 
   @Test
   void transferToAMemberRacingThatMemberLeaving_alwaysLeavesAMemberLeader() throws Exception {
-    // THREADS / 2 forums, each with one race: leader A hands over to B while B leaves
+    // One race per forum: leader A hands over to B while B leaves
     List<long[]> forums = new ArrayList<>();
     List<Callable<Boolean>> ops = new ArrayList<>();
     for (int i = 0; i < THREADS / 2; i++) {
@@ -94,7 +90,6 @@ class MemberManagementConcurrencyIT extends AbstractIntegrationTest {
       long forum = f[0];
       Long leaderId =
           jdbc.queryForObject("select leader_id from channel where id = ?", Long.class, forum);
-      // Whoever won, leader_id names someone who still has a LEADER (or CREATOR) row
       assertThat(roleOf(forum, leaderId))
           .as("forum %d leader %d", forum, leaderId)
           .isIn("LEADER", "CREATOR");
@@ -102,7 +97,7 @@ class MemberManagementConcurrencyIT extends AbstractIntegrationTest {
     }
   }
 
-  /** Releases every op together; a rejected op (domain exception) counts as false. */
+  /** A rejected op counts as false. */
   private List<Boolean> inParallel(List<Callable<Boolean>> ops) throws Exception {
     CountDownLatch start = new CountDownLatch(1);
     try (ExecutorService pool = Executors.newFixedThreadPool(ops.size())) {

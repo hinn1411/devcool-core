@@ -12,10 +12,7 @@ public final class ChannelPermissionPolicy {
 
   private ChannelPermissionPolicy() {}
 
-  /**
-   * Whether the action exists at all for this channel type. A PRIVATE_CHAT keeps both people (no
-   * add, remove or leave); only a FORUM has a leader to transfer.
-   */
+  /** Whether the action exists at all for this channel type. */
   public static boolean supports(ChannelType type, ChannelAction action) {
     return switch (type) {
       case ChannelType.LOUNGE -> action != ChannelAction.TRANSFER_LEADER;
@@ -24,15 +21,12 @@ public final class ChannelPermissionPolicy {
     };
   }
 
-  /**
-   * Whether a member with this role may perform the action in a channel of this type. Role only:
-   * the service adds the state checks (TRANSFER_LEADER: the caller must be {@code leader_id}).
-   */
+  /** Role check only; the service checks {@code leader_id} for TRANSFER_LEADER. */
   public static boolean allows(ChannelType type, MemberType role, ChannelAction action) {
     if (!supports(type, action)) {
       return false;
     }
-    // Exhaustive, no default: a new ChannelAction fails the compile until its rule is decided
+    // No default: a new action must get a rule
     return switch (action) {
       case UPDATE_CHANNEL, ADD_MEMBERS -> type != ChannelType.FORUM || isForumAdmin(role);
       case REMOVE_MEMBER ->
