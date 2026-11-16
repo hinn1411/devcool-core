@@ -65,7 +65,7 @@ class ChannelServiceTest {
 
   private void channelIs(ChannelType type, int totalOfMembers) {
     when(channelPort.findAccessInfo(CHANNEL_ID))
-        .thenReturn(Optional.of(new ChannelAccessInfo(type, totalOfMembers)));
+        .thenReturn(Optional.of(new ChannelAccessInfo(type, totalOfMembers, null)));
   }
 
   private void channelIsMissing() {

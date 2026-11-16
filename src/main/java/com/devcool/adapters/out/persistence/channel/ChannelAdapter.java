@@ -76,7 +76,7 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public Optional<ChannelAccessInfo> findAccessInfo(Long id) {
     return repo.findAccessRowById(id)
-        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers()));
+        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers(), row.leaderId()));
   }
 
   @Override
@@ -101,6 +101,11 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean increaseTotalMembers(Long channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
+  }
+
+  @Override
+  public boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId) {
+    throw new UnsupportedOperationException();
   }
 
   @Override

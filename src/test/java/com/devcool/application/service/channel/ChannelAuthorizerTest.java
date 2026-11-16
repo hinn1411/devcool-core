@@ -100,7 +100,7 @@ class ChannelAuthorizerTest {
 
     private void channelIs(ChannelType type) {
       when(channelPort.findAccessInfo(CHANNEL_ID))
-          .thenReturn(Optional.of(new ChannelAccessInfo(type, 3)));
+          .thenReturn(Optional.of(new ChannelAccessInfo(type, 3, null)));
     }
 
     private void callerIs(MemberType role) {
@@ -115,7 +115,7 @@ class ChannelAuthorizerTest {
       ChannelAccessInfo info =
           authorizer.requireAllowed(CHANNEL_ID, USER_ID, ChannelAction.ADD_MEMBERS);
 
-      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3));
+      assertThat(info).isEqualTo(new ChannelAccessInfo(ChannelType.FORUM, 3, null));
     }
 
     @Test

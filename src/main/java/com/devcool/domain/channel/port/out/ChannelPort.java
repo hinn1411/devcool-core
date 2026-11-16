@@ -24,6 +24,12 @@ public interface ChannelPort {
   boolean increaseTotalMembers(Long channelId, Integer newMembers);
 
   /**
+   * Compare-and-set: {@code leader_id = newLeaderId WHERE leader_id = expectedLeaderId}. Locks the
+   * channel row until commit. False when the current leader is not {@code expectedLeaderId}.
+   */
+  boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId);
+
+  /**
    * Bumps and returns {@code last_seq}; locks the channel row until commit. Empty if no channel.
    */
   Optional<Long> getNextSequence(Long channelId);

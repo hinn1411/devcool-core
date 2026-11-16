@@ -93,7 +93,8 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """
       SELECT new com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow(
       c.channelType,
-      c.totalOfMembers
+      c.totalOfMembers,
+      c.leader.id
       )
       FROM ChannelEntity c
       WHERE c.id = :id
