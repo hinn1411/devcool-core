@@ -2,26 +2,21 @@ package com.devcool.application.service.channel.strategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
-import com.devcool.domain.channel.model.Channel;
+import com.devcool.domain.channel.model.DirectChat;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
+import com.devcool.domain.channel.port.in.command.OpenDirectChatCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
-import com.devcool.domain.member.model.Member;
-import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.user.exception.UserDuplicateException;
-import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,8 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,13 +40,13 @@ class PrivateChatCreationStrategyTest {
 
   @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
-  @Captor ArgumentCaptor<Channel> channelCaptor;
+  @Mock OpenDirectChatUseCase directChats;
 
   PrivateChatCreationStrategy strategy;
 
   @BeforeEach
   void setUp() {
-    strategy = new PrivateChatCreationStrategy(userPort, channelPort);
+    strategy = new PrivateChatCreationStrategy(userPort, channelPort, directChats);
   }
 
   static Stream<Arguments> invalidPrivateChatCommands() {
@@ -98,7 +91,7 @@ class PrivateChatCreationStrategyTest {
     assertThatThrownBy(() -> strategy.createChannel(command))
         .isInstanceOf(InvalidChannelConfigException.class)
         .hasMessageContaining(expectedMessage);
-    verifyNoInteractions(userPort, channelPort);
+    verifyNoInteractions(userPort, channelPort, directChats);
   }
 
   @Test
@@ -109,29 +102,21 @@ class PrivateChatCreationStrategyTest {
 
     assertThatThrownBy(() -> strategy.createChannel(command))
         .isInstanceOf(UserDuplicateException.class);
-    verifyNoInteractions(userPort, channelPort);
+    verifyNoInteractions(userPort, channelPort, directChats);
   }
 
   @Test
-  void createChannel_validCommand_savesChannelWithBothParticipants() {
-    Long savedChannelId = 555L;
-    User other = user(OTHER_ID);
-    User creator = user(CREATOR_ID);
-    when(userPort.findByIds(VALID_MEMBER_IDS)).thenReturn(List.of(other));
-    when(userPort.findById(CREATOR_ID)).thenReturn(Optional.of(creator));
-    when(channelPort.save(any())).thenReturn(savedChannelId);
+  void createChannel_validCommand_findsOrCreatesTheDirectChat() {
+    when(directChats.openDirectChat(new OpenDirectChatCommand(CREATOR_ID, OTHER_ID)))
+        .thenReturn(new DirectChat(555L, false));
     CreateChannelCommand command =
         privateChat(ChannelType.PRIVATE_CHAT, BoundaryType.PRIVATE, null, VALID_MEMBER_IDS, null);
 
     Long actual = strategy.createChannel(command);
-    assertThat(actual).isEqualTo(savedChannelId);
-    verify(channelPort).save(channelCaptor.capture());
-    Channel saved = channelCaptor.getValue();
-    assertThat(saved.getMembers()).hasSize(saved.getTotalOfMembers());
-    assertThat(saved.getMembers())
-        .extracting(m -> m.getUser().getId(), Member::getRole)
-        .containsExactlyInAnyOrder(
-            tuple(CREATOR_ID, MemberType.CREATOR), tuple(OTHER_ID, MemberType.MEMBER));
+
+    assertThat(actual).isEqualTo(555L);
+    // No save of its own: POST /channels can't create a second DM for the pair (P3-T12)
+    verifyNoInteractions(channelPort);
   }
 
   private static CreateChannelCommand privateChat(
@@ -148,9 +133,5 @@ class PrivateChatCreationStrategyTest {
         CREATOR_ID,
         leaderId,
         memberIds);
-  }
-
-  private static User user(long id) {
-    return User.builder().id(id).build();
   }
 }

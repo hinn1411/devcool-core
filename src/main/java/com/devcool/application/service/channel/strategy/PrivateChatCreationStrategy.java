@@ -5,6 +5,7 @@ import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
+import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.member.model.Member;
@@ -21,8 +22,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
     implements ChannelCreationStrategy {
-  public PrivateChatCreationStrategy(UserPort userPort, ChannelPort channelPort) {
+  private final OpenDirectChatUseCase directChats;
+
+  public PrivateChatCreationStrategy(
+      UserPort userPort, ChannelPort channelPort, OpenDirectChatUseCase directChats) {
     super(userPort, channelPort);
+    this.directChats = directChats;
   }
 
   @Override
