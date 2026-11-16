@@ -75,11 +75,11 @@ public class MemberAdapter implements MemberPort {
 
   @Override
   public boolean removeMember(Long channelId, Long userId) {
-    throw new UnsupportedOperationException();
+    return repo.deleteByChannelIdAndUserId(channelId, userId) > 0;
   }
 
   @Override
   public boolean updateRole(Long channelId, Long userId, MemberType role) {
-    throw new UnsupportedOperationException();
+    return repo.updateRole(channelId, userId, role) > 0;
   }
 }

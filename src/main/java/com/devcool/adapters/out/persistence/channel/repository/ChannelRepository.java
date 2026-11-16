@@ -24,6 +24,20 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """)
   int increaseTotalMembers(@Param("channelId") Long channelId, @Param("delta") int delta);
 
+  /** Compare-and-set on the leader (P3-T11): 0 rows when the leader already changed. */
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE channel SET leader_id = :newLeaderId
+          WHERE id = :channelId AND leader_id = :expectedLeaderId
+          """,
+      nativeQuery = true)
+  int updateLeader(
+      @Param("channelId") Long channelId,
+      @Param("expectedLeaderId") Long expectedLeaderId,
+      @Param("newLeaderId") Long newLeaderId);
+
   /** A null argument keeps the stored value. */
   @Modifying
   @Query(

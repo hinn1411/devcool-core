@@ -12,10 +12,14 @@ public final class ChannelPermissionPolicy {
 
   private ChannelPermissionPolicy() {}
 
-  /** Whether the action exists at all for this channel type. */
+  /**
+   * Whether the action exists at all for this channel type. A PRIVATE_CHAT keeps both people (no
+   * add, remove or leave); only a FORUM has a leader to transfer.
+   */
   public static boolean supports(ChannelType type, ChannelAction action) {
     return switch (type) {
-      case ChannelType.LOUNGE, ChannelType.FORUM -> true;
+      case ChannelType.LOUNGE -> action != ChannelAction.TRANSFER_LEADER;
+      case ChannelType.FORUM -> true;
       case ChannelType.PRIVATE_CHAT -> Objects.equals(action, ChannelAction.UPDATE_CHANNEL);
     };
   }
@@ -26,9 +30,14 @@ public final class ChannelPermissionPolicy {
       return false;
     }
     return switch (type) {
-      case ChannelType.LOUNGE, ChannelType.PRIVATE_CHAT -> true;
-      case ChannelType.FORUM ->
-          Objects.equals(role, MemberType.CREATOR) || Objects.equals(role, MemberType.LEADER);
+      case ChannelType.PRIVATE_CHAT -> true;
+      case ChannelType.LOUNGE ->
+          action != ChannelAction.REMOVE_MEMBER || role == MemberType.CREATOR;
+      case ChannelType.FORUM -> action == ChannelAction.LEAVE_CHANNEL || isForumAdmin(role);
     };
+  }
+
+  private static boolean isForumAdmin(MemberType role) {
+    return Objects.equals(role, MemberType.CREATOR) || Objects.equals(role, MemberType.LEADER);
   }
 }

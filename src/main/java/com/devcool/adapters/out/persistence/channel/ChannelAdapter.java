@@ -105,7 +105,7 @@ public class ChannelAdapter implements ChannelPort {
 
   @Override
   public boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId) {
-    throw new UnsupportedOperationException();
+    return repo.updateLeader(channelId, expectedLeaderId, newLeaderId) > 0;
   }
 
   @Override

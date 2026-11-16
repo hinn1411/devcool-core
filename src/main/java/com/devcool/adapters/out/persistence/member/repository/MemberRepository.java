@@ -25,6 +25,26 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
   Optional<MemberType> findRoleByChannelIdAndUserId(
       @Param("channelId") Long channelId, @Param("userId") Long userId);
 
+  /** Hard delete (P3-T11): the unique (user, channel) pair stays free for a later re-add. */
+  @Modifying
+  @Query(
+      """
+      DELETE FROM MemberEntity m
+      WHERE m.channel.id = :channelId AND m.user.id = :userId
+      """)
+  int deleteByChannelIdAndUserId(@Param("channelId") Long channelId, @Param("userId") Long userId);
+
+  @Modifying
+  @Query(
+      """
+      UPDATE MemberEntity m SET m.role = :role
+      WHERE m.channel.id = :channelId AND m.user.id = :userId
+      """)
+  int updateRole(
+      @Param("channelId") Long channelId,
+      @Param("userId") Long userId,
+      @Param("role") MemberType role);
+
   /**
    * Forward-only, clamped read marker (P3-T10). Returns the matched row count: 0 when the user is
    * not a member of the channel. A no-op (older seq) still matches, so it returns 1.
