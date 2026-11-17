@@ -12,9 +12,7 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.OpenDirectChatCommand;
-import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.user.exception.UserDuplicateException;
-import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
@@ -38,15 +36,13 @@ class PrivateChatCreationStrategyTest {
   private static final List<Long> TWO_MEMBER_IDS = List.of(OTHER_ID, THIRD_ID);
   private static final Instant SOME_EXPIRY = Instant.parse("2030-01-01T00:00:00Z");
 
-  @Mock UserPort userPort;
-  @Mock ChannelPort channelPort;
   @Mock OpenDirectChatUseCase directChats;
 
   PrivateChatCreationStrategy strategy;
 
   @BeforeEach
   void setUp() {
-    strategy = new PrivateChatCreationStrategy(userPort, channelPort, directChats);
+    strategy = new PrivateChatCreationStrategy(directChats);
   }
 
   static Stream<Arguments> invalidPrivateChatCommands() {
@@ -91,7 +87,7 @@ class PrivateChatCreationStrategyTest {
     assertThatThrownBy(() -> strategy.createChannel(command))
         .isInstanceOf(InvalidChannelConfigException.class)
         .hasMessageContaining(expectedMessage);
-    verifyNoInteractions(userPort, channelPort, directChats);
+    verifyNoInteractions(directChats);
   }
 
   @Test
@@ -102,7 +98,7 @@ class PrivateChatCreationStrategyTest {
 
     assertThatThrownBy(() -> strategy.createChannel(command))
         .isInstanceOf(UserDuplicateException.class);
-    verifyNoInteractions(userPort, channelPort, directChats);
+    verifyNoInteractions(directChats);
   }
 
   @Test
@@ -115,8 +111,6 @@ class PrivateChatCreationStrategyTest {
     Long actual = strategy.createChannel(command);
 
     assertThat(actual).isEqualTo(555L);
-    // No save of its own: POST /channels can't create a second DM for the pair (P3-T12)
-    verifyNoInteractions(channelPort);
   }
 
   private static CreateChannelCommand privateChat(

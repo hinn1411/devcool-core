@@ -24,6 +24,9 @@ import com.devcool.domain.user.exception.UserNotFoundException;
 import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.model.enums.UserStatus;
 import com.devcool.domain.user.port.out.UserPort;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +49,8 @@ class DirectChatServiceTest {
   private static final long TARGET = 2L;
   private static final long CHANNEL = 55L;
   private static final DirectChatPair PAIR = new DirectChatPair(CALLER, TARGET);
+  private static final Instant NOW = Instant.parse("2026-11-17T09:00:00Z");
+  private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
   @Mock UserPort userPort;
   @Mock ChannelPort channelPort;
@@ -57,7 +62,7 @@ class DirectChatServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new DirectChatService(userPort, channelPort, directChatPort, transactions);
+    service = new DirectChatService(userPort, channelPort, directChatPort, transactions, CLOCK);
   }
 
   @Test
@@ -80,6 +85,7 @@ class DirectChatServiceTest {
         .extracting(m -> m.getUser().getId(), Member::getRole)
         .containsExactlyInAnyOrder(
             tuple(CALLER, MemberType.CREATOR), tuple(TARGET, MemberType.MEMBER));
+    assertThat(saved.getMembers()).extracting(Member::getJoinedTime).containsOnly(NOW);
     assertThat(transactions.rolledBack).isZero();
   }
 

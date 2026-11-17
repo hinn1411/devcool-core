@@ -7,26 +7,19 @@ import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.OpenDirectChatCommand;
-import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.user.exception.UserDuplicateException;
-import com.devcool.domain.user.port.out.UserPort;
-import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+/**
+ * Legacy {@code POST /channels} for PRIVATE_CHAT: validates the generic request shape, then uses
+ * the same find-or-create as {@code POST /channels/direct}, so it can't add a second DM (P3-T12).
+ */
 @Component
-public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
-    implements ChannelCreationStrategy {
+@RequiredArgsConstructor
+public class PrivateChatCreationStrategy implements ChannelCreationStrategy {
   private final OpenDirectChatUseCase directChats;
-
-  public PrivateChatCreationStrategy(
-      UserPort userPort, ChannelPort channelPort, OpenDirectChatUseCase directChats) {
-    super(userPort, channelPort);
-    this.directChats = directChats;
-  }
 
   @Override
   public ChannelType getSupportedType() {
@@ -36,46 +29,30 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
   @Override
   public Long createChannel(CreateChannelCommand command) {
     validate(command);
-    // Same find-or-create as POST /channels/direct, so this path can't add a second DM (P3-T12)
+    Long targetUserId = command.memberIds().get(0);
     return directChats
-        .openDirectChat(new OpenDirectChatCommand(command.creatorId(), command.memberIds().get(0)))
+        .openDirectChat(new OpenDirectChatCommand(command.creatorId(), targetUserId))
         .channelId();
   }
 
-  private void validate(CreateChannelCommand command) {
-    ChannelType channelType = command.channelType();
-    BoundaryType boundaryType = command.boundaryType();
-    int totalOfMembers = command.memberIds().size();
-    Long leaderId = command.leaderId();
-    Instant expiredTime = command.expiredTime();
-
-    if (!Objects.equals(channelType, ChannelType.PRIVATE_CHAT)) {
-      log.info("Channel type must be PRIVATE_CHAT");
+  private static void validate(CreateChannelCommand command) {
+    if (command.channelType() != ChannelType.PRIVATE_CHAT) {
       throw new InvalidChannelConfigException("Channel type must be PRIVATE_CHAT");
     }
-
-    if (Objects.nonNull(leaderId)) {
-      log.info("Private chat does not have leader");
+    if (command.leaderId() != null) {
       throw new InvalidChannelConfigException("Private chat does not have leader");
     }
-
-    if (!Objects.equals(boundaryType, BoundaryType.PRIVATE)) {
-      log.info("Private chat visibility is PRIVATE");
+    if (command.boundaryType() != BoundaryType.PRIVATE) {
       throw new InvalidChannelConfigException("Private chat visibility must be PRIVATE");
     }
-
-    if (totalOfMembers != 1) {
-      log.info("Private chat only has 1 members");
+    if (command.memberIds().size() != 1) {
       throw new InvalidChannelConfigException("Private chat only has 1 member");
     }
-
-    if (Objects.nonNull(expiredTime)) {
-      log.info("Private chat must not have expired time");
+    if (command.expiredTime() != null) {
       throw new InvalidChannelConfigException("Private chat must not have expired time");
     }
-
+    // Kept as USR_405 for existing clients; POST /channels/direct answers 400 CHANNEL_400
     if (command.memberIds().contains(command.creatorId())) {
-      log.info("Private chat participant must not be the creator");
       throw new UserDuplicateException(List.of(command.creatorId()));
     }
   }

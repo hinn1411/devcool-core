@@ -3,12 +3,16 @@ package com.devcool.adapters.out.persistence.channel;
 import com.devcool.adapters.out.persistence.channel.repository.DirectChatRepository;
 import com.devcool.domain.channel.model.DirectChatPair;
 import com.devcool.domain.channel.port.out.DirectChatPort;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Spring injects the repository; a shared stateless bean, not owned state")
 public class DirectChatAdapter implements DirectChatPort {
   private final DirectChatRepository repo;
 

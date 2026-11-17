@@ -13,12 +13,15 @@ create table direct_chat (
 
 -- Backfill: the oldest (lowest id) PRIVATE_CHAT per pair. Later duplicates stay as plain channels;
 -- merging their messages is out of scope. Only chats with exactly two distinct members count.
+-- DISTINCT ON picks the winner explicitly; insert order under ON CONFLICT isn't guaranteed.
 insert into direct_chat (user_low_id, user_high_id, channel_id)
-select min(m.user_id), max(m.user_id), c.id
-from channel c
-join member m on m.channel_id = c.id
-where c.channel_type = 'PRIVATE_CHAT'
-group by c.id
-having count(distinct m.user_id) = 2
-order by c.id
-on conflict (user_low_id, user_high_id) do nothing;
+select distinct on (pair.low, pair.high) pair.low, pair.high, pair.channel_id
+from (
+    select min(m.user_id) as low, max(m.user_id) as high, c.id as channel_id
+    from channel c
+    join member m on m.channel_id = c.id
+    where c.channel_type = 'PRIVATE_CHAT'
+    group by c.id
+    having count(distinct m.user_id) = 2
+) pair
+order by pair.low, pair.high, pair.channel_id;
