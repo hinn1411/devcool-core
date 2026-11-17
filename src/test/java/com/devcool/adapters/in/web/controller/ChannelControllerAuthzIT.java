@@ -536,6 +536,71 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     }
   }
 
+  /** P3-T12. */
+  @Nested
+  class DirectChat {
+
+    @Test
+    void withoutToken() throws Exception {
+      expectUnauthenticated(openDirect(member.id(), null));
+    }
+
+    @Test
+    void firstOpen_creates201_thenTheOtherSideGetsTheSameChat200() throws Exception {
+      MvcResult created =
+          expectResponse(openDirect(member.id(), bearer(creator)), 201, "SVR_201").andReturn();
+      Long channelId = channelIdOf(created);
+
+      MvcResult reopened =
+          expectResponse(openDirect(creator.id(), bearer(member)), 200, "SVR_200").andReturn();
+
+      assertThat(channelIdOf(reopened)).isEqualTo(channelId);
+      assertThat(memberRole(channelId, creator.id())).contains("CREATOR");
+      assertThat(memberRole(channelId, member.id())).contains("MEMBER");
+      assertThat(memberCounts(channelId)).isEqualTo(new MemberCounts(2, 2));
+    }
+
+    @Test
+    void legacyCreate_returnsTheExistingDirectChat() throws Exception {
+      Long channelId =
+          channelIdOf(
+              expectResponse(openDirect(member.id(), bearer(creator)), 201, "SVR_201").andReturn());
+
+      Long viaLegacy = createChannel(member, ChannelType.PRIVATE_CHAT, List.of(creator.id()), null);
+
+      assertThat(viaLegacy).isEqualTo(channelId);
+    }
+
+    @Test
+    void withYourself_is400() throws Exception {
+      expectResponse(openDirect(creator.id(), bearer(creator)), 400, "CHANNEL_400");
+    }
+
+    @Test
+    void unknownUser_is404() throws Exception {
+      expectResponse(openDirect(Long.MAX_VALUE, bearer(creator)), 404, "USR_404");
+    }
+
+    @Test
+    void blockedUser_is404() throws Exception {
+      jdbc.update("update app_user set status = 'BLOCKED' where id = ?", outsider.id());
+
+      expectResponse(openDirect(outsider.id(), bearer(creator)), 404, "USR_404");
+    }
+
+    private ResultActions openDirect(Long userId, String authorization) throws Exception {
+      return mvc.perform(
+          withAuth(post("/api/v1/channels/direct"), authorization)
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(json.writeValueAsString(Map.of("userId", userId))));
+    }
+
+    private Long channelIdOf(MvcResult result) throws Exception {
+      return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.data.channelId"))
+          .longValue();
+    }
+  }
+
   private static void expectUnauthenticated(ResultActions result) throws Exception {
     result
         .andExpect(status().isUnauthorized())
