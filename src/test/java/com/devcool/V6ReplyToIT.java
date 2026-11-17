@@ -3,28 +3,20 @@ package com.devcool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.devcool.support.PostgresTestContainer;
+import com.devcool.support.AbstractMigrationIT;
 import java.util.Map;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /** V6 (P3-T08): seed at V5, then add message.reply_to_id. Expand only. */
-class V6ReplyToIT {
+class V6ReplyToIT extends AbstractMigrationIT {
 
   private static final long ALICE = 1, CHANNEL = 10, OLD_A = 100, OLD_B = 101;
 
-  private String url;
-  private JdbcTemplate jdbc;
-
   @BeforeEach
   void seedAtV5ThenApplyV6() {
-    url = PostgresTestContainer.freshDatabase("v6_it_");
-    var pg = PostgresTestContainer.POSTGRES;
-    jdbc = new JdbcTemplate(new DriverManagerDataSource(url, pg.getUsername(), pg.getPassword()));
+    openFreshDatabase("v6_it_");
 
     migrateTo("5");
     jdbc.batchUpdate(
@@ -115,14 +107,5 @@ class V6ReplyToIT {
 
   private Long replyToOf(long id) {
     return jdbc.queryForObject("select reply_to_id from message where id = ?", Long.class, id);
-  }
-
-  private void migrateTo(String version) {
-    var pg = PostgresTestContainer.POSTGRES;
-    Flyway.configure()
-        .dataSource(url, pg.getUsername(), pg.getPassword())
-        .target(version)
-        .load()
-        .migrate();
   }
 }

@@ -3,33 +3,25 @@ package com.devcool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.devcool.support.PostgresTestContainer;
+import com.devcool.support.AbstractMigrationIT;
 import java.time.OffsetDateTime;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
 import java.util.Map;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /** V5 (P3-T03a): seed at V4 with seq and NULL-seq rows, then migrate. */
-class V5ContractIT {
+class V5ContractIT extends AbstractMigrationIT {
 
   private static final long ALICE = 1;
   private static final long BUSY = 10, QUIET = 20, OLD_ONLY = 30;
   private static final OffsetDateTime QUIET_LAST_AT = OffsetDateTime.parse("2026-11-01T09:00:00Z");
 
-  private String url;
-  private JdbcTemplate jdbc;
-
   @BeforeEach
   void seedAtV4ThenApplyV5() {
-    url = PostgresTestContainer.freshDatabase("v5_it_");
-    var pg = PostgresTestContainer.POSTGRES;
-    jdbc = new JdbcTemplate(new DriverManagerDataSource(url, pg.getUsername(), pg.getPassword()));
+    openFreshDatabase("v5_it_");
 
     migrateTo("4");
     jdbc.batchUpdate(
@@ -89,15 +81,6 @@ class V5ContractIT {
                     QUIET))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("seq");
-  }
-
-  private void migrateTo(String version) {
-    var pg = PostgresTestContainer.POSTGRES;
-    Flyway.configure()
-        .dataSource(url, pg.getUsername(), pg.getPassword())
-        .target(version)
-        .load()
-        .migrate();
   }
 
   private List<Map.Entry<Long, Long>> seqById(long channelId) {

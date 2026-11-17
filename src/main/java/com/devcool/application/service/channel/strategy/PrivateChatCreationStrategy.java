@@ -1,16 +1,14 @@
 package com.devcool.application.service.channel.strategy;
 
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
-import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.policy.ChannelCreationStrategy;
 import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
+import com.devcool.domain.channel.port.in.command.OpenDirectChatCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
-import com.devcool.domain.member.model.Member;
 import com.devcool.domain.user.exception.UserDuplicateException;
-import com.devcool.domain.user.model.User;
 import com.devcool.domain.user.port.out.UserPort;
 import java.time.Instant;
 import java.util.List;
@@ -38,12 +36,10 @@ public class PrivateChatCreationStrategy extends AbstractChannelCreationStrategy
   @Override
   public Long createChannel(CreateChannelCommand command) {
     validate(command);
-
-    List<User> users = loadUsers(command.memberIds());
-    User creator = loadUser(command.creatorId());
-    List<Member> members = toMembers(users, creator);
-    Channel channel = buildChannel(command, creator, null, members);
-    return channelPort.save(channel);
+    // Same find-or-create as POST /channels/direct, so this path can't add a second DM (P3-T12)
+    return directChats
+        .openDirectChat(new OpenDirectChatCommand(command.creatorId(), command.memberIds().get(0)))
+        .channelId();
   }
 
   private void validate(CreateChannelCommand command) {

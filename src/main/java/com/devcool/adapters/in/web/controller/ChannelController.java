@@ -4,6 +4,7 @@ import com.devcool.adapters.in.web.dto.mapper.ChannelDtoMapper;
 import com.devcool.adapters.in.web.dto.request.AddMembersRequest;
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.MarkReadRequest;
+import com.devcool.adapters.in.web.dto.request.OpenDirectChatRequest;
 import com.devcool.adapters.in.web.dto.request.TransferLeaderRequest;
 import com.devcool.adapters.in.web.dto.request.UpdateChannelRequest;
 import com.devcool.adapters.in.web.dto.response.AddMembersResponse;
@@ -13,10 +14,12 @@ import com.devcool.adapters.in.web.dto.response.UpdateChannelResponse;
 import com.devcool.adapters.in.web.dto.wrapper.ApiSuccessResponse;
 import com.devcool.adapters.in.web.util.ApiResponseFactory;
 import com.devcool.domain.channel.model.ChannelListPage;
+import com.devcool.domain.channel.model.DirectChat;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.LeaveChannelUseCase;
 import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
+import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.RemoveMemberUseCase;
 import com.devcool.domain.channel.port.in.TransferLeaderUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
@@ -25,6 +28,7 @@ import com.devcool.domain.channel.port.in.command.CreateChannelCommand;
 import com.devcool.domain.channel.port.in.command.GetChannelCommand;
 import com.devcool.domain.channel.port.in.command.LeaveChannelCommand;
 import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
+import com.devcool.domain.channel.port.in.command.OpenDirectChatCommand;
 import com.devcool.domain.channel.port.in.command.RemoveMemberCommand;
 import com.devcool.domain.channel.port.in.command.TransferLeaderCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
@@ -47,6 +51,7 @@ public class ChannelController {
   private final UpdateChannelUseCase channelUpdater;
   private final GetChannelQuery channelQuerier;
   private final MarkChannelReadUseCase channelReader;
+  private final OpenDirectChatUseCase directChats;
   private final RemoveMemberUseCase memberRemover;
   private final LeaveChannelUseCase channelLeaver;
   private final TransferLeaderUseCase leaderTransferrer;
@@ -65,6 +70,22 @@ public class ChannelController {
                 ErrorCode.CREATED.code(),
                 "Create channel successfully",
                 response));
+  }
+
+  @Operation(
+      summary = "Open a direct chat",
+      description = "Returns the caller's PRIVATE_CHAT with the user (200), or creates it (201).")
+  @PostMapping("/direct")
+  ResponseEntity<ApiSuccessResponse<CreateChannelResponse>> openDirectChat(
+      @Valid @RequestBody OpenDirectChatRequest request, Authentication auth) {
+    Long callerId = Long.valueOf(auth.getName());
+    DirectChat chat =
+        directChats.openDirectChat(new OpenDirectChatCommand(callerId, request.userId()));
+    CreateChannelResponse response = mapper.toCreateChannelResponse(chat.channelId());
+    HttpStatus status = chat.created() ? HttpStatus.CREATED : HttpStatus.OK;
+    ErrorCode code = chat.created() ? ErrorCode.CREATED : ErrorCode.OK;
+    return ResponseEntity.status(status)
+        .body(ApiResponseFactory.success(status, code.code(), "Direct chat ready", response));
   }
 
   @PatchMapping("/{channelId}")

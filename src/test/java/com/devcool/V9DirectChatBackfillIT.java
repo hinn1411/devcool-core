@@ -4,31 +4,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
-import com.devcool.support.PostgresTestContainer;
-import java.util.Map;
-import org.flywaydb.core.Flyway;
+import com.devcool.support.AbstractMigrationIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /**
  * V9 on a database that already holds direct chats (P3-T12): seed at V8 the way the pre-V9 app
  * wrote them (duplicates included), then apply the rest and check the backfill and the pair key.
  */
-class V9DirectChatBackfillIT {
-
-  private String url;
-  private JdbcTemplate jdbc;
+class V9DirectChatBackfillIT extends AbstractMigrationIT {
 
   @BeforeEach
   void seedAtV8ThenMigrate() {
-    url = PostgresTestContainer.freshDatabase("v9_it_");
-    var pg = PostgresTestContainer.POSTGRES;
-    jdbc = new JdbcTemplate(new DriverManagerDataSource(url, pg.getUsername(), pg.getPassword()));
+    openFreshDatabase("v9_it_");
 
-    migrate("8");
+    migrateTo("8");
     jdbc.batchUpdate(
         """
         insert into app_user (id, role, status) values
@@ -50,7 +41,7 @@ class V9DirectChatBackfillIT {
           (7, 1, 13, 'CREATOR', now()), (8, 2, 13, 'MEMBER', now()),
           (9, 1, 14, 'CREATOR', now())
         """);
-    migrate(null);
+    migrateTo(null);
   }
 
   @Test
@@ -87,19 +78,5 @@ class V9DirectChatBackfillIT {
         low,
         high,
         channelId);
-  }
-
-  /** {@code null} migrates to the latest version. */
-  private void migrate(String target) {
-    var pg = PostgresTestContainer.POSTGRES;
-    // As application.properties: V8's CREATE INDEX CONCURRENTLY waits forever on a lock tx
-    var config =
-        Flyway.configure()
-            .dataSource(url, pg.getUsername(), pg.getPassword())
-            .configuration(Map.of("flyway.postgresql.transactional.lock", "false"));
-    if (target != null) {
-      config.target(target);
-    }
-    config.load().migrate();
   }
 }

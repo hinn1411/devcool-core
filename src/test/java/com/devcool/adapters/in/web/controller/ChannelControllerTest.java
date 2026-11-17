@@ -19,6 +19,7 @@ import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
 import com.devcool.domain.channel.port.in.LeaveChannelUseCase;
 import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
+import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
 import com.devcool.domain.channel.port.in.RemoveMemberUseCase;
 import com.devcool.domain.channel.port.in.TransferLeaderUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
@@ -65,6 +66,7 @@ class ChannelControllerTest {
   @MockitoBean private RemoveMemberUseCase memberRemover;
   @MockitoBean private LeaveChannelUseCase channelLeaver;
   @MockitoBean private TransferLeaderUseCase leaderTransferrer;
+  @MockitoBean private OpenDirectChatUseCase directChats;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
