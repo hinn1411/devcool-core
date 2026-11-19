@@ -13,10 +13,7 @@ import java.time.Instant;
  */
 public abstract class AbstractMediaMessageCreationStrategy extends AbstractMessageCreationStrategy {
 
-  /**
-   * The key must be one the server generated for this very channel (P3-T14): the client got it from
-   * presign-upload, so anything else is a bug or a probe. Runs before authz and the seq bump.
-   */
+  /** The key must be one generated for this channel; runs before authz and the seq bump. */
   @Override
   public void validate(CreateMessageCommand command) {
     MediaKey.channelIdOf(command.content())

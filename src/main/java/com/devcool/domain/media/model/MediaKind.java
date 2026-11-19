@@ -14,7 +14,7 @@ public enum MediaKind {
 
   private static final long MB = 1024L * 1024L;
 
-  /** Accepted content type → the key extension a presigned upload gets. */
+  /** Content type → key extension. */
   private final Map<String, String> extensions;
 
   private final long maxBytes;
@@ -37,7 +37,7 @@ public enum MediaKind {
     return size > 0 && size <= maxBytes;
   }
 
-  /** The key extension (with dot) for one of this kind's content types. */
+  /** Key extension, with the dot. */
   public String extensionFor(String contentType) {
     return extensions.get(contentType);
   }

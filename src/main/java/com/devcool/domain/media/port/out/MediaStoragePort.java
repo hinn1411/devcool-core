@@ -10,7 +10,7 @@ public interface MediaStoragePort {
 
   PresignedGetResult presignGet(PresignGetRequest request);
 
-  /** The URL only accepts a PUT with exactly this content type and length. */
+  /** Only a PUT with exactly this type and length (and no existing object) succeeds. */
   PresignedPutResult presignPut(PresignPutRequest request);
 
   record UploadRequest(

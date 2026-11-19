@@ -3,10 +3,10 @@ package com.devcool.domain.media.port.in;
 import com.devcool.domain.media.port.in.command.PresignUploadCommand;
 import java.time.Instant;
 
-/** Signs a short-lived S3 PUT so the browser uploads directly; the API never sees the bytes. */
+/** Signs an S3 PUT so the browser uploads directly. */
 public interface PresignUploadUseCase {
   PresignedUpload presignUpload(PresignUploadCommand command);
 
-  /** {@code key} is what the client SENDs afterwards as the media message content. */
+  /** {@code key} is the IMAGE/VIDEO message content to SEND. */
   record PresignedUpload(String url, String key, Instant expiresAt) {}
 }

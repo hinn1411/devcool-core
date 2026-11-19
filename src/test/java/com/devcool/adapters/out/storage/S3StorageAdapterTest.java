@@ -108,7 +108,7 @@ class S3StorageAdapterTest {
 
   /** A real presigner: signing is local, so static fake credentials need no network. */
   @Test
-  void presignPut_signsContentTypeAndContentLength() {
+  void presignPut_signsContentTypeLengthAndWriteOnce() {
     try (S3Presigner real =
         S3Presigner.builder()
             .region(Region.US_EAST_1)
@@ -129,7 +129,9 @@ class S3StorageAdapterTest {
           .contains(OBJECT_KEY)
           .contains("X-Amz-Expires=300")
           .containsPattern("X-Amz-SignedHeaders=[^&]*content-length")
-          .containsPattern("X-Amz-SignedHeaders=[^&]*content-type");
+          .containsPattern("X-Amz-SignedHeaders=[^&]*content-type")
+          // If-None-Match: * → a second PUT to the same key gets 412, no silent swap after SEND
+          .containsPattern("X-Amz-SignedHeaders=[^&]*if-none-match");
       assertThat(result.expiresAt())
           .isBetween(Instant.now().plusSeconds(290), Instant.now().plusSeconds(301));
     }
@@ -150,6 +152,7 @@ class S3StorageAdapterTest {
   private void stubPresigner(String url) throws MalformedURLException {
     PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
     when(presigned.url()).thenReturn(new URL(url));
+    when(presigned.expiration()).thenReturn(Instant.now().plus(Duration.ofMinutes(10)));
     when(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
   }
 }

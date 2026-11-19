@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/** The file about to be uploaded. The PUT must then send exactly this Content-Type and size. */
+/** The PUT must send exactly this Content-Type and size. */
 public record PresignUploadRequest(
     @Schema(description = "Channel the media is for; the caller must be a member") @NotNull
         Long channelId,

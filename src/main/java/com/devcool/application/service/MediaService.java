@@ -30,14 +30,14 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
 
   private static final Duration DEFAULT_PRESIGN_TTL = Duration.ofMinutes(10);
 
-  /** A write capability: shorter than reads, still enough for 10 MB on a slow link. */
+  /** Shorter than reads: a write capability. */
   private static final Duration UPLOAD_PRESIGN_TTL = Duration.ofMinutes(5);
 
   private final MediaStoragePort storagePort;
   private final ChannelAuthorizer channelAuthorizer;
   private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
-  /** Deprecated path: the bytes stream through the API. Replaced by {@link #presignUpload}. */
+  /** Deprecated: bytes go through the API. Use {@link #presignUpload}. */
   @Override
   public String upload(UploadMediaCommand command) {
     channelAuthorizer.requireMembership(command.channelId(), command.userId());
@@ -56,7 +56,7 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
     }
   }
 
-  /** membership → type/size → sign. The declared type and size are bound into the signature. */
+  /** membership → type/size → sign (type and size are signed). */
   @Override
   public PresignedUpload presignUpload(PresignUploadCommand command) {
     channelAuthorizer.requireMembership(command.channelId(), command.userId());
@@ -82,7 +82,7 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
     return new PresignedUrlResult(presignedResult.url(), presignedResult.expiresAt());
   }
 
-  /** Non-empty, an accepted content type, and within that kind's size limit. */
+  /** Non-empty, accepted type, within the kind's limit. */
   private static MediaKind requireAllowed(String contentType, long size) {
     if (size <= 0) {
       log.warn("Media content is empty!");
@@ -118,7 +118,7 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
 
     String ext = filename.substring(filename.lastIndexOf(".")).toLowerCase(Locale.ROOT);
 
-    if (!ext.matches("\\.(" + MediaKey.ALLOWED_EXTENSIONS + ")$")) {
+    if (!MediaKey.isAllowedExtension(ext)) {
       throw new UnsupportedMediaTypeException(ext);
     }
 

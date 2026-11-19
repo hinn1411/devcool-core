@@ -9,16 +9,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The S3 object key of an uploaded media file: {@code
- * channel/{channelId}/{yyyy/MM/dd}/{uuid}{ext}}. The channel id in the key is what authorises
- * access to the object, so a key that does not match in full is rejected rather than parsed
- * loosely.
+ * S3 key {@code channel/{channelId}/{yyyy/MM/dd}/{uuid}{ext}}. The channel id authorises access, so
+ * only an exact match parses.
  */
 public final class MediaKey {
 
-  /** Lowercase, without the dot. */
-  public static final String ALLOWED_EXTENSIONS = "jpg|jpeg|png|webp|mp4";
-
+  private static final String EXTENSIONS = "jpg|jpeg|png|webp|mp4";
+  private static final Pattern EXTENSION = Pattern.compile("\\.(?:" + EXTENSIONS + ")");
   private static final DateTimeFormatter DATE_PATH = DateTimeFormatter.ofPattern("yyyy/MM/dd");
   private static final Pattern PATTERN =
       Pattern.compile(
@@ -26,20 +23,23 @@ public final class MediaKey {
               + "/\\d{4}/\\d{2}/\\d{2}"
               + "/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
               + "(?:\\.(?:"
-              + ALLOWED_EXTENSIONS
+              + EXTENSIONS
               + "))?");
 
   private MediaKey() {}
 
-  /**
-   * A fresh key; {@code extension} is {@code ""} or one of {@link #ALLOWED_EXTENSIONS} with a dot.
-   */
+  /** {@code extension} is {@code ""} or an allowed one, with the dot. */
   public static String generate(long channelId, LocalDate date, String extension) {
     return "channel/%d/%s/%s%s"
         .formatted(channelId, date.format(DATE_PATH), UUID.randomUUID(), extension);
   }
 
-  /** The channel the key belongs to, or empty if the key isn't exactly the generated shape. */
+  /** {@code extension} lowercase, with the dot, e.g. {@code ".png"}. */
+  public static boolean isAllowedExtension(String extension) {
+    return EXTENSION.matcher(extension).matches();
+  }
+
+  /** Empty unless the key is exactly the generated shape. */
   public static Optional<Long> channelIdOf(String key) {
     if (Objects.isNull(key)) {
       return Optional.empty();

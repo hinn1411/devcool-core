@@ -17,10 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Presigned upload over HTTP with real tokens (P3-T14). The happy path signs with AWS credentials
- * CI doesn't have, so it lives in MediaControllerTest; here: authz and the OpenAPI contract.
- */
+/** Presign authz and the OpenAPI contract; the signing happy path is in MediaControllerTest. */
 class MediaControllerIT extends AbstractIntegrationTest {
 
   @Autowired MockMvc mvc;

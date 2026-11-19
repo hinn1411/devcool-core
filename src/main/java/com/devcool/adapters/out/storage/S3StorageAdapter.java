@@ -2,7 +2,6 @@ package com.devcool.adapters.out.storage;
 
 import com.devcool.adapters.out.storage.config.AwsProps;
 import com.devcool.domain.media.port.out.MediaStoragePort;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -51,15 +50,10 @@ public class S3StorageAdapter implements MediaStoragePort {
             .build();
 
     PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignRequest);
-
-    Instant expiresAt = Instant.now().plus(request.expiresIn());
-    return new PresignedGetResult(presigned.url().toString(), expiresAt);
+    return new PresignedGetResult(presigned.url().toString(), presigned.expiration());
   }
 
-  /**
-   * Content type and length set on the request become signed headers: S3 answers 403 to a PUT that
-   * sends any other value, so the client can't upload more (or another type) than it declared.
-   */
+  /** Signed headers: S3 rejects another type or size (403) and a second write (412). */
   @Override
   public PresignedPutResult presignPut(PresignPutRequest request) {
     PutObjectRequest putRequest =
@@ -68,6 +62,7 @@ public class S3StorageAdapter implements MediaStoragePort {
             .key(request.objectKey())
             .contentType(request.contentType())
             .contentLength(request.contentLength())
+            .ifNoneMatch("*")
             .build();
 
     PresignedPutObjectRequest presigned =

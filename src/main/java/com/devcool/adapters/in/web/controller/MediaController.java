@@ -29,7 +29,7 @@ public class MediaController {
   private final PresignUploadUseCase presignUploadUseCase;
   private final MediaDtoMapper mapper;
 
-  /** Streams the bytes through the API; kept until the frontend switches to presign-upload. */
+  /** Deprecated: bytes go through the API. Use presign-upload. */
   @Operation(
       summary = "Upload media through the API",
       description = "Deprecated: use POST /api/v1/medias/presign-upload and PUT to S3.",
@@ -53,9 +53,7 @@ public class MediaController {
 
   @Operation(
       summary = "Get a presigned S3 PUT URL",
-      description =
-          "Then PUT the file to the URL with exactly the declared Content-Type and size,"
-              + " and send the key as an IMAGE/VIDEO message. The URL expires in 5 minutes.")
+      description = "PUT the file with the declared Content-Type and size, then SEND the key.")
   @PostMapping("/presign-upload")
   public ResponseEntity<ApiSuccessResponse<PresignUploadResponse>> presignUpload(
       @Valid @RequestBody PresignUploadRequest request, Authentication auth) {
