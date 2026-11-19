@@ -16,10 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/**
- * Seeding and request helpers shared by the search ITs (P3-T13). No config annotations, so the
- * cached context is shared with every other IT.
- */
+/** Search IT helpers. No config annotations: shares the cached context. */
 abstract class AbstractMessageSearchIT extends AbstractIntegrationTest {
 
   @Autowired MockMvc mvc;
@@ -27,7 +24,7 @@ abstract class AbstractMessageSearchIT extends AbstractIntegrationTest {
   @Autowired TokenIssuerPort tokenIssuer;
   @Autowired UserPort userPort;
 
-  /** Letters only (one {@code simple} lexeme) and unique, so other ITs' rows never match. */
+  /** Letters only (one lexeme), unique across ITs. */
   static String uniqueWord() {
     StringBuilder word = new StringBuilder("zq");
     ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -62,8 +59,6 @@ abstract class AbstractMessageSearchIT extends AbstractIntegrationTest {
   private String bearer(long user) {
     return "Bearer " + tokenIssuer.issue(userPort.findById(user).orElseThrow()).accessToken();
   }
-
-  // ---- seeding ---------------------------------------------------------------------------------
 
   long user() {
     String name = "s" + UUID.randomUUID().toString().substring(0, 8);
@@ -107,7 +102,7 @@ abstract class AbstractMessageSearchIT extends AbstractIntegrationTest {
     return insert(channelId, sender, content, "MARKDOWN");
   }
 
-  /** A media message whose content (e.g. a caption or file name) carries the word anyway. */
+  /** Media row whose content still carries the word. */
   long postMedia(long channelId, long sender, String content) {
     return insert(channelId, sender, content, "IMAGE");
   }

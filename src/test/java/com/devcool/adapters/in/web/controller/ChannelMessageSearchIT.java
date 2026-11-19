@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** {@code GET /channels/{id}/messages/search} over HTTP with a real tsvector + GIN (P3-T13). */
+/** {@code GET /channels/{id}/messages/search} (P3-T13). */
 class ChannelMessageSearchIT extends AbstractMessageSearchIT {
 
   private long alice;
@@ -27,7 +28,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
     word = uniqueWord();
   }
 
-  /** Done when 1: whole words, any case, this channel only, newest first, with seq. */
+  /** Done when 1. */
   @Test
   void matchesWholeWords_caseInsensitive_newestFirst_withSeq() throws Exception {
     long first = post(channel, alice, "Fix the " + word + " today");
@@ -46,7 +47,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
     result.andExpect(jsonPath("$.data.hasMore").value(false));
   }
 
-  /** Done when 1 + decision "simple": no stemming, so "deploy" doesn't find "deployed". */
+  /** Done when 1: no stemming. */
   @Test
   void simpleConfig_doesNotStem() throws Exception {
     long deployed = post(channel, alice, "deployed " + word);
@@ -56,7 +57,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
         .containsExactly(deployed);
   }
 
-  /** Done when 2 + negative authz: same answers as history. */
+  /** Done when 2. */
   @Test
   void nonMember_is403() throws Exception {
     post(channel, alice, word);
@@ -86,7 +87,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
     perform(alice, channelSearch(channel, "a".repeat(201))).andExpect(status().isBadRequest());
   }
 
-  /** Done when 4: a tombstone keeps its content in the row, media isn't text. */
+  /** Done when 4. */
   @Test
   void deletedAndMediaMessages_neverMatch() throws Exception {
     softDelete(post(channel, alice, "secret " + word));
@@ -97,7 +98,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
     assertThat(ids(result)).isEmpty();
   }
 
-  /** Done when 5: websearch_to_tsquery never raises a syntax error. */
+  /** Done when 5. */
   @ParameterizedTest
   @ValueSource(strings = {"\"((", "-", "&!", "a & | b", ":*", "'", "!!!", "<->", "or"})
   void junkQuery_is200_neverServerError(String q) throws Exception {
@@ -106,7 +107,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
     perform(alice, channelSearch(channel, q)).andExpect(status().isOk());
   }
 
-  /** Done when 5: the operators that do work. */
+  /** Done when 5: operators. */
   @Test
   void websearchOperators_phraseOrAndExclude() throws Exception {
     String other = uniqueWord();
@@ -122,7 +123,7 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
         .isEmpty();
   }
 
-  /** Done when 7: keyset by seq walks every hit once. */
+  /** Done when 7. */
   @Test
   void paging_beforeSeq_walksEveryHitOnce() throws Exception {
     long m1 = post(channel, alice, word + " 1");
@@ -141,6 +142,27 @@ class ChannelMessageSearchIT extends AbstractMessageSearchIT {
                 channelSearch(channel, word)
                     .param("limit", "2")
                     .param("beforeSeq", String.valueOf(seqOf(m2))))
+            .andExpect(jsonPath("$.data.hasMore").value(false));
+    assertThat(ids(page2)).containsExactly(m1);
+  }
+
+  /** Review #4. */
+  @Test
+  void paging_byEchoingCursorId_walksEveryHitOnce() throws Exception {
+    long m1 = post(channel, alice, word + " 1");
+    post(channel(alice), alice, "bumps the global id between hits");
+    long m2 = post(channel, alice, word + " 2");
+    long m3 = post(channel, alice, word + " 3");
+
+    ResultActions page1 = perform(alice, channelSearch(channel, word).param("limit", "2"));
+    assertThat(ids(page1)).containsExactly(m3, m2);
+    page1.andExpect(jsonPath("$.data.cursorId").value(seqOf(m2)));
+
+    String cursor =
+        JsonPath.read(page1.andReturn().getResponse().getContentAsString(), "$.data.cursorId")
+            .toString();
+    ResultActions page2 =
+        perform(alice, channelSearch(channel, word).param("limit", "2").param("beforeSeq", cursor))
             .andExpect(jsonPath("$.data.hasMore").value(false));
     assertThat(ids(page2)).containsExactly(m1);
   }

@@ -13,15 +13,12 @@ import com.devcool.domain.chat.port.out.ReactionPort;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Keyword search (P3-T13). Order: the query text is valid → the caller may read → search. The
- * global search has no per-channel check: the SQL itself keeps only the caller's channels, so
- * {@code LIMIT} and {@code hasMore} stay right.
- */
+/** Validate → authorize → search. Global search filters membership in SQL. */
 @Service
 @RequiredArgsConstructor
 @SuppressFBWarnings(
@@ -42,7 +39,7 @@ public class SearchMessagesService implements SearchMessagesQuery {
     List<MessageItem> fetched =
         messagePort.searchInChannel(
             command.query(), command.channelId(), command.beforeSeq(), command.limit() + 1);
-    return page(fetched, command.limit(), command.userId());
+    return page(fetched, command.limit(), command.userId(), MessageItem::getSeq);
   }
 
   @Override
@@ -52,10 +49,9 @@ public class SearchMessagesService implements SearchMessagesQuery {
     List<MessageItem> fetched =
         messagePort.searchInMyChannels(
             command.query(), command.userId(), command.beforeId(), command.limit() + 1);
-    return page(fetched, command.limit(), command.userId());
+    return page(fetched, command.limit(), command.userId(), MessageItem::getId);
   }
 
-  /** Blank text would match nothing useful; over the cap is a cheap abuse guard. */
   private static void requireValid(String query) {
     if (query == null || query.isBlank()) {
       throw new InvalidSearchQueryException("Search text must not be blank");
@@ -66,15 +62,16 @@ public class SearchMessagesService implements SearchMessagesQuery {
     }
   }
 
-  /** One extra row was fetched to tell whether another page exists. */
-  private MessageList page(List<MessageItem> fetched, int limit, Long viewerId) {
+  /** limit+1 rows → hasMore; cursor = the value the next request sends back. */
+  private MessageList page(
+      List<MessageItem> fetched, int limit, Long viewerId, Function<MessageItem, Long> cursorOf) {
     boolean hasMore = fetched.size() > limit;
     List<MessageItem> items = hasMore ? fetched.subList(0, limit) : fetched;
     attachReactions(items, viewerId);
-    return new MessageList(items, hasMore ? items.getLast().getId() : null, hasMore);
+    return new MessageList(items, hasMore ? cursorOf.apply(items.getLast()) : null, hasMore);
   }
 
-  /** One grouped query per page; hits are never tombstones (the SQL drops them). */
+  /** One grouped query per page. */
   private void attachReactions(List<MessageItem> items, Long viewerId) {
     Map<Long, List<ReactionSummary>> byMessage =
         reactionPort.summarize(items.stream().map(MessageItem::getId).toList(), viewerId);

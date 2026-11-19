@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** {@code GET /messages/search}: every channel the caller is a member of now (P3-T13). */
+/** {@code GET /messages/search} (P3-T13). */
 class GlobalMessageSearchIT extends AbstractMessageSearchIT {
 
   private long alice;
@@ -24,7 +24,7 @@ class GlobalMessageSearchIT extends AbstractMessageSearchIT {
     word = uniqueWord();
   }
 
-  /** Done when 6 + negative authz: never a channel the caller isn't (or no longer is) in. */
+  /** Done when 6. */
   @Test
   void onlyCurrentMemberships_leftAndForeignChannelsExcluded() throws Exception {
     long mine = channel(alice);
@@ -87,7 +87,7 @@ class GlobalMessageSearchIT extends AbstractMessageSearchIT {
     perform(alice, globalSearch(q)).andExpect(status().isOk());
   }
 
-  /** Done when 7: keyset by id across channels (seq is per channel, so it can't order these). */
+  /** Done when 7. */
   @Test
   void paging_beforeId_walksEveryHitOnce() throws Exception {
     long a = channel(alice);
@@ -105,6 +105,18 @@ class GlobalMessageSearchIT extends AbstractMessageSearchIT {
         perform(alice, globalSearch(word).param("limit", "2").param("beforeId", String.valueOf(m2)))
             .andExpect(jsonPath("$.data.hasMore").value(false));
     assertThat(ids(page2)).containsExactly(m1);
+  }
+
+  /** Review #4. */
+  @Test
+  void cursorId_isTheLastId_forBeforeId() throws Exception {
+    long a = channel(alice);
+    post(a, alice, word);
+    long m2 = post(a, alice, word);
+    post(a, alice, word);
+
+    perform(alice, globalSearch(word).param("limit", "2"))
+        .andExpect(jsonPath("$.data.cursorId").value(m2));
   }
 
   @ParameterizedTest

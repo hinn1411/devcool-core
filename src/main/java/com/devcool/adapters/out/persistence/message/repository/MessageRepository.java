@@ -68,10 +68,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   List<MessageEntity> findPageAfterSeq(
       @Param("channelId") Long channelId, @Param("afterSeq") Long afterSeq, Pageable pageable);
 
-  /**
-   * Ids of live TEXT/MARKDOWN messages of one channel whose words match {@code q}, seq DESC.
-   * Native: JPQL has no {@code @@}. {@code websearch_to_tsquery} never raises on user input.
-   */
+  /** Native: JPQL has no {@code @@}. */
   @Query(
       value =
           """
@@ -92,7 +89,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       @Param("beforeSeq") Long beforeSeq,
       @Param("size") int size);
 
-  /** Like {@link #searchIdsInChannel} over the channels {@code userId} is a member of, id DESC. */
+  /** Same, across the caller's channels, id DESC. */
   @Query(
       value =
           """
@@ -117,7 +114,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       @Param("beforeId") Long beforeId,
       @Param("size") int size);
 
-  /** The rows behind a page of search hits, parents join-fetched (no N+1); order not kept. */
+  /** Hits with parents fetch-joined (no N+1); unordered. */
   @Query(
       """
       SELECT ms

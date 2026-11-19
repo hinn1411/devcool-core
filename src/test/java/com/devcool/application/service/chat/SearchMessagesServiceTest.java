@@ -37,7 +37,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** Keyword search: validation, authorization order and paging (P3-T13). */
+/** P3-T13. */
 @ExtendWith(MockitoExtension.class)
 class SearchMessagesServiceTest {
 
@@ -58,12 +58,12 @@ class SearchMessagesServiceTest {
             messagePort, reactionPort, new ChannelAuthorizer(channelPort, memberPort));
   }
 
-  /** Blank, whitespace-only, or over 200 characters (Done when 3). */
+  /** Done when 3. */
   static Stream<String> invalidQueries() {
     return Stream.of(null, "", "   ", "\t\n", "a".repeat(201));
   }
 
-  /** {@code GET /channels/{id}/messages/search} (Done when 1, 2, 3, 7). */
+  /** Done when 1, 2, 3, 7. */
   @Nested
   class ChannelSearch {
 
@@ -92,6 +92,22 @@ class SearchMessagesServiceTest {
       assertThat(page.items()).extracting(MessageItem::getId).containsExactly(8L, 5L);
       assertThat(page.hasMore()).isTrue();
       assertThat(page.cursorId()).isEqualTo(5L);
+    }
+
+    /** Review #4. */
+    @Test
+    void cursor_isTheLastSeq_notTheId() {
+      aliceCanRead();
+      List<MessageItem> hits =
+          List.of(
+              MessageItem.builder().id(1301L).seq(5L).build(),
+              MessageItem.builder().id(1240L).seq(4L).build(),
+              MessageItem.builder().id(1102L).seq(2L).build());
+      when(messagePort.searchInChannel(Q, CHANNEL, null, 3)).thenReturn(hits);
+
+      MessageList page = service.searchInChannel(channel(Q, null, 2));
+
+      assertThat(page.cursorId()).isEqualTo(4L);
     }
 
     @Test
@@ -156,7 +172,7 @@ class SearchMessagesServiceTest {
     }
   }
 
-  /** {@code GET /messages/search}: membership is filtered in the SQL (Done when 3, 6, 7). */
+  /** Done when 3, 6, 7. */
   @Nested
   class GlobalSearch {
 
@@ -208,8 +224,6 @@ class SearchMessagesServiceTest {
     }
   }
 
-  // ---- shared ----------------------------------------------------------------------------------
-
   /** Page of ids 7, 4 (the extra row 1 dropped); only 7 has a reaction. */
   private void assertReactionsAttachedForPageOnly(MessageList page, ReactionSummary expected) {
     ArgumentCaptor<List<Long>> asked = ArgumentCaptor.captor();
@@ -219,7 +233,6 @@ class SearchMessagesServiceTest {
     assertThat(page.items().getLast().getReactions()).isEmpty();
   }
 
-  /** Search hits are never tombstones (the SQL filters them), so only ids matter here. */
   private static List<MessageItem> ids(long... ids) {
     return Arrays.stream(ids).mapToObj(id -> MessageItem.builder().id(id).seq(id).build()).toList();
   }

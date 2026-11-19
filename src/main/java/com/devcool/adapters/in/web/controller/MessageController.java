@@ -86,8 +86,8 @@ public class MessageController {
   @Operation(
       summary = "Search one channel",
       description =
-          "Members only. Whole words, case-insensitive; \"phrase\", or, -word work. Live"
-              + " TEXT/MARKDOWN messages, newest first. Next page: the last item's seq.")
+          "Members only. Whole-word match on TEXT/MARKDOWN, newest first."
+              + " Next page: cursorId → beforeSeq.")
   @GetMapping("/channels/{channelId}/messages/search")
   public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> searchChannel(
       @PathVariable Long channelId,
@@ -106,9 +106,7 @@ public class MessageController {
 
   @Operation(
       summary = "Search my channels",
-      description =
-          "Like the channel search, across every channel the caller is a member of now."
-              + " Next page: the last item's id.")
+      description = "Across the caller's channels. Next page: cursorId → beforeId.")
   @GetMapping("/messages/search")
   public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> searchMyChannels(
       @RequestParam String q,

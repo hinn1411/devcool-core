@@ -90,7 +90,7 @@ public class MessageAdapter implements MessagePort {
     return itemsInOrder(repo.searchIdsInMemberChannels(query, userId, beforeId, size));
   }
 
-  /** Second query loads the hits with their parents; the id list keeps the search order. */
+  /** Load hits, keep search order. */
   private List<MessageItem> itemsInOrder(List<Long> ids) {
     if (ids.isEmpty()) {
       return List.of();
