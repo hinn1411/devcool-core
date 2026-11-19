@@ -10,6 +10,9 @@ public interface MediaStoragePort {
 
   PresignedGetResult presignGet(PresignGetRequest request);
 
+  /** The URL only accepts a PUT with exactly this content type and length. */
+  PresignedPutResult presignPut(PresignPutRequest request);
+
   record UploadRequest(
       String objectKey, InputStream inputStream, long contentLength, String contentType) {}
 
@@ -18,4 +21,9 @@ public interface MediaStoragePort {
   record PresignGetRequest(String objectKey, Duration expiresIn) {}
 
   record PresignedGetResult(String url, Instant expiresAt) {}
+
+  record PresignPutRequest(
+      String objectKey, String contentType, long contentLength, Duration expiresIn) {}
+
+  record PresignedPutResult(String url, Instant expiresAt) {}
 }

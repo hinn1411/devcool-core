@@ -7,7 +7,9 @@ import com.devcool.domain.media.exception.MediaTooLargeException;
 import com.devcool.domain.media.exception.UnsupportedMediaTypeException;
 import com.devcool.domain.media.model.MediaKind;
 import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
+import com.devcool.domain.media.port.in.PresignUploadUseCase;
 import com.devcool.domain.media.port.in.UploadMediaUseCase;
+import com.devcool.domain.media.port.in.command.PresignUploadCommand;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import com.devcool.domain.media.port.out.MediaStoragePort;
 import java.io.IOException;
@@ -27,7 +29,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
+public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, PresignUploadUseCase {
 
   private static final Duration DEFAULT_PRESIGN_TTL = Duration.ofMinutes(10);
   private static final String ALLOWED_EXTENSIONS = "jpg|jpeg|png|webp|mp4";
@@ -82,6 +84,11 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase {
     } catch (IOException e) {
       throw new RuntimeException("Failed to read upload stream", e);
     }
+  }
+
+  @Override
+  public PresignedUpload presignUpload(PresignUploadCommand command) {
+    throw new UnsupportedOperationException();
   }
 
   @Override

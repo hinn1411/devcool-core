@@ -53,4 +53,9 @@ public class S3StorageAdapter implements MediaStoragePort {
     Instant expiresAt = Instant.now().plus(request.expiresIn());
     return new PresignedGetResult(presigned.url().toString(), expiresAt);
   }
+
+  @Override
+  public PresignedPutResult presignPut(PresignPutRequest request) {
+    throw new UnsupportedOperationException();
+  }
 }

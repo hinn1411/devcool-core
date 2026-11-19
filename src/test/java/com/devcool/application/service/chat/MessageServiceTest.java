@@ -9,8 +9,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.application.service.channel.ChannelAuthorizer;
+import com.devcool.application.service.chat.strategy.ImageMessageCreationStrategy;
 import com.devcool.application.service.chat.strategy.MarkdownMessageCreationStrategy;
 import com.devcool.application.service.chat.strategy.TextMessageCreationStrategy;
+import com.devcool.application.service.chat.strategy.VideoMessageCreationStrategy;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
@@ -29,6 +31,7 @@ import com.devcool.domain.chat.port.in.command.CreateMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.chat.port.out.ReactionPort;
+import com.devcool.domain.media.exception.InvalidObjectKeyException;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.port.out.MemberPort;
 import java.time.Instant;
@@ -368,6 +371,54 @@ class MessageServiceTest {
                       Arguments.of(type, " \n\t "),
                       Arguments.of(type, "x".repeat(1001)),
                       Arguments.of(type, "hi\0there"))); // PG varchar rejects 0x00
+    }
+  }
+
+  /** The S3 key is a capability: a media SEND may only point into its own channel (P3-T14). */
+  @Nested
+  class MediaKeys {
+
+    private static final String UUID_PART = "123e4567-e89b-12d3-a456-426614174000";
+
+    @BeforeEach
+    void withMedia() {
+      service = serviceWith(new ImageMessageCreationStrategy(), new VideoMessageCreationStrategy());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+        value = ContentType.class,
+        names = {"IMAGE", "VIDEO"})
+    void keyOfThisChannel_isStoredAsMediaPath(ContentType type) {
+      aliceIsMember();
+      freshSend(5L);
+      String key = "channel/" + CHANNEL + "/2026/11/19/" + UUID_PART + ".mp4";
+
+      service.save(command(type, key));
+
+      assertThat(storedMessage().getMedia().getPath()).isEqualTo(key);
+    }
+
+    @ParameterizedTest
+    @MethodSource("badKeys")
+    void foreignOrMalformedKey_isRejectedBeforeAnyPortCall(ContentType type, String key) {
+      CreateMessageCommand send = command(type, key);
+
+      assertThatThrownBy(() -> service.save(send)).isInstanceOf(InvalidObjectKeyException.class);
+      verifyNoInteractions(messagePort, channelPort, memberPort);
+      assertThat(transactions.started).isZero();
+    }
+
+    static Stream<Arguments> badKeys() {
+      return Stream.of(ContentType.IMAGE, ContentType.VIDEO)
+          .flatMap(
+              type ->
+                  Stream.of(
+                      Arguments.of(type, "channel/" + OTHER_CHANNEL + "/2026/11/19/" + UUID_PART),
+                      Arguments.of(type, "channel/" + CHANNEL + "/../2/2026/11/19/" + UUID_PART),
+                      Arguments.of(type, "https://evil.example/x.png"),
+                      Arguments.of(type, ""),
+                      Arguments.of(type, null)));
     }
   }
 

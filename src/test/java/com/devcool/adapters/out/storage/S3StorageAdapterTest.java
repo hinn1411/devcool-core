@@ -19,7 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
@@ -99,6 +102,37 @@ class S3StorageAdapterTest {
         ArgumentCaptor.forClass(GetObjectPresignRequest.class);
     verify(s3Presigner).presignGetObject(captor.capture());
     assertThat(captor.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(5));
+  }
+
+  // ── presignPut (P3-T14) ──────────────────────────────────────────────────────
+
+  /** A real presigner: signing is local, so static fake credentials need no network. */
+  @Test
+  void presignPut_signsContentTypeAndContentLength() {
+    try (S3Presigner real =
+        S3Presigner.builder()
+            .region(Region.US_EAST_1)
+            .credentialsProvider(
+                StaticCredentialsProvider.create(AwsBasicCredentials.create("AKIDTEST", "secret")))
+            .build()) {
+      S3StorageAdapter signing =
+          new S3StorageAdapter(
+              s3Client, real, new AwsProps("us-east-1", new AwsProps.S3Props(BUCKET)));
+
+      MediaStoragePort.PresignedPutResult result =
+          signing.presignPut(
+              new MediaStoragePort.PresignPutRequest(
+                  OBJECT_KEY, "image/png", 1024, Duration.ofMinutes(5)));
+
+      assertThat(result.url())
+          .contains(BUCKET)
+          .contains(OBJECT_KEY)
+          .contains("X-Amz-Expires=300")
+          .containsPattern("X-Amz-SignedHeaders=[^&]*content-length")
+          .containsPattern("X-Amz-SignedHeaders=[^&]*content-type");
+      assertThat(result.expiresAt())
+          .isBetween(Instant.now().plusSeconds(290), Instant.now().plusSeconds(301));
+    }
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────────
