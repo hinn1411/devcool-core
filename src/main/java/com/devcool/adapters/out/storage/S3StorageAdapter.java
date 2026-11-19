@@ -12,6 +12,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Component
 @RequiredArgsConstructor
@@ -54,8 +56,26 @@ public class S3StorageAdapter implements MediaStoragePort {
     return new PresignedGetResult(presigned.url().toString(), expiresAt);
   }
 
+  /**
+   * Content type and length set on the request become signed headers: S3 answers 403 to a PUT that
+   * sends any other value, so the client can't upload more (or another type) than it declared.
+   */
   @Override
   public PresignedPutResult presignPut(PresignPutRequest request) {
-    throw new UnsupportedOperationException();
+    PutObjectRequest putRequest =
+        PutObjectRequest.builder()
+            .bucket(awsProps.s3().bucket())
+            .key(request.objectKey())
+            .contentType(request.contentType())
+            .contentLength(request.contentLength())
+            .build();
+
+    PresignedPutObjectRequest presigned =
+        s3Presigner.presignPutObject(
+            PutObjectPresignRequest.builder()
+                .signatureDuration(request.expiresIn())
+                .putObjectRequest(putRequest)
+                .build());
+    return new PresignedPutResult(presigned.url().toString(), presigned.expiration());
   }
 }

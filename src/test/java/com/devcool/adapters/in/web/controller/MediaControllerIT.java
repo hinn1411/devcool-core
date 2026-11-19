@@ -39,7 +39,7 @@ class MediaControllerIT extends AbstractIntegrationTest {
   }
 
   @Test
-  void presignUpload_nonMember_isMemberNotFound() throws Exception {
+  void presignUpload_nonMember_is403() throws Exception {
     mvc.perform(
             post("/api/v1/medias/presign-upload")
                 .header(AUTHORIZATION, bearer(outsider))
@@ -49,7 +49,7 @@ class MediaControllerIT extends AbstractIntegrationTest {
                     {"channelId": %d, "contentType": "image/png", "size": 1024}
                     """
                         .formatted(channel)))
-        .andExpect(status().isNotFound())
+        .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("MEMBER_404"));
   }
 

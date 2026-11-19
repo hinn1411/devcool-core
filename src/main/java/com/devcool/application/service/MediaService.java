@@ -5,6 +5,7 @@ import com.devcool.domain.media.exception.InvalidMediaContentException;
 import com.devcool.domain.media.exception.InvalidObjectKeyException;
 import com.devcool.domain.media.exception.MediaTooLargeException;
 import com.devcool.domain.media.exception.UnsupportedMediaTypeException;
+import com.devcool.domain.media.model.MediaKey;
 import com.devcool.domain.media.model.MediaKind;
 import com.devcool.domain.media.port.in.GetMediaUrlUseCase;
 import com.devcool.domain.media.port.in.PresignUploadUseCase;
@@ -16,12 +17,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,50 +29,23 @@ import org.springframework.stereotype.Service;
 public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, PresignUploadUseCase {
 
   private static final Duration DEFAULT_PRESIGN_TTL = Duration.ofMinutes(10);
-  private static final String ALLOWED_EXTENSIONS = "jpg|jpeg|png|webp|mp4";
 
-  /**
-   * Exactly the shape {@link #buildMediaKey} produces: {@code
-   * channel/{channelId}/{yyyy/MM/dd}/{uuid}{ext}}. The channel id in the key is what authorises
-   * access to the object, so a key that does not match in full is rejected rather than parsed
-   * loosely.
-   */
-  private static final Pattern OBJECT_KEY_PATTERN =
-      Pattern.compile(
-          "channel/([1-9]\\d{0,8})"
-              + "/\\d{4}/\\d{2}/\\d{2}"
-              + "/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
-              + "(?:\\.(?:"
-              + ALLOWED_EXTENSIONS
-              + "))?");
+  /** A write capability: shorter than reads, still enough for 10 MB on a slow link. */
+  private static final Duration UPLOAD_PRESIGN_TTL = Duration.ofMinutes(5);
 
   private final MediaStoragePort storagePort;
   private final ChannelAuthorizer channelAuthorizer;
   private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
+  /** Deprecated path: the bytes stream through the API. Replaced by {@link #presignUpload}. */
   @Override
   public String upload(UploadMediaCommand command) {
     channelAuthorizer.requireMembership(command.channelId(), command.userId());
+    requireAllowed(command.contentType(), command.size());
 
-    if (command.size() <= 0) {
-      log.warn("Media content is empty!");
-      throw new InvalidMediaContentException();
-    }
-
-    MediaKind kind =
-        MediaKind.fromContentType(command.contentType())
-            .orElseThrow(
-                () -> {
-                  log.warn("Content type: {}  is invalid!", command.contentType());
-                  return new UnsupportedMediaTypeException(String.valueOf(command.contentType()));
-                });
-
-    if (!kind.isSizeAllowed(command.size())) {
-      log.warn("{} size {} exceeds limit {}", kind, command.size(), kind.maxBytes());
-      throw new MediaTooLargeException(command.size(), kind.maxBytes());
-    }
-
-    String mediaKey = buildMediaKey(command.channelId(), command.filename());
+    String mediaKey =
+        MediaKey.generate(
+            command.channelId(), LocalDate.now(), extractExtension(command.filename()));
     try (InputStream in = command.content().open()) {
       MediaStoragePort.UploadRequest uploadRequest =
           new MediaStoragePort.UploadRequest(mediaKey, in, command.size(), command.contentType());
@@ -86,9 +56,20 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
     }
   }
 
+  /** membership → type/size → sign. The declared type and size are bound into the signature. */
   @Override
   public PresignedUpload presignUpload(PresignUploadCommand command) {
-    throw new UnsupportedOperationException();
+    channelAuthorizer.requireMembership(command.channelId(), command.userId());
+    MediaKind kind = requireAllowed(command.contentType(), command.size());
+
+    String key =
+        MediaKey.generate(
+            command.channelId(), LocalDate.now(), kind.extensionFor(command.contentType()));
+    MediaStoragePort.PresignedPutResult signed =
+        storagePort.presignPut(
+            new MediaStoragePort.PresignPutRequest(
+                key, command.contentType(), command.size(), UPLOAD_PRESIGN_TTL));
+    return new PresignedUpload(signed.url(), key, signed.expiresAt());
   }
 
   @Override
@@ -101,36 +82,43 @@ public class MediaService implements UploadMediaUseCase, GetMediaUrlUseCase, Pre
     return new PresignedUrlResult(presignedResult.url(), presignedResult.expiresAt());
   }
 
-  private static Long channelIdFrom(String objectKey) {
-    if (Objects.nonNull(objectKey)) {
-      Matcher matcher = OBJECT_KEY_PATTERN.matcher(objectKey);
-      if (matcher.matches()) {
-        return Long.valueOf(matcher.group(1));
-      }
+  /** Non-empty, an accepted content type, and within that kind's size limit. */
+  private static MediaKind requireAllowed(String contentType, long size) {
+    if (size <= 0) {
+      log.warn("Media content is empty!");
+      throw new InvalidMediaContentException();
     }
-    log.warn("Rejected an object key that does not match the expected format");
-    throw new InvalidObjectKeyException();
+    MediaKind kind =
+        MediaKind.fromContentType(contentType)
+            .orElseThrow(
+                () -> {
+                  log.warn("Content type: {}  is invalid!", contentType);
+                  return new UnsupportedMediaTypeException(String.valueOf(contentType));
+                });
+    if (!kind.isSizeAllowed(size)) {
+      log.warn("{} size {} exceeds limit {}", kind, size, kind.maxBytes());
+      throw new MediaTooLargeException(size, kind.maxBytes());
+    }
+    return kind;
   }
 
-  private String buildMediaKey(Long channelId, String fileName) {
-    String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-
-    String extension = extractExtension(fileName);
-
-    String uuid = UUID.randomUUID().toString();
-
-    return String.format("channel/%d/%s/%s%s", channelId, datePath, uuid, extension);
+  private static Long channelIdFrom(String objectKey) {
+    return MediaKey.channelIdOf(objectKey)
+        .orElseThrow(
+            () -> {
+              log.warn("Rejected an object key that does not match the expected format");
+              return new InvalidObjectKeyException();
+            });
   }
 
-  private String extractExtension(String filename) {
+  private static String extractExtension(String filename) {
     if (Objects.isNull(filename) || !filename.contains(".")) {
       return "";
     }
 
     String ext = filename.substring(filename.lastIndexOf(".")).toLowerCase(Locale.ROOT);
 
-    // Optional: allowlist extensions
-    if (!ext.matches("\\.(" + ALLOWED_EXTENSIONS + ")$")) {
+    if (!ext.matches("\\.(" + MediaKey.ALLOWED_EXTENSIONS + ")$")) {
       throw new UnsupportedMediaTypeException(ext);
     }
 
