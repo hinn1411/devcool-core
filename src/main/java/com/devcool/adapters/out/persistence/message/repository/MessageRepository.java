@@ -6,6 +6,7 @@ import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
 import com.devcool.domain.chat.model.DeletableMessage;
 import com.devcool.domain.chat.model.ReplyTarget;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,6 +67,69 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
       """)
   List<MessageEntity> findPageAfterSeq(
       @Param("channelId") Long channelId, @Param("afterSeq") Long afterSeq, Pageable pageable);
+
+  /**
+   * Ids of live TEXT/MARKDOWN messages of one channel whose words match {@code q}, seq DESC.
+   * Native: JPQL has no {@code @@}. {@code websearch_to_tsquery} never raises on user input.
+   */
+  @Query(
+      value =
+          """
+          SELECT m.id
+          FROM message m
+          WHERE m.channel_id = :channelId
+            AND m.search_vector @@ websearch_to_tsquery('simple', :q)
+            AND m.deleted_time IS NULL
+            AND m.content_type IN ('TEXT', 'MARKDOWN')
+            AND (CAST(:beforeSeq AS bigint) IS NULL OR m.seq < CAST(:beforeSeq AS bigint))
+          ORDER BY m.seq DESC
+          LIMIT :size
+          """,
+      nativeQuery = true)
+  List<Long> searchIdsInChannel(
+      @Param("q") String q,
+      @Param("channelId") Long channelId,
+      @Param("beforeSeq") Long beforeSeq,
+      @Param("size") int size);
+
+  /** Like {@link #searchIdsInChannel} over the channels {@code userId} is a member of, id DESC. */
+  @Query(
+      value =
+          """
+          SELECT m.id
+          FROM message m
+          WHERE m.search_vector @@ websearch_to_tsquery('simple', :q)
+            AND m.deleted_time IS NULL
+            AND m.content_type IN ('TEXT', 'MARKDOWN')
+            AND (CAST(:beforeId AS bigint) IS NULL OR m.id < CAST(:beforeId AS bigint))
+            AND m.channel_id IN (
+              SELECT mb.channel_id
+              FROM member mb
+              WHERE mb.user_id = :userId
+            )
+          ORDER BY m.id DESC
+          LIMIT :size
+          """,
+      nativeQuery = true)
+  List<Long> searchIdsInMemberChannels(
+      @Param("q") String q,
+      @Param("userId") Long userId,
+      @Param("beforeId") Long beforeId,
+      @Param("size") int size);
+
+  /** The rows behind a page of search hits, parents join-fetched (no N+1); order not kept. */
+  @Query(
+      """
+      SELECT ms
+      FROM MessageEntity ms
+      LEFT JOIN FETCH ms.media
+      JOIN FETCH ms.user
+      LEFT JOIN FETCH ms.replyTo rt
+      LEFT JOIN FETCH rt.user
+      LEFT JOIN FETCH rt.media
+      WHERE ms.id IN :ids
+      """)
+  List<MessageEntity> findAllForItems(@Param("ids") Collection<Long> ids);
 
   /** Served by the uk_message_user_client_msg index; no join, no media load. */
   @Query(

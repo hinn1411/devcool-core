@@ -38,6 +38,7 @@ class MessageDtoMapperTest {
         .createdTime(CREATED)
         .version(2)
         .editedTime(EDITED)
+        .channelId(3L)
         .userId(9L)
         .senderName("Alice")
         .senderAvatar("https://cdn.devcool.com/avatars/alice.png")
@@ -68,6 +69,7 @@ class MessageDtoMapperTest {
         .containsExactly(
             new MessageItemResponse(
                 5L,
+                3L,
                 7L,
                 "hello",
                 "TEXT",
