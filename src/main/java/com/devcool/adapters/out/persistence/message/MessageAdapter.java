@@ -76,6 +76,18 @@ public class MessageAdapter implements MessagePort {
   }
 
   @Override
+  public List<MessageItem> searchInChannel(
+      String query, Long channelId, Long beforeSeq, Integer size) {
+    throw new UnsupportedOperationException("P3-T13 Green");
+  }
+
+  @Override
+  public List<MessageItem> searchInMyChannels(
+      String query, Long userId, Long beforeId, Integer size) {
+    throw new UnsupportedOperationException("P3-T13 Green");
+  }
+
+  @Override
   public List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size) {
     return repo.findPageAfterSeq(channelId, afterSeq, PageRequest.of(0, size)).stream()
         .map(mapper::toItem)
