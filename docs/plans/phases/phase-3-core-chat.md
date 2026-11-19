@@ -53,7 +53,7 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - [x] **P3-T10** Read state: `PUT /channels/{id}/read`; the channel list returns `unreadCount` and `lastMessage` preview
 - [x] **P3-T11** Member management: remove member (admin), leave channel (self), transfer leader (Forum). Membership checks everywhere
 - [x] **P3-T12** DM convenience: `POST /channels/direct {userId}` returns the existing PRIVATE_CHAT or creates it (unique pair constraint)
-- [ ] **P3-T13** Keyword search: `tsvector` generated column + GIN index; `GET /channels/{id}/messages/search?q=` (membership-checked). Add a global search across my channels
+- [x] **P3-T13** Keyword search: `tsvector` generated column + GIN index; `GET /channels/{id}/messages/search?q=` (membership-checked). Add a global search across my channels
 - [ ] **P3-T14** Presigned PUT upload endpoint + validation. Mark the multipart upload as deprecated
 - [x] **P3-T15** A MARKDOWN message strategy (currently missing → `InvalidMessageConfigException`)
 - [ ] **P3-T16** `UNSUBSCRIBE` wired end to end (currently falls through to "Unsupported action"); the `WsUnsubscribeService` stub implemented

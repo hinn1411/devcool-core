@@ -11,10 +11,13 @@ import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
 import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
+import com.devcool.domain.chat.port.in.SearchMessagesQuery;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import com.devcool.domain.chat.port.in.command.ReactionCommand;
+import com.devcool.domain.chat.port.in.command.SearchChannelMessagesCommand;
+import com.devcool.domain.chat.port.in.command.SearchMyMessagesCommand;
 import com.devcool.domain.common.ErrorCode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,6 +50,7 @@ public class MessageController {
   private final EditMessageUseCase messageEditor;
   private final DeleteMessageUseCase messageDeleter;
   private final ReactToMessageUseCase messageReactor;
+  private final SearchMessagesQuery messageSearcher;
   private final MessageDtoMapper mapper;
 
   @GetMapping("/channels/{channelId}/messages")
@@ -77,6 +81,44 @@ public class MessageController {
     return ResponseEntity.ok(
         ApiResponseFactory.success(
             HttpStatus.OK, ErrorCode.OK.code(), "Getting messages successfully", response));
+  }
+
+  @Operation(
+      summary = "Search one channel",
+      description =
+          "Members only. Whole-word match on TEXT/MARKDOWN, newest first."
+              + " Next page: cursorId → beforeSeq.")
+  @GetMapping("/channels/{channelId}/messages/search")
+  public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> searchChannel(
+      @PathVariable Long channelId,
+      @RequestParam String q,
+      @RequestParam(required = false) @Min(1) Long beforeSeq,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit,
+      Authentication auth) {
+    MessageList found =
+        messageSearcher.searchInChannel(
+            new SearchChannelMessagesCommand(
+                Long.valueOf(auth.getName()), channelId, q, beforeSeq, limit));
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Search done", mapper.toGetResponse(found)));
+  }
+
+  @Operation(
+      summary = "Search my channels",
+      description = "Across the caller's channels. Next page: cursorId → beforeId.")
+  @GetMapping("/messages/search")
+  public ResponseEntity<ApiSuccessResponse<GetMessagesResponse>> searchMyChannels(
+      @RequestParam String q,
+      @RequestParam(required = false) @Min(1) Long beforeId,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit,
+      Authentication auth) {
+    MessageList found =
+        messageSearcher.searchMyChannels(
+            new SearchMyMessagesCommand(Long.valueOf(auth.getName()), q, beforeId, limit));
+    return ResponseEntity.ok(
+        ApiResponseFactory.success(
+            HttpStatus.OK, ErrorCode.OK.code(), "Search done", mapper.toGetResponse(found)));
   }
 
   @Operation(
