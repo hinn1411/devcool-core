@@ -2,6 +2,7 @@ package com.devcool.adapters.out.realtime.immemory;
 
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
@@ -49,7 +50,10 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
 
   @Override
   public void unsubscribeUser(Long userId, Long channelId) {
-    throw new UnsupportedOperationException();
+    Set<String> connections = channelToConnections.get(channelId);
+    if (connections != null) {
+      connections.removeIf(connection -> Objects.equals(userId, connectionToUser.get(connection)));
+    }
   }
 
   @Override

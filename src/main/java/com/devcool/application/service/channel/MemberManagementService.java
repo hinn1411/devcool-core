@@ -68,6 +68,7 @@ public class MemberManagementService
       throw new InvalidChannelConfigException("The leader must transfer the role first");
     }
     deleteMemberRow(channelId, targetId);
+    connectionRegistryPort.unsubscribeUser(targetId, channelId);
   }
 
   @Override
@@ -80,6 +81,7 @@ public class MemberManagementService
       throw new InvalidChannelConfigException("Transfer the leader role before leaving");
     }
     deleteMemberRow(command.channelId(), command.userId());
+    connectionRegistryPort.unsubscribeUser(command.userId(), command.channelId());
   }
 
   @Override

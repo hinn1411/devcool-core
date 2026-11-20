@@ -11,6 +11,7 @@ import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
+import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.DomainException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -87,6 +88,21 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
                         WsMessageType.ACK,
                         clientFrame.clientMsgId(),
                         Map.of("description", "Subscribe successfully")))));
+      }
+      case WsMessageType.UNSUBSCRIBE -> {
+        if (Objects.isNull(clientFrame.channelId())) {
+          sendError(session, clientFrame.clientMsgId(), "Missing channelId");
+          return;
+        }
+        unsubscribeUseCase.unsubscribe(
+            new UnsubscribeCommand(connectionId, clientFrame.channelId()));
+        session.sendMessage(
+            new TextMessage(
+                objectMapper.writeValueAsString(
+                    new WsServerFrame(
+                        WsMessageType.ACK,
+                        clientFrame.clientMsgId(),
+                        Map.of("description", "Unsubscribe successfully")))));
       }
       case WsMessageType.SEND_MESSAGE -> {
         UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
