@@ -3,6 +3,7 @@ package com.devcool.adapters.in.websocket.handler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -10,6 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.dto.ServerFrame;
+import com.devcool.adapters.in.websocket.handler.action.PingAction;
+import com.devcool.adapters.in.websocket.handler.action.SendMessageAction;
+import com.devcool.adapters.in.websocket.handler.action.SubscribeAction;
+import com.devcool.adapters.in.websocket.handler.action.UnsubscribeAction;
+import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.SavedMessage;
@@ -17,13 +23,16 @@ import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
 import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
+import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.devcool.domain.common.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,16 +69,21 @@ class ChatHandlerTest {
 
   @BeforeEach
   void setUp() {
+    FrameWriter writer = new FrameWriter(objectMapper);
     handler =
         new ChatHandler(
             objectMapper,
             sessionRegistry,
             connectionRegistryPort,
-            subscribeUseCase,
-            unsubscribeUseCase,
-            sendMessageUseCase);
-    when(session.getId()).thenReturn("conn-1");
-    when(session.getAttributes()).thenReturn(new HashMap<>());
+            writer,
+            List.of(
+                new PingAction(writer),
+                new SubscribeAction(writer, subscribeUseCase),
+                new UnsubscribeAction(writer, unsubscribeUseCase),
+                new SendMessageAction(writer, sendMessageUseCase)));
+    // Lenient: only the actions that need them read the id and user.
+    lenient().when(session.getId()).thenReturn("conn-1");
+    lenient().when(session.getAttributes()).thenReturn(new HashMap<>());
   }
 
   @Test
@@ -92,6 +106,47 @@ class ChatHandlerTest {
     ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
     verify(session).sendMessage(reply.capture());
     assertThat(reply.getValue().getPayload()).contains("Invalid JSON");
+  }
+
+  @Test
+  void clientSendsAnAckFrame_repliesUnsupportedAction() throws Exception {
+    handler.handleTextMessage(
+        session, new TextMessage("{\"action\":\"ACK\",\"clientMsgId\":\"r-0\"}"));
+
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
+    assertThat(frame.data()).isEqualTo("Unsupported action");
+  }
+
+  // ---- SUBSCRIBE
+  // ---------------------------------------------------------------------------------
+
+  @Test
+  void subscribeByNonMember_repliesErrorWithItsCode_andKeepsTheSocketOpen() throws Exception {
+    doThrow(new ForbiddenException("Not a member"))
+        .when(subscribeUseCase)
+        .subscribe(any(SubscribeCommand.class));
+
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"action\":\"SUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-3\"}"));
+
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
+    assertThat(frame.clientMsgId()).isEqualTo("r-3");
+    assertThat(frame.data()).isEqualTo(new ForbiddenException("x").getErrorCode().code());
+    verify(session, never()).close(any(CloseStatus.class));
+  }
+
+  @Test
+  void subscribeWithoutChannelId_repliesErrorAndCallsNoUseCase() throws Exception {
+    handler.handleTextMessage(
+        session, new TextMessage("{\"action\":\"SUBSCRIBE\",\"clientMsgId\":\"r-4\"}"));
+
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
+    assertThat(frame.data()).isEqualTo("Missing channelId");
+    verifyNoInteractions(subscribeUseCase);
   }
 
   // ---- UNSUBSCRIBE (P3-T16) --------------------------------------------------------------------
