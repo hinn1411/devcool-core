@@ -11,6 +11,7 @@ import com.devcool.domain.channel.port.in.command.LeaveChannelCommand;
 import com.devcool.domain.channel.port.in.command.RemoveMemberCommand;
 import com.devcool.domain.channel.port.in.command.TransferLeaderCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.enums.MemberType;
@@ -35,12 +36,17 @@ public class MemberManagementService
   private final ChannelPort channelPort;
   private final MemberPort memberPort;
   private final ChannelAuthorizer channelAuthorizer;
+  private final ConnectionRegistryPort connectionRegistryPort;
 
   public MemberManagementService(
-      ChannelPort channelPort, MemberPort memberPort, ChannelAuthorizer channelAuthorizer) {
+      ChannelPort channelPort,
+      MemberPort memberPort,
+      ChannelAuthorizer channelAuthorizer,
+      ConnectionRegistryPort connectionRegistryPort) {
     this.channelPort = channelPort;
     this.memberPort = memberPort;
     this.channelAuthorizer = channelAuthorizer;
+    this.connectionRegistryPort = connectionRegistryPort;
   }
 
   @Override

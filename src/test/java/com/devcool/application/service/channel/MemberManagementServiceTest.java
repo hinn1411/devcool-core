@@ -16,6 +16,7 @@ import com.devcool.domain.channel.port.in.command.LeaveChannelCommand;
 import com.devcool.domain.channel.port.in.command.RemoveMemberCommand;
 import com.devcool.domain.channel.port.in.command.TransferLeaderCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.enums.MemberType;
@@ -39,10 +40,14 @@ class MemberManagementServiceTest {
 
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
+  @Mock private ConnectionRegistryPort connectionRegistryPort;
 
   private MemberManagementService newService() {
     return new MemberManagementService(
-        channelPort, memberPort, new ChannelAuthorizer(channelPort, memberPort));
+        channelPort,
+        memberPort,
+        new ChannelAuthorizer(channelPort, memberPort),
+        connectionRegistryPort);
   }
 
   private void channelIs(ChannelType type, Long leaderId) {
@@ -58,6 +63,7 @@ class MemberManagementServiceTest {
     verify(memberPort, never()).removeMember(anyLong(), anyLong());
     verify(memberPort, never()).updateRole(anyLong(), anyLong(), any());
     verify(channelPort, never()).increaseTotalMembers(anyLong(), anyInt());
+    verify(connectionRegistryPort, never()).unsubscribeUser(anyLong(), anyLong());
   }
 
   @Nested
@@ -79,6 +85,27 @@ class MemberManagementServiceTest {
       InOrder order = inOrder(memberPort, channelPort);
       order.verify(memberPort).removeMember(CHANNEL_ID, TARGET_ID);
       order.verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
+    }
+
+    @Test
+    void cutsOffTheTargetsLivePushes() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.CREATOR);
+      roleOf(TARGET_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, TARGET_ID)).thenReturn(true);
+
+      remove(TARGET_ID);
+
+      verify(connectionRegistryPort).unsubscribeUser(TARGET_ID, CHANNEL_ID);
+    }
+
+    @Test
+    void plainMember_isForbidden_andNobodyIsUnsubscribed() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.MEMBER);
+
+      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(ForbiddenException.class);
+      assertNothingWritten();
     }
 
     @Test
@@ -138,6 +165,17 @@ class MemberManagementServiceTest {
       leave();
 
       verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
+    }
+
+    @Test
+    void cutsOffTheCallersLivePushes() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, CALLER_ID)).thenReturn(true);
+
+      leave();
+
+      verify(connectionRegistryPort).unsubscribeUser(CALLER_ID, CHANNEL_ID);
     }
 
     @Test

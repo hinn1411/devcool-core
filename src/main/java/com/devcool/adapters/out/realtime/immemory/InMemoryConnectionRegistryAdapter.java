@@ -48,6 +48,11 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
   }
 
   @Override
+  public void unsubscribeUser(Long userId, Long channelId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public Set<String> getConnectionsByChannel(Long channelId) {
     return Set.copyOf(channelToConnections.getOrDefault(channelId, Set.of()));
   }

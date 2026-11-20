@@ -127,4 +127,29 @@ class InMemoryConnectionRegistryAdapterTest {
           .doesNotThrowAnyException();
     }
   }
+
+  @Nested
+  class UserUnsubscription {
+    @Test
+    void removesAllOfThatUsersConnectionsOnly() {
+      registry.registerConnection("bob-tab1", 9L);
+      registry.registerConnection("bob-tab2", 9L);
+      registry.registerConnection("alice", 7L);
+      for (String c : new String[] {"bob-tab1", "bob-tab2", "alice"}) {
+        registry.subscribe(c, 42L);
+      }
+      registry.subscribe("bob-tab1", 43L);
+
+      registry.unsubscribeUser(9L, 42L);
+
+      assertThat(registry.getConnectionsByChannel(42L)).containsExactly("alice");
+      assertThat(registry.getConnectionsByChannel(43L)).containsExactly("bob-tab1");
+      assertThat(registry.getUserId("bob-tab1")).isEqualTo(9L);
+    }
+
+    @Test
+    void userWithNoConnections_noThrows() {
+      assertThatCode(() -> registry.unsubscribeUser(9L, 42L)).doesNotThrowAnyException();
+    }
+  }
 }

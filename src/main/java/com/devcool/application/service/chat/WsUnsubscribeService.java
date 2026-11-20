@@ -10,5 +10,7 @@ import org.springframework.stereotype.Service;
 public class WsUnsubscribeService implements WsUnsubscribeUseCase {
 
   @Override
-  public void unsubscribe(UnsubscribeCommand command) {}
+  public void unsubscribe(UnsubscribeCommand command) {
+    throw new UnsupportedOperationException();
+  }
 }

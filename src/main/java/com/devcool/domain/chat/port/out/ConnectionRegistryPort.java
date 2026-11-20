@@ -13,5 +13,8 @@ public interface ConnectionRegistryPort {
 
   void unsubscribe(String connectionId, Long channelId);
 
+  /** Drops every connection of {@code userId} from the channel (removed or left). */
+  void unsubscribeUser(Long userId, Long channelId);
+
   Set<String> getConnectionsByChannel(Long channelId);
 }

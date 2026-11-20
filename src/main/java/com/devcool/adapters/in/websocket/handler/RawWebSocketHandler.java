@@ -8,6 +8,7 @@ import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
@@ -33,6 +34,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   private final WsSessionStore sessionStore;
   private final ConnectionRegistryPort connectionRegistryPort;
   private final WsSubscribeUseCase subscribeUseCase;
+  private final WsUnsubscribeUseCase unsubscribeUseCase;
   private final SendMessageUseCase sendMessageUseCase;
 
   @Override
