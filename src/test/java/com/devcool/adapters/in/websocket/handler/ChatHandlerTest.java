@@ -2,12 +2,12 @@ package com.devcool.adapters.in.websocket.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.dto.ServerFrame;
@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -192,22 +193,22 @@ class ChatHandlerTest {
 
   @Test
   void send_passesTheParsedClientMsgIdToTheUseCase() throws Exception {
-    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
+    commitsAs(SAVED);
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
     ArgumentCaptor<SendMessageCommand> command = ArgumentCaptor.forClass(SendMessageCommand.class);
-    verify(sendMessageUseCase).sendMessage(command.capture());
+    verify(sendMessageUseCase).sendMessage(command.capture(), any());
     assertThat(command.getValue().clientMsgId()).isEqualTo(new ClientMsgId(UUID.fromString(KEY)));
   }
 
   @Test
   void send_passesReplyToIdToTheUseCase() throws Exception {
-    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
+    commitsAs(SAVED);
     handler.handleTextMessage(
         session, sendFrame("\"clientMsgId\":\"" + KEY + "\",\"replyToId\":77"));
 
     ArgumentCaptor<SendMessageCommand> command = ArgumentCaptor.forClass(SendMessageCommand.class);
-    verify(sendMessageUseCase).sendMessage(command.capture());
+    verify(sendMessageUseCase).sendMessage(command.capture(), any());
     assertThat(command.getValue().replyToId()).isEqualTo(77L);
   }
 
@@ -227,7 +228,7 @@ class ChatHandlerTest {
 
   @Test
   void sendRejectedByTheDomain_repliesErrorWithItsCode_andKeepsTheSocketOpen() throws Exception {
-    doThrow(new ClientMsgIdReusedException()).when(sendMessageUseCase).sendMessage(any());
+    doThrow(new ClientMsgIdReusedException()).when(sendMessageUseCase).sendMessage(any(), any());
 
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
@@ -242,7 +243,7 @@ class ChatHandlerTest {
 
   @Test
   void send_ackCarriesMessageIdSeqAndIsoCreatedTime() throws Exception {
-    when(sendMessageUseCase.sendMessage(any())).thenReturn(SAVED);
+    commitsAs(SAVED);
 
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
@@ -251,8 +252,7 @@ class ChatHandlerTest {
 
   @Test
   void retriedSend_ackCarriesTheOriginalIds() throws Exception {
-    when(sendMessageUseCase.sendMessage(any()))
-        .thenReturn(new SavedMessage(100L, 42L, SAVED.createdTime(), true));
+    commitsAs(new SavedMessage(100L, 42L, SAVED.createdTime(), true));
 
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
@@ -269,6 +269,18 @@ class ChatHandlerTest {
     assertThat(data.path("messageId").asLong()).isEqualTo(100L);
     assertThat(data.path("seq").asLong()).isEqualTo(42L);
     assertThat(data.path("createdTime").asText()).isEqualTo("2026-11-01T10:00:00Z");
+  }
+
+  /** The use case commits as {@code saved} and runs the handler's ACK callback. */
+  @SuppressWarnings("unchecked")
+  private void commitsAs(SavedMessage saved) {
+    doAnswer(
+            call -> {
+              call.getArgument(1, Consumer.class).accept(saved);
+              return null;
+            })
+        .when(sendMessageUseCase)
+        .sendMessage(any(), any());
   }
 
   /** A SEND_MESSAGE frame; {@code keyField} is the raw JSON for the key ("" leaves it out). */

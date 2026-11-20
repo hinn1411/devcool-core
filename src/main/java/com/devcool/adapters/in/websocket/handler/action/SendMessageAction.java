@@ -12,6 +12,7 @@ import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -41,17 +42,27 @@ public class SendMessageAction implements FrameAction {
       writer.error(session, null, "Invalid clientMsgId");
       return;
     }
-    SavedMessage saved =
-        sendMessageUseCase.sendMessage(
-            new SendMessageCommand(
-                session.getId(),
-                AuthHandshakeInterceptor.userIdOf(session),
-                frame.channelId(),
-                frame.contentType(),
-                frame.content(),
-                clientMsgId,
-                frame.replyToId()));
-    writer.ack(
-        session, clientMsgId.toString(), new SendAck(saved.id(), saved.seq(), saved.createdTime()));
+    sendMessageUseCase.sendMessage(
+        new SendMessageCommand(
+            session.getId(),
+            AuthHandshakeInterceptor.userIdOf(session),
+            frame.channelId(),
+            frame.contentType(),
+            frame.content(),
+            clientMsgId,
+            frame.replyToId()),
+        saved -> ack(session, clientMsgId, saved));
+  }
+
+  /** Runs inside the use case, between commit and push; a dead socket must not lose the push. */
+  private void ack(WebSocketSession session, ClientMsgId clientMsgId, SavedMessage saved) {
+    try {
+      writer.ack(
+          session,
+          clientMsgId.toString(),
+          new SendAck(saved.id(), saved.seq(), saved.createdTime()));
+    } catch (IOException ex) {
+      throw new UncheckedIOException(ex);
+    }
   }
 }

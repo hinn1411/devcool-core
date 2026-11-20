@@ -1,14 +1,15 @@
 package com.devcool.adapters.in.websocket.session;
 
+import com.devcool.adapters.in.websocket.dto.MessagePush;
+import com.devcool.domain.chat.model.MessageEvent;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
@@ -24,20 +25,20 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
 
   private static final Logger log = LoggerFactory.getLogger(SessionEmitterAdapter.class);
   private final SessionRegistry sessionRegistry;
-  private final ObjectMapper objectMapper;
+  private final FrameWriter writer;
 
   @Override
-  public void sendMessageToConnection(String connectionId, Object payload) {
+  public void send(String connectionId, MessageEvent event) {
     WebSocketSession session = sessionRegistry.get(connectionId);
     if (Objects.isNull(session) || !session.isOpen()) {
       return;
     }
-
     try {
-      String json = objectMapper.writeValueAsString(payload);
-      session.sendMessage(new TextMessage(json));
-    } catch (Exception ignored) {
-      log.info("Ignore emitting response exception!");
+      writer.send(session, MessagePush.from(event));
+    } catch (IOException | IllegalStateException ex) {
+      // At-most-once: the client catches up by seq. Log, don't fail the sender's request.
+      log.warn(
+          "Push of message {} to {} failed: {}", event.messageId(), connectionId, ex.toString());
     }
   }
 }
