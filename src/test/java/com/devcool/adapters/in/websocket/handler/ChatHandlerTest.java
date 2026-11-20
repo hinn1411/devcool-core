@@ -20,13 +20,12 @@ import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.ClientMsgId;
 import com.devcool.domain.chat.model.SavedMessage;
+import com.devcool.domain.chat.port.in.ChannelSubscriptionUseCase;
+import com.devcool.domain.chat.port.in.ConnectionLifecycleUseCase;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
-import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
-import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
-import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,9 +59,8 @@ class ChatHandlerTest {
       new SavedMessage(100L, 42L, Instant.parse("2026-11-01T10:00:00Z"), false);
 
   @Mock private SessionRegistry sessionRegistry;
-  @Mock private ConnectionRegistryPort connectionRegistryPort;
-  @Mock private WsSubscribeUseCase subscribeUseCase;
-  @Mock private WsUnsubscribeUseCase unsubscribeUseCase;
+  @Mock private ConnectionLifecycleUseCase connections;
+  @Mock private ChannelSubscriptionUseCase subscriptions;
   @Mock private SendMessageUseCase sendMessageUseCase;
   @Mock private WebSocketSession session;
 
@@ -75,12 +73,12 @@ class ChatHandlerTest {
         new ChatHandler(
             objectMapper,
             sessionRegistry,
-            connectionRegistryPort,
+            connections,
             writer,
             List.of(
                 new PingAction(writer),
-                new SubscribeAction(writer, subscribeUseCase),
-                new UnsubscribeAction(writer, unsubscribeUseCase),
+                new SubscribeAction(writer, subscriptions),
+                new UnsubscribeAction(writer, subscriptions),
                 new SendMessageAction(writer, sendMessageUseCase)));
     // Lenient: only the actions that need them read the id and user.
     lenient().when(session.getId()).thenReturn("conn-1");
@@ -97,7 +95,7 @@ class ChatHandlerTest {
     ServerFrame frame = objectMapper.readValue(reply.getValue().getPayload(), ServerFrame.class);
     assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Invalid JSON");
-    verifyNoInteractions(subscribeUseCase, sendMessageUseCase);
+    verifyNoInteractions(subscriptions, sendMessageUseCase);
   }
 
   @Test
@@ -125,7 +123,7 @@ class ChatHandlerTest {
   @Test
   void subscribeByNonMember_repliesErrorWithItsCode_andKeepsTheSocketOpen() throws Exception {
     doThrow(new ForbiddenException("Not a member"))
-        .when(subscribeUseCase)
+        .when(subscriptions)
         .subscribe(any(SubscribeCommand.class));
 
     handler.handleTextMessage(
@@ -147,7 +145,7 @@ class ChatHandlerTest {
     ServerFrame frame = onlyReply();
     assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Missing channelId");
-    verifyNoInteractions(subscribeUseCase);
+    verifyNoInteractions(subscriptions);
   }
 
   // ---- UNSUBSCRIBE (P3-T16) --------------------------------------------------------------------
@@ -158,7 +156,7 @@ class ChatHandlerTest {
         session,
         new TextMessage("{\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-1\"}"));
 
-    verify(unsubscribeUseCase).unsubscribe(new UnsubscribeCommand("conn-1", 42L));
+    verify(subscriptions).unsubscribe(new UnsubscribeCommand("conn-1", 42L));
     ServerFrame frame = onlyReply();
     assertThat(frame.type()).isEqualTo(FrameType.ACK);
     assertThat(frame.clientMsgId()).isEqualTo("r-1");
@@ -172,7 +170,7 @@ class ChatHandlerTest {
             "{\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"connectionId\":\"someone-else\"}"));
 
     ArgumentCaptor<UnsubscribeCommand> command = ArgumentCaptor.forClass(UnsubscribeCommand.class);
-    verify(unsubscribeUseCase).unsubscribe(command.capture());
+    verify(subscriptions).unsubscribe(command.capture());
     assertThat(command.getValue().connectionId()).isEqualTo("conn-1");
   }
 
@@ -184,7 +182,7 @@ class ChatHandlerTest {
     ServerFrame frame = onlyReply();
     assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Missing channelId");
-    verifyNoInteractions(unsubscribeUseCase);
+    verifyNoInteractions(subscriptions);
     verify(session, never()).close(any(CloseStatus.class));
   }
 

@@ -4,7 +4,7 @@ import com.devcool.adapters.in.websocket.dto.ClientFrame;
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
-import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.ChannelSubscriptionUseCase;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class SubscribeAction implements FrameAction {
 
   private final FrameWriter writer;
-  private final WsSubscribeUseCase subscribeUseCase;
+  private final ChannelSubscriptionUseCase subscriptions;
 
   @Override
   public FrameType type() {
@@ -35,7 +35,7 @@ public class SubscribeAction implements FrameAction {
       writer.error(session, frame.clientMsgId(), "Missing channelId");
       return;
     }
-    subscribeUseCase.subscribe(
+    subscriptions.subscribe(
         new SubscribeCommand(
             session.getId(), AuthHandshakeInterceptor.userIdOf(session), frame.channelId()));
     writer.ack(session, frame.clientMsgId(), Map.of("description", "Subscribe successfully"));

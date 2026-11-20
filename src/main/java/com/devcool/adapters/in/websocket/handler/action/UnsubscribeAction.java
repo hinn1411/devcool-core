@@ -3,7 +3,7 @@ package com.devcool.adapters.in.websocket.handler.action;
 import com.devcool.adapters.in.websocket.dto.ClientFrame;
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
-import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
+import com.devcool.domain.chat.port.in.ChannelSubscriptionUseCase;
 import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -21,7 +21,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class UnsubscribeAction implements FrameAction {
 
   private final FrameWriter writer;
-  private final WsUnsubscribeUseCase unsubscribeUseCase;
+  private final ChannelSubscriptionUseCase subscriptions;
 
   @Override
   public FrameType type() {
@@ -34,7 +34,7 @@ public class UnsubscribeAction implements FrameAction {
       writer.error(session, frame.clientMsgId(), "Missing channelId");
       return;
     }
-    unsubscribeUseCase.unsubscribe(new UnsubscribeCommand(session.getId(), frame.channelId()));
+    subscriptions.unsubscribe(new UnsubscribeCommand(session.getId(), frame.channelId()));
     writer.ack(session, frame.clientMsgId(), Map.of("description", "Unsubscribe successfully"));
   }
 }

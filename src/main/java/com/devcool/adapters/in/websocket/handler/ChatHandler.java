@@ -6,7 +6,9 @@ import com.devcool.adapters.in.websocket.handler.action.FrameAction;
 import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
-import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
+import com.devcool.domain.chat.port.in.ConnectionLifecycleUseCase;
+import com.devcool.domain.chat.port.in.command.ConnectCommand;
+import com.devcool.domain.chat.port.in.command.DisconnectCommand;
 import com.devcool.domain.common.DomainException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,23 +29,23 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared singleton beans; they are not owned state")
-public class ChatHandler extends TextWebSocketHandler {
+public final class ChatHandler extends TextWebSocketHandler {
 
   private final ObjectMapper objectMapper;
   private final SessionRegistry sessionRegistry;
-  private final ConnectionRegistryPort connectionRegistryPort;
+  private final ConnectionLifecycleUseCase connections;
   private final FrameWriter writer;
   private final Map<FrameType, FrameAction> actions = new EnumMap<>(FrameType.class);
 
   public ChatHandler(
       ObjectMapper objectMapper,
       SessionRegistry sessionRegistry,
-      ConnectionRegistryPort connectionRegistryPort,
+      ConnectionLifecycleUseCase connections,
       FrameWriter writer,
       List<FrameAction> actions) {
     this.objectMapper = objectMapper;
     this.sessionRegistry = sessionRegistry;
-    this.connectionRegistryPort = connectionRegistryPort;
+    this.connections = connections;
     this.writer = writer;
     for (FrameAction action : actions) {
       if (Objects.nonNull(this.actions.put(action.type(), action))) {
@@ -55,8 +57,8 @@ public class ChatHandler extends TextWebSocketHandler {
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
     sessionRegistry.put(session);
-    connectionRegistryPort.registerConnection(
-        session.getId(), AuthHandshakeInterceptor.userIdOf(session));
+    connections.connect(
+        new ConnectCommand(session.getId(), AuthHandshakeInterceptor.userIdOf(session)));
   }
 
   @Override
@@ -79,7 +81,7 @@ public class ChatHandler extends TextWebSocketHandler {
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     String connectionId = session.getId();
     sessionRegistry.remove(connectionId);
-    connectionRegistryPort.removeConnection(connectionId);
+    connections.disconnect(new DisconnectCommand(connectionId));
   }
 
   /**
