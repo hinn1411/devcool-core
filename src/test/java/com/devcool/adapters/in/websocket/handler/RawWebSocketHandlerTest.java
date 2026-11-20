@@ -14,7 +14,9 @@ import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
+import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +51,7 @@ class RawWebSocketHandlerTest {
   @Mock private WsSessionStore sessionStore;
   @Mock private ConnectionRegistryPort connectionRegistryPort;
   @Mock private WsSubscribeUseCase subscribeUseCase;
+  @Mock private WsUnsubscribeUseCase unsubscribeUseCase;
   @Mock private SendMessageUseCase sendMessageUseCase;
   @Mock private WebSocketSession session;
 
@@ -62,6 +65,7 @@ class RawWebSocketHandlerTest {
             sessionStore,
             connectionRegistryPort,
             subscribeUseCase,
+            unsubscribeUseCase,
             sendMessageUseCase);
     when(session.getId()).thenReturn("conn-1");
     when(session.getAttributes()).thenReturn(new HashMap<>());
@@ -88,6 +92,44 @@ class RawWebSocketHandlerTest {
     ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
     verify(session).sendMessage(reply.capture());
     assertThat(reply.getValue().getPayload()).contains("Invalid JSON");
+  }
+
+  // ---- UNSUBSCRIBE (P3-T16) --------------------------------------------------------------------
+
+  @Test
+  void unsubscribe_repliesAckWithClientMsgId() throws Exception {
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-1\"}"));
+
+    verify(unsubscribeUseCase).unsubscribe(new UnsubscribeCommand("conn-1", 42L));
+    WsServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(WsMessageType.ACK);
+    assertThat(frame.clientMsgId()).isEqualTo("r-1");
+  }
+
+  @Test
+  void unsubscribe_usesSessionIdNotFrame() throws Exception {
+    handler.handleTextMessage(
+        session,
+        new TextMessage(
+            "{\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"connectionId\":\"someone-else\"}"));
+
+    ArgumentCaptor<UnsubscribeCommand> command = ArgumentCaptor.forClass(UnsubscribeCommand.class);
+    verify(unsubscribeUseCase).unsubscribe(command.capture());
+    assertThat(command.getValue().connectionId()).isEqualTo("conn-1");
+  }
+
+  @Test
+  void unsubscribeWithoutChannelId_repliesErrorAndCallsNoUseCase() throws Exception {
+    handler.handleTextMessage(
+        session, new TextMessage("{\"action\":\"UNSUBSCRIBE\",\"clientMsgId\":\"r-2\"}"));
+
+    WsServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
+    assertThat(frame.data()).isEqualTo("Missing channelId");
+    verifyNoInteractions(unsubscribeUseCase);
+    verify(session, never()).close(any(CloseStatus.class));
   }
 
   // ---- SEND_MESSAGE: idempotency key (P3-T03) -------------------------------------------------

@@ -8,8 +8,10 @@ import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
+import com.devcool.domain.chat.port.in.WsUnsubscribeUseCase;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
+import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.DomainException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,6 +35,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   private final WsSessionStore sessionStore;
   private final ConnectionRegistryPort connectionRegistryPort;
   private final WsSubscribeUseCase subscribeUseCase;
+  private final WsUnsubscribeUseCase unsubscribeUseCase;
   private final SendMessageUseCase sendMessageUseCase;
 
   @Override
@@ -78,13 +81,16 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
       case WsMessageType.SUBSCRIBE -> {
         subscribeUseCase.subscribe(
             new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
-        session.sendMessage(
-            new TextMessage(
-                objectMapper.writeValueAsString(
-                    new WsServerFrame(
-                        WsMessageType.ACK,
-                        clientFrame.clientMsgId(),
-                        Map.of("description", "Subscribe successfully")))));
+        sendAck(session, clientFrame.clientMsgId(), "Subscribe successfully");
+      }
+      case WsMessageType.UNSUBSCRIBE -> {
+        if (Objects.isNull(clientFrame.channelId())) {
+          sendError(session, clientFrame.clientMsgId(), "Missing channelId");
+          return;
+        }
+        unsubscribeUseCase.unsubscribe(
+            new UnsubscribeCommand(connectionId, clientFrame.channelId()));
+        sendAck(session, clientFrame.clientMsgId(), "Unsubscribe successfully");
       }
       case WsMessageType.SEND_MESSAGE -> {
         UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
@@ -147,6 +153,15 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     } catch (IllegalArgumentException ex) {
       return null;
     }
+  }
+
+  private void sendAck(WebSocketSession session, String clientMsgId, String description)
+      throws IOException {
+    session.sendMessage(
+        new TextMessage(
+            objectMapper.writeValueAsString(
+                new WsServerFrame(
+                    WsMessageType.ACK, clientMsgId, Map.of("description", description)))));
   }
 
   private void sendError(WebSocketSession session, String clientMsgId, Object data)

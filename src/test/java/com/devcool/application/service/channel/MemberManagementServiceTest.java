@@ -16,6 +16,7 @@ import com.devcool.domain.channel.port.in.command.LeaveChannelCommand;
 import com.devcool.domain.channel.port.in.command.RemoveMemberCommand;
 import com.devcool.domain.channel.port.in.command.TransferLeaderCommand;
 import com.devcool.domain.channel.port.out.ChannelPort;
+import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.ForbiddenException;
 import com.devcool.domain.member.exception.MemberNotFoundException;
 import com.devcool.domain.member.model.enums.MemberType;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** Service-only rules; roles are in ChannelPermissionPolicyTest. */
 @ExtendWith(MockitoExtension.class)
@@ -39,10 +42,14 @@ class MemberManagementServiceTest {
 
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
+  @Mock private ConnectionRegistryPort connectionRegistryPort;
 
   private MemberManagementService newService() {
     return new MemberManagementService(
-        channelPort, memberPort, new ChannelAuthorizer(channelPort, memberPort));
+        channelPort,
+        memberPort,
+        new ChannelAuthorizer(channelPort, memberPort),
+        connectionRegistryPort);
   }
 
   private void channelIs(ChannelType type, Long leaderId) {
@@ -58,6 +65,24 @@ class MemberManagementServiceTest {
     verify(memberPort, never()).removeMember(anyLong(), anyLong());
     verify(memberPort, never()).updateRole(anyLong(), anyLong(), any());
     verify(channelPort, never()).increaseTotalMembers(anyLong(), anyInt());
+    verify(connectionRegistryPort, never()).unsubscribeUser(anyLong(), anyLong());
+  }
+
+  /** Runs the action inside a fake transaction; returns before commit, then commits. */
+  private void inTransaction(Runnable action, Runnable beforeCommit) {
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      action.run();
+      beforeCommit.run();
+      TransactionSynchronizationManager.getSynchronizations()
+          .forEach(TransactionSynchronization::afterCommit);
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+  }
+
+  private void assertNobodyUnsubscribedYet() {
+    verify(connectionRegistryPort, never()).unsubscribeUser(anyLong(), anyLong());
   }
 
   @Nested
@@ -79,6 +104,41 @@ class MemberManagementServiceTest {
       InOrder order = inOrder(memberPort, channelPort);
       order.verify(memberPort).removeMember(CHANNEL_ID, TARGET_ID);
       order.verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
+    }
+
+    @Test
+    void cutsOffTheTargetsLivePushes() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.CREATOR);
+      roleOf(TARGET_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, TARGET_ID)).thenReturn(true);
+
+      remove(TARGET_ID);
+
+      verify(connectionRegistryPort).unsubscribeUser(TARGET_ID, CHANNEL_ID);
+    }
+
+    /** Before commit, a concurrent SUBSCRIBE still sees the row and would re-add the target. */
+    @Test
+    void cutsOffPushesOnlyAfterCommit() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.CREATOR);
+      roleOf(TARGET_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, TARGET_ID)).thenReturn(true);
+
+      inTransaction(
+          () -> remove(TARGET_ID), MemberManagementServiceTest.this::assertNobodyUnsubscribedYet);
+
+      verify(connectionRegistryPort).unsubscribeUser(TARGET_ID, CHANNEL_ID);
+    }
+
+    @Test
+    void plainMember_isForbidden_andNobodyIsUnsubscribed() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.MEMBER);
+
+      assertThatThrownBy(() -> remove(TARGET_ID)).isInstanceOf(ForbiddenException.class);
+      assertNothingWritten();
     }
 
     @Test
@@ -138,6 +198,28 @@ class MemberManagementServiceTest {
       leave();
 
       verify(channelPort).increaseTotalMembers(CHANNEL_ID, -1);
+    }
+
+    @Test
+    void cutsOffTheCallersLivePushes() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, CALLER_ID)).thenReturn(true);
+
+      leave();
+
+      verify(connectionRegistryPort).unsubscribeUser(CALLER_ID, CHANNEL_ID);
+    }
+
+    @Test
+    void cutsOffPushesOnlyAfterCommit() {
+      channelIs(ChannelType.LOUNGE, null);
+      roleOf(CALLER_ID, MemberType.MEMBER);
+      when(memberPort.removeMember(CHANNEL_ID, CALLER_ID)).thenReturn(true);
+
+      inTransaction(this::leave, MemberManagementServiceTest.this::assertNobodyUnsubscribedYet);
+
+      verify(connectionRegistryPort).unsubscribeUser(CALLER_ID, CHANNEL_ID);
     }
 
     @Test
