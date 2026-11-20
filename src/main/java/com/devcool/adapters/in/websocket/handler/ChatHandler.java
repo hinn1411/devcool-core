@@ -1,10 +1,11 @@
 package com.devcool.adapters.in.websocket.handler;
 
-import com.devcool.adapters.in.websocket.dto.WsClientFrame;
-import com.devcool.adapters.in.websocket.dto.WsMessageAck;
-import com.devcool.adapters.in.websocket.dto.WsMessageType;
-import com.devcool.adapters.in.websocket.dto.WsServerFrame;
-import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
+import com.devcool.adapters.in.websocket.dto.ClientFrame;
+import com.devcool.adapters.in.websocket.dto.FrameType;
+import com.devcool.adapters.in.websocket.dto.SendAck;
+import com.devcool.adapters.in.websocket.dto.ServerFrame;
+import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
+import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
@@ -16,6 +17,7 @@ import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.common.DomainException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
@@ -29,10 +31,13 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Component
 @RequiredArgsConstructor
-public class RawWebSocketHandler extends TextWebSocketHandler {
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Spring injects shared singleton beans; they are not owned state")
+public class ChatHandler extends TextWebSocketHandler {
   private final ObjectMapper objectMapper;
 
-  private final WsSessionStore sessionStore;
+  private final SessionRegistry sessionRegistry;
   private final ConnectionRegistryPort connectionRegistryPort;
   private final WsSubscribeUseCase subscribeUseCase;
   private final WsUnsubscribeUseCase unsubscribeUseCase;
@@ -40,7 +45,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
 
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
-    sessionStore.put(session);
+    sessionRegistry.put(session);
     Long userId = getUserId(session);
     String connectionId = session.getId();
     connectionRegistryPort.registerConnection(connectionId, userId);
@@ -51,14 +56,14 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     String connectionId = session.getId();
     Long userId = getUserId(session);
 
-    WsClientFrame clientFrame;
+    ClientFrame clientFrame;
     try {
-      clientFrame = objectMapper.readValue(message.getPayload(), WsClientFrame.class);
+      clientFrame = objectMapper.readValue(message.getPayload(), ClientFrame.class);
     } catch (JsonProcessingException ex) {
       session.sendMessage(
           new TextMessage(
               objectMapper.writeValueAsString(
-                  new WsServerFrame(WsMessageType.ERROR, null, "Invalid JSON"))));
+                  new ServerFrame(FrameType.ERROR, null, "Invalid JSON"))));
       return;
     }
 
@@ -66,24 +71,23 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
       session.sendMessage(
           new TextMessage(
               objectMapper.writeValueAsString(
-                  new WsServerFrame(
-                      WsMessageType.ERROR, clientFrame.clientMsgId(), "Missing action"))));
+                  new ServerFrame(FrameType.ERROR, clientFrame.clientMsgId(), "Missing action"))));
       return;
     }
 
     switch (clientFrame.action()) {
-      case WsMessageType.PING -> {
+      case FrameType.PING -> {
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(WsMessageType.ACK, clientFrame.clientMsgId(), "PONG"))));
+                    new ServerFrame(FrameType.ACK, clientFrame.clientMsgId(), "PONG"))));
       }
-      case WsMessageType.SUBSCRIBE -> {
+      case FrameType.SUBSCRIBE -> {
         subscribeUseCase.subscribe(
             new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
         sendAck(session, clientFrame.clientMsgId(), "Subscribe successfully");
       }
-      case WsMessageType.UNSUBSCRIBE -> {
+      case FrameType.UNSUBSCRIBE -> {
         if (Objects.isNull(clientFrame.channelId())) {
           sendError(session, clientFrame.clientMsgId(), "Missing channelId");
           return;
@@ -92,7 +96,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
             new UnsubscribeCommand(connectionId, clientFrame.channelId()));
         sendAck(session, clientFrame.clientMsgId(), "Unsubscribe successfully");
       }
-      case WsMessageType.SEND_MESSAGE -> {
+      case FrameType.SEND_MESSAGE -> {
         UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
         if (Objects.isNull(clientMsgId)) {
           // Don't reflect an arbitrary client string back.
@@ -120,17 +124,17 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(
-                        WsMessageType.ACK,
+                    new ServerFrame(
+                        FrameType.ACK,
                         clientMsgId.toString(),
-                        new WsMessageAck(saved.id(), saved.seq(), saved.createdTime())))));
+                        new SendAck(saved.id(), saved.seq(), saved.createdTime())))));
       }
       default -> {
         session.sendMessage(
             new TextMessage(
                 objectMapper.writeValueAsString(
-                    new WsServerFrame(
-                        WsMessageType.ERROR, clientFrame.clientMsgId(), "Unsupported action"))));
+                    new ServerFrame(
+                        FrameType.ERROR, clientFrame.clientMsgId(), "Unsupported action"))));
       }
     }
   }
@@ -138,7 +142,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
   @Override
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     String connectionId = session.getId();
-    sessionStore.remove(connectionId);
+    sessionRegistry.remove(connectionId);
     connectionRegistryPort.removeConnection(connectionId);
   }
 
@@ -160,19 +164,17 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     session.sendMessage(
         new TextMessage(
             objectMapper.writeValueAsString(
-                new WsServerFrame(
-                    WsMessageType.ACK, clientMsgId, Map.of("description", description)))));
+                new ServerFrame(FrameType.ACK, clientMsgId, Map.of("description", description)))));
   }
 
   private void sendError(WebSocketSession session, String clientMsgId, Object data)
       throws IOException {
     session.sendMessage(
         new TextMessage(
-            objectMapper.writeValueAsString(
-                new WsServerFrame(WsMessageType.ERROR, clientMsgId, data))));
+            objectMapper.writeValueAsString(new ServerFrame(FrameType.ERROR, clientMsgId, data))));
   }
 
   private Long getUserId(WebSocketSession session) {
-    return (Long) session.getAttributes().get(WsAuthHandShakeInterceptor.ATTR_USER_ID);
+    return (Long) session.getAttributes().get(AuthHandshakeInterceptor.ATTR_USER_ID);
   }
 }

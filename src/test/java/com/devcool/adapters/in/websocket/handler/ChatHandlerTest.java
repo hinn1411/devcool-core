@@ -8,8 +8,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.devcool.adapters.in.websocket.dto.WsMessageType;
-import com.devcool.adapters.in.websocket.dto.WsServerFrame;
+import com.devcool.adapters.in.websocket.dto.FrameType;
+import com.devcool.adapters.in.websocket.dto.ServerFrame;
+import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
@@ -38,7 +39,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 @ExtendWith(MockitoExtension.class)
-class RawWebSocketHandlerTest {
+class ChatHandlerTest {
 
   // As Boot's: ISO-8601 dates.
   private final ObjectMapper objectMapper =
@@ -48,21 +49,21 @@ class RawWebSocketHandlerTest {
   private static final SavedMessage SAVED =
       new SavedMessage(100L, 42L, Instant.parse("2026-11-01T10:00:00Z"), false);
 
-  @Mock private WsSessionStore sessionStore;
+  @Mock private SessionRegistry sessionRegistry;
   @Mock private ConnectionRegistryPort connectionRegistryPort;
   @Mock private WsSubscribeUseCase subscribeUseCase;
   @Mock private WsUnsubscribeUseCase unsubscribeUseCase;
   @Mock private SendMessageUseCase sendMessageUseCase;
   @Mock private WebSocketSession session;
 
-  private RawWebSocketHandler handler;
+  private ChatHandler handler;
 
   @BeforeEach
   void setUp() {
     handler =
-        new RawWebSocketHandler(
+        new ChatHandler(
             objectMapper,
-            sessionStore,
+            sessionRegistry,
             connectionRegistryPort,
             subscribeUseCase,
             unsubscribeUseCase,
@@ -78,9 +79,8 @@ class RawWebSocketHandlerTest {
 
     ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
     verify(session).sendMessage(reply.capture());
-    WsServerFrame frame =
-        objectMapper.readValue(reply.getValue().getPayload(), WsServerFrame.class);
-    assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
+    ServerFrame frame = objectMapper.readValue(reply.getValue().getPayload(), ServerFrame.class);
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Invalid JSON");
     verifyNoInteractions(subscribeUseCase, sendMessageUseCase);
   }
@@ -103,8 +103,8 @@ class RawWebSocketHandlerTest {
         new TextMessage("{\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-1\"}"));
 
     verify(unsubscribeUseCase).unsubscribe(new UnsubscribeCommand("conn-1", 42L));
-    WsServerFrame frame = onlyReply();
-    assertThat(frame.type()).isEqualTo(WsMessageType.ACK);
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ACK);
     assertThat(frame.clientMsgId()).isEqualTo("r-1");
   }
 
@@ -125,8 +125,8 @@ class RawWebSocketHandlerTest {
     handler.handleTextMessage(
         session, new TextMessage("{\"action\":\"UNSUBSCRIBE\",\"clientMsgId\":\"r-2\"}"));
 
-    WsServerFrame frame = onlyReply();
-    assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Missing channelId");
     verifyNoInteractions(unsubscribeUseCase);
     verify(session, never()).close(any(CloseStatus.class));
@@ -163,8 +163,8 @@ class RawWebSocketHandlerTest {
       throws Exception {
     handler.handleTextMessage(session, sendFrame(keyField));
 
-    WsServerFrame frame = onlyReply();
-    assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.data()).isEqualTo("Invalid clientMsgId");
     assertThat(frame.clientMsgId()).as("the raw client string is not reflected").isNull();
     verifyNoInteractions(sendMessageUseCase);
@@ -177,8 +177,8 @@ class RawWebSocketHandlerTest {
 
     handler.handleTextMessage(session, sendFrame("\"clientMsgId\":\"" + KEY + "\""));
 
-    WsServerFrame frame = onlyReply();
-    assertThat(frame.type()).isEqualTo(WsMessageType.ERROR);
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
     assertThat(frame.clientMsgId()).isEqualTo(KEY);
     assertThat(frame.data()).isEqualTo("MESSAGE_410");
     verify(session, never()).close(any(CloseStatus.class));
@@ -227,9 +227,9 @@ class RawWebSocketHandlerTest {
             + "}");
   }
 
-  private WsServerFrame onlyReply() throws Exception {
+  private ServerFrame onlyReply() throws Exception {
     ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
     verify(session).sendMessage(reply.capture());
-    return objectMapper.readValue(reply.getValue().getPayload(), WsServerFrame.class);
+    return objectMapper.readValue(reply.getValue().getPayload(), ServerFrame.class);
   }
 }

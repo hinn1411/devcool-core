@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.LoginRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
-import com.devcool.adapters.in.websocket.dto.WsClientFrame;
-import com.devcool.adapters.in.websocket.dto.WsMessageType;
+import com.devcool.adapters.in.websocket.dto.ClientFrame;
+import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -122,8 +122,7 @@ class BigintIdsIT {
     Client sending = connect(sender);
     sendFrame(
         sending,
-        new WsClientFrame(
-            WsMessageType.SEND_MESSAGE, channelId, ContentType.TEXT, "big ids", uuid()));
+        new ClientFrame(FrameType.SEND_MESSAGE, channelId, ContentType.TEXT, "big ids", uuid()));
 
     assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("\"messageId\"");
     JsonNode pushed = json.readTree(awaitFrame(listening));
@@ -213,11 +212,11 @@ class BigintIdsIT {
   }
 
   private void subscribe(Client client, long channelId) throws Exception {
-    sendFrame(client, new WsClientFrame(WsMessageType.SUBSCRIBE, channelId, null, null, uuid()));
+    sendFrame(client, new ClientFrame(FrameType.SUBSCRIBE, channelId, null, null, uuid()));
     assertThat(awaitFrame(client)).contains("Subscribe successfully");
   }
 
-  private void sendFrame(Client client, WsClientFrame frame) throws Exception {
+  private void sendFrame(Client client, ClientFrame frame) throws Exception {
     client.session().sendMessage(new TextMessage(json.writeValueAsString(frame)));
   }
 

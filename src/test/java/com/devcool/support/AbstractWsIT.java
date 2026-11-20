@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
-import com.devcool.adapters.in.websocket.dto.WsClientFrame;
-import com.devcool.adapters.in.websocket.dto.WsMessageType;
+import com.devcool.adapters.in.websocket.dto.ClientFrame;
+import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
@@ -100,12 +100,12 @@ public abstract class AbstractWsIT {
   }
 
   protected void subscribe(Client client, Long channelId) throws Exception {
-    sendFrame(client, new WsClientFrame(WsMessageType.SUBSCRIBE, channelId, null, null, uuid()));
+    sendFrame(client, new ClientFrame(FrameType.SUBSCRIBE, channelId, null, null, uuid()));
     assertThat(awaitFrame(client)).contains("Subscribe successfully");
   }
 
   protected void unsubscribe(Client client, Long channelId) throws Exception {
-    sendFrame(client, new WsClientFrame(WsMessageType.UNSUBSCRIBE, channelId, null, null, uuid()));
+    sendFrame(client, new ClientFrame(FrameType.UNSUBSCRIBE, channelId, null, null, uuid()));
     assertThat(awaitFrame(client)).contains("\"type\":\"ACK\"");
   }
 
@@ -118,11 +118,10 @@ public abstract class AbstractWsIT {
   protected void send(Client client, Long channelId, String content) throws Exception {
     sendFrame(
         client,
-        new WsClientFrame(
-            WsMessageType.SEND_MESSAGE, channelId, ContentType.TEXT, content, uuid()));
+        new ClientFrame(FrameType.SEND_MESSAGE, channelId, ContentType.TEXT, content, uuid()));
   }
 
-  protected void sendFrame(Client client, WsClientFrame frame) throws Exception {
+  protected void sendFrame(Client client, ClientFrame frame) throws Exception {
     client.session().sendMessage(new TextMessage(json.writeValueAsString(frame)));
   }
 

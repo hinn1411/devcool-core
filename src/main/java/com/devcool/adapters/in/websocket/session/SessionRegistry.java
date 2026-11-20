@@ -1,4 +1,4 @@
-package com.devcool.adapters.in.websocket.handler;
+package com.devcool.adapters.in.websocket.session;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
-public class WsSessionStore {
+public class SessionRegistry {
 
   private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
