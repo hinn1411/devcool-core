@@ -55,7 +55,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 - [ ] **P4-T05** Valkey in Terraform (`data` stack behind the `enable_valkey` hibernate toggle, ADR-0013; ElastiCache Serverless) and in local compose (`valkey/valkey`). Spring Data Redis (Lettuce). **Verify pub/sub support on the serverless offering** and record the result in ADR-0006
 - [ ] **P4-T06** `POST /api/v1/ws/ticket` + handshake redeem (`GETDEL`). Reject with 401 on missing or invalid tickets. Origin allowlist from config. Remove the header-based path (or keep it for non-browser clients)
 ### Stage 2: backplane
-- [ ] **P4-T07** Refactor: move fan-out out of `WsSendMessageService` into `DeliverToLocalConnectionsUseCase`. `RealtimeEmitterPort` → `RealtimeBackplanePort`
+- [ ] **P4-T07** Refactor: move fan-out out of `WsSendMessageService` into `DeliverToLocalConnectionsUseCase`. `RealtimeEmitterPort` → `RealtimeBackplanePort`. Delivery re-checks membership (one batched query per channel), so the registry is no longer the only push-side authz; every path that ends membership (remove, leave, channel delete, user deactivation) still calls `unsubscribeUser`
 - [ ] **P4-T08** `RedisBackplaneAdapter`: per-channel topics with ref-counted subscribe/unsubscribe, `originNodeId`/`originConnectionId`, listener hands off to a bounded executor
 - [ ] **P4-T09** `RESUME {channelId, lastSeq}` → up to 200 messages in seq order, else `RESYNC_REQUIRED`. Membership checked
 ### Presence and typing

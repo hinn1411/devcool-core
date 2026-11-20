@@ -81,13 +81,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
       case WsMessageType.SUBSCRIBE -> {
         subscribeUseCase.subscribe(
             new SubscribeCommand(connectionId, userId, clientFrame.channelId()));
-        session.sendMessage(
-            new TextMessage(
-                objectMapper.writeValueAsString(
-                    new WsServerFrame(
-                        WsMessageType.ACK,
-                        clientFrame.clientMsgId(),
-                        Map.of("description", "Subscribe successfully")))));
+        sendAck(session, clientFrame.clientMsgId(), "Subscribe successfully");
       }
       case WsMessageType.UNSUBSCRIBE -> {
         if (Objects.isNull(clientFrame.channelId())) {
@@ -96,13 +90,7 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
         }
         unsubscribeUseCase.unsubscribe(
             new UnsubscribeCommand(connectionId, clientFrame.channelId()));
-        session.sendMessage(
-            new TextMessage(
-                objectMapper.writeValueAsString(
-                    new WsServerFrame(
-                        WsMessageType.ACK,
-                        clientFrame.clientMsgId(),
-                        Map.of("description", "Unsubscribe successfully")))));
+        sendAck(session, clientFrame.clientMsgId(), "Unsubscribe successfully");
       }
       case WsMessageType.SEND_MESSAGE -> {
         UUID clientMsgId = parseClientMsgId(clientFrame.clientMsgId());
@@ -165,6 +153,15 @@ public class RawWebSocketHandler extends TextWebSocketHandler {
     } catch (IllegalArgumentException ex) {
       return null;
     }
+  }
+
+  private void sendAck(WebSocketSession session, String clientMsgId, String description)
+      throws IOException {
+    session.sendMessage(
+        new TextMessage(
+            objectMapper.writeValueAsString(
+                new WsServerFrame(
+                    WsMessageType.ACK, clientMsgId, Map.of("description", description)))));
   }
 
   private void sendError(WebSocketSession session, String clientMsgId, Object data)

@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** Remove, leave, transfer leader. Locks the channel row first; a FORUM keeps one leader. */
 @Service
@@ -68,7 +70,7 @@ public class MemberManagementService
       throw new InvalidChannelConfigException("The leader must transfer the role first");
     }
     deleteMemberRow(channelId, targetId);
-    connectionRegistryPort.unsubscribeUser(targetId, channelId);
+    cutOffLivePushesAfterCommit(targetId, channelId);
   }
 
   @Override
@@ -81,7 +83,7 @@ public class MemberManagementService
       throw new InvalidChannelConfigException("Transfer the leader role before leaving");
     }
     deleteMemberRow(command.channelId(), command.userId());
-    connectionRegistryPort.unsubscribeUser(command.userId(), command.channelId());
+    cutOffLivePushesAfterCommit(command.userId(), command.channelId());
   }
 
   @Override
@@ -112,6 +114,25 @@ public class MemberManagementService
     if (newLeaderRole == MemberType.MEMBER) {
       setRole(channelId, newLeaderId, MemberType.LEADER);
     }
+  }
+
+  /**
+   * After commit: before it, a concurrent SUBSCRIBE still sees the member row and would re-add the
+   * user, and a rollback would cut off someone still a member. A SUBSCRIBE that read the row just
+   * before commit can still slip in; the fan-out membership re-check in P4 closes that.
+   */
+  private void cutOffLivePushesAfterCommit(Long userId, Long channelId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      connectionRegistryPort.unsubscribeUser(userId, channelId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            connectionRegistryPort.unsubscribeUser(userId, channelId);
+          }
+        });
   }
 
   private MemberType roleOf(Long channelId, Long userId) {

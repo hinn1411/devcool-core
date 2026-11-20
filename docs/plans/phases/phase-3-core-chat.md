@@ -56,7 +56,7 @@ These are the "design a chat app" data-model questions: ordering, idempotency, u
 - [x] **P3-T13** Keyword search: `tsvector` generated column + GIN index; `GET /channels/{id}/messages/search?q=` (membership-checked). Add a global search across my channels
 - [x] **P3-T14** Presigned PUT upload endpoint + validation. Mark the multipart upload as deprecated
 - [x] **P3-T15** A MARKDOWN message strategy (currently missing → `InvalidMessageConfigException`)
-- [ ] **P3-T16** `UNSUBSCRIBE` wired end to end (currently falls through to "Unsupported action"); the `WsUnsubscribeService` stub implemented. Remove/leave also unsubscribe the user's open connections from that channel
+- [x] **P3-T16** `UNSUBSCRIBE` wired end to end (currently falls through to "Unsupported action"); the `WsUnsubscribeService` stub implemented. Remove/leave also unsubscribe the user's open connections from that channel
 
 ## Files touched
 - `domain/chat/**`, `domain/channel/**`, `domain/member/**`
