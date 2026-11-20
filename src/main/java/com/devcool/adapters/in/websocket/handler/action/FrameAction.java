@@ -5,10 +5,7 @@ import com.devcool.adapters.in.websocket.dto.FrameType;
 import java.io.IOException;
 import org.springframework.web.socket.WebSocketSession;
 
-/**
- * Handles one client {@link FrameType}: frame → command → inbound port → reply. A rejected
- * command's {@code DomainException} propagates; the handler turns it into an ERROR frame.
- */
+/** Handles one client {@link FrameType}. A DomainException propagates to the handler. */
 public interface FrameAction {
 
   FrameType type();

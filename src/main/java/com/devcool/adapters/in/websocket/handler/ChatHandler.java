@@ -24,7 +24,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-/** Connection lifecycle, frame parsing and dispatch. Each action lives in its own class. */
 @Component
 @SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
@@ -84,10 +83,7 @@ public final class ChatHandler extends TextWebSocketHandler {
     connections.disconnect(new DisconnectCommand(connectionId));
   }
 
-  /**
-   * Runs the action for {@code frame.action()}. Never lets a frame-level failure escape: Spring
-   * closes the socket on an exception, and the protocol forbids that for a bad frame.
-   */
+  /** A DomainException becomes an ERROR frame: an escaping one makes Spring close the socket. */
   private void dispatch(WebSocketSession session, ClientFrame frame) throws IOException {
     FrameAction action = actions.get(frame.action());
     if (Objects.isNull(action)) {

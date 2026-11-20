@@ -57,7 +57,6 @@ class ConnectionServiceTest {
     verifyNoInteractions(connectionRegistryPort);
   }
 
-  /** No membership check: it only shrinks this connection's own subscriptions (a no-op if none). */
   @Test
   void unsubscribe_dropsOnlyThisConnectionFromTheChannel() {
     service.unsubscribe(new UnsubscribeCommand("conn-1", 42L));

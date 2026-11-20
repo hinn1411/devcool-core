@@ -38,7 +38,7 @@ public class SendMessageAction implements FrameAction {
     try {
       clientMsgId = ClientMsgId.parse(frame.clientMsgId());
     } catch (InvalidClientMsgIdException ex) {
-      // Handled here, not by the dispatcher: it would reflect the arbitrary client string back.
+      // Not via the dispatcher: it would echo the raw client string.
       writer.error(session, null, "Invalid clientMsgId");
       return;
     }
@@ -54,7 +54,6 @@ public class SendMessageAction implements FrameAction {
         saved -> ack(session, clientMsgId, saved));
   }
 
-  /** Runs inside the use case, between commit and push; a dead socket must not lose the push. */
   private void ack(WebSocketSession session, ClientMsgId clientMsgId, SavedMessage saved) {
     try {
       writer.ack(

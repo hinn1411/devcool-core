@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/** The one place that turns a frame into JSON on the wire. */
 @Component
 @RequiredArgsConstructor
 @SuppressFBWarnings(

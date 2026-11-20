@@ -3,7 +3,6 @@ package com.devcool.adapters.in.websocket.dto;
 import com.devcool.domain.chat.model.MessageEvent;
 import java.time.Instant;
 
-/** The MESSAGE frame pushed to subscribers. */
 public record MessagePush(
     String type,
     Long channelId,

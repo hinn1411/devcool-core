@@ -81,7 +81,6 @@ class ChatHandlerTest {
                 new SubscribeAction(writer, subscriptions),
                 new UnsubscribeAction(writer, subscriptions),
                 new SendMessageAction(writer, sendMessageUseCase)));
-    // Lenient: only the actions that need them read the id and user.
     lenient().when(session.getId()).thenReturn("conn-1");
     lenient().when(session.getAttributes()).thenReturn(new HashMap<>());
   }
@@ -118,8 +117,7 @@ class ChatHandlerTest {
     assertThat(frame.data()).isEqualTo("Unsupported action");
   }
 
-  // ---- SUBSCRIBE
-  // ---------------------------------------------------------------------------------
+  // ---- SUBSCRIBE ----
 
   @Test
   void subscribeByNonMember_repliesErrorWithItsCode_andKeepsTheSocketOpen() throws Exception {
@@ -271,7 +269,6 @@ class ChatHandlerTest {
     assertThat(data.path("createdTime").asText()).isEqualTo("2026-11-01T10:00:00Z");
   }
 
-  /** The use case commits as {@code saved} and runs the handler's ACK callback. */
   @SuppressWarnings("unchecked")
   private void commitsAs(SavedMessage saved) {
     doAnswer(

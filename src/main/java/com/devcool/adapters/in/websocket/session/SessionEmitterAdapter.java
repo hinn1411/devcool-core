@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-/**
- * The driven side of the WebSocket adapter. It lives next to {@link SessionRegistry} because both
- * directions share one transport and one session map; P4's Valkey backplane (ADR-0006) replaces it.
- */
+/** Outbound side of the WS adapter; shares {@link SessionRegistry}. Replaced in P4 (ADR-0006). */
 @Component
 @RequiredArgsConstructor
 @SuppressFBWarnings(
@@ -36,7 +33,7 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
     try {
       writer.send(session, MessagePush.from(event));
     } catch (IOException | IllegalStateException ex) {
-      // At-most-once: the client catches up by seq. Log, don't fail the sender's request.
+      // At-most-once: the client catches up by seq.
       log.warn(
           "Push of message {} to {} failed: {}", event.messageId(), connectionId, ex.toString());
     }

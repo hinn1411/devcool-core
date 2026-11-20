@@ -19,7 +19,6 @@ public class AuthHandshakeInterceptor implements HandshakeInterceptor {
   public static final String ATTR_USER_ID = "userId";
   private static final Logger log = LoggerFactory.getLogger(AuthHandshakeInterceptor.class);
 
-  /** The authenticated user this handshake stored on the session. */
   public static Long userIdOf(WebSocketSession session) {
     return (Long) session.getAttributes().get(ATTR_USER_ID);
   }

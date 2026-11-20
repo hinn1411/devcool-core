@@ -14,10 +14,7 @@ import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * Not {@code @Transactional}: {@link SaveMessageUseCase#save} commits in its own transaction, so
- * the message is durable before the ACK and the push.
- */
+/** Not {@code @Transactional}: {@code save} commits on its own. */
 @Service
 @RequiredArgsConstructor
 @SuppressFBWarnings(
@@ -35,15 +32,13 @@ public class SendMessageService implements SendMessageUseCase {
     try {
       onCommitted.accept(saved);
     } finally {
-      // Committed is committed: a failed ACK (dead sender socket) must not hide the message from
-      // the others. A retry is not pushed again; the original send already did (design §4).
+      // A failed ACK still pushes; a retry was already pushed.
       if (!saved.duplicate()) {
         publish(command, saved);
       }
     }
   }
 
-  /** Pushes to every connection subscribed to the channel except the sender's own. */
   private void publish(SendMessageCommand command, SavedMessage saved) {
     MessageEvent event = toEvent(command, saved);
     for (String connectionId :

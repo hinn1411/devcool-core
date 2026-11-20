@@ -4,10 +4,7 @@ import com.devcool.domain.chat.exception.InvalidClientMsgIdException;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * The sender's idempotency key for one message: a retry with the same key saves nothing. Only the
- * canonical 36-character UUID form is a key.
- */
+/** The sender's idempotency key: a canonical 36-char UUID. */
 public record ClientMsgId(UUID value) {
 
   private static final int CANONICAL_LENGTH = 36;
@@ -16,11 +13,8 @@ public record ClientMsgId(UUID value) {
     Objects.requireNonNull(value, "value");
   }
 
-  /**
-   * @throws InvalidClientMsgIdException when {@code raw} is null or not a canonical UUID
-   */
   public static ClientMsgId parse(String raw) {
-    // UUID.fromString accepts short forms like "1-1-1-1-1"; only the 36-char form is a client key.
+    // UUID.fromString also accepts short forms like "1-1-1-1-1".
     if (Objects.isNull(raw) || raw.length() != CANONICAL_LENGTH) {
       throw new InvalidClientMsgIdException();
     }
@@ -31,7 +25,6 @@ public record ClientMsgId(UUID value) {
     }
   }
 
-  /** The canonical lower-case form. */
   @Override
   public String toString() {
     return value.toString();
