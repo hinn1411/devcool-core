@@ -18,6 +18,7 @@ import com.devcool.adapters.in.websocket.handler.action.UnsubscribeAction;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
+import com.devcool.domain.chat.model.ClientMsgId;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
 import com.devcool.domain.chat.port.in.WsSubscribeUseCase;
@@ -198,7 +199,7 @@ class ChatHandlerTest {
 
     ArgumentCaptor<SendMessageCommand> command = ArgumentCaptor.forClass(SendMessageCommand.class);
     verify(sendMessageUseCase).sendMessage(command.capture());
-    assertThat(command.getValue().clientMsgId()).isEqualTo(UUID.fromString(KEY));
+    assertThat(command.getValue().clientMsgId()).isEqualTo(new ClientMsgId(UUID.fromString(KEY)));
   }
 
   @Test

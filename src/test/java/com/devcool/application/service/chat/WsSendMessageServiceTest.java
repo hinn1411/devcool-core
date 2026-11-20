@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.application.service.chat.WsSendMessageService.OutboundWsEvent;
+import com.devcool.domain.chat.model.ClientMsgId;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.SaveMessageUseCase;
@@ -70,7 +71,12 @@ class WsSendMessageServiceTest {
 
     service.sendMessage(
         new SendMessageCommand(
-            "conn-1", 1L, 10L, ContentType.MARKDOWN, "# hi **x**", UUID.randomUUID()));
+            "conn-1",
+            1L,
+            10L,
+            ContentType.MARKDOWN,
+            "# hi **x**",
+            new ClientMsgId(UUID.randomUUID())));
 
     ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
     verify(realtimeEmitterPort).sendMessageToConnection(eq("conn-2"), payload.capture());
@@ -85,7 +91,8 @@ class WsSendMessageServiceTest {
     when(connectionRegistryPort.getConnectionsByChannel(10L)).thenReturn(Set.of("conn-2"));
 
     service.sendMessage(
-        new SendMessageCommand("conn-1", 1L, 10L, ContentType.TEXT, "re", UUID.randomUUID(), 77L));
+        new SendMessageCommand(
+            "conn-1", 1L, 10L, ContentType.TEXT, "re", new ClientMsgId(UUID.randomUUID()), 77L));
 
     ArgumentCaptor<CreateMessageCommand> saved =
         ArgumentCaptor.forClass(CreateMessageCommand.class);
@@ -97,6 +104,7 @@ class WsSendMessageServiceTest {
   }
 
   private static SendMessageCommand command() {
-    return new SendMessageCommand("conn-1", 1L, 10L, ContentType.TEXT, "hello", UUID.randomUUID());
+    return new SendMessageCommand(
+        "conn-1", 1L, 10L, ContentType.TEXT, "hello", new ClientMsgId(UUID.randomUUID()));
   }
 }

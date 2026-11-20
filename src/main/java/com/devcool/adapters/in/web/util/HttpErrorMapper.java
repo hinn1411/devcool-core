@@ -26,6 +26,7 @@ public class HttpErrorMapper {
       case INVALID_CHANNEL_CONFIG,
               INVALID_MEDIA_CONTENT,
               INVALID_MESSAGE_CONFIG,
+              INVALID_CLIENT_MSG_ID,
               INVALID_HISTORY_CURSOR,
               INVALID_CHANNEL_CURSOR,
               INVALID_EMOJI,
