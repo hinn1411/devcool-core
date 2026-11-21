@@ -172,30 +172,58 @@ More detail:
 
 ### Prerequisites
 
-- Java 21+
-- Maven 3.9+
-- Docker (for PostgreSQL via Docker Compose)
-- AWS credentials configured (for S3 — can use a local bucket or LocalStack)
+- Java 21
+- Docker
+- AWS credentials are optional: only media upload needs them
 
 ### Setup
 
-1. Clone the repository.
-2. Copy `local.env` and fill in your JWT secrets and AWS credentials.
-3. Start the application — Spring Boot will automatically start the PostgreSQL container:
+1. Create the Docker Compose settings and fill in the database and pgAdmin values:
 
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
-```
+   ```bash
+   cp docker/local/.env.example docker/local/.env
+   ```
 
-Docker Compose spins up:
-- **PostgreSQL 16** on `localhost:5432`
-- **pgAdmin 4** on `http://localhost:5050`
+2. Create `local.env` in the repo root (gitignored) with the app's secrets. Each one must be standard Base64 of at least 32 bytes:
+
+   ```bash
+   JWT_ACCESS_SECRET=<output of: openssl rand -base64 48>
+   JWT_REFRESH_SECRET=<output of: openssl rand -base64 48>
+   ```
+
+3. Start the app. The `local` profile starts Docker Compose and runs the database migrations on its own:
+
+   ```bash
+   set -a; . ./local.env; set +a
+   ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
+   ```
+
+   In IntelliJ, load `local.env` as the run configuration's env file instead.
+
+| Service | URL |
+|---|---|
+| API | `http://localhost:8080` |
+| Swagger UI | `http://localhost:8080/docs` |
+| Health | `http://localhost:8080/actuator/health` |
+| PostgreSQL 16 | `localhost:5432` |
+| pgAdmin | `http://localhost:5050` |
+
+### Optional
+
+- **Sample data** (fresh database only; the ids are fixed):
+
+  ```bash
+  docker compose -f docker/local/compose.yaml exec -T postgres \
+    sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < docker/local/seed/message-history-seed.sql
+  ```
+
+- **Production image:** to run the container that AWS runs, see [`docker/ecs/README.md`](docker/ecs/README.md).
 
 ### Useful commands
 
 ```bash
 # Build (skip tests)
-./mvnw clean package -DskipTests
+./mvnw package -DskipTests
 
 # Format code
 ./mvnw spotless:apply
