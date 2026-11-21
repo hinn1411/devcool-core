@@ -4,7 +4,7 @@ A real-time chat and collaboration platform backend built with **Spring Boot 3.5
 
 ## Table of Contents
 
-- [Introduction](#introduction)
+- [Highlights](#highlights)
 - [Tech Stack](#tech-stack)
 - [Hexagonal Architecture](#hexagonal-architecture)
 - [AWS Architecture](#aws-architecture)
@@ -14,16 +14,18 @@ A real-time chat and collaboration platform backend built with **Spring Boot 3.5
 
 ---
 
-## Introduction
+## Highlights
 
-DevCool is a backend API service that powers a developer-focused chat platform. It supports:
-
-- **Authentication** — JWT-based auth with access tokens and HttpOnly refresh token cookies
-- **Channels** — Forum, Lounge, and Private Chat channel types with membership management
-- **Real-time messaging** — Raw WebSocket connections with custom message protocol (Subscribe / Unsubscribe / SendMessage)
-- **Media uploads** — Multipart file upload to S3 (JPEG, PNG, WebP, MP4; max 10 MB) with presigned URL retrieval
-
-The codebase enforces strict layering so that domain logic never depends on Spring, JPA, or AWS — making it easy to test in isolation and swap infrastructure adapters without touching business rules.
+- **Clean, enforced architecture**: hexagonal (ports and adapters). Business logic never depends on Spring, the database or AWS, and automated architecture tests keep it that way.
+- **Reliable messaging**: a message is saved before it's acknowledged or broadcast; retries never create duplicates; every channel keeps a strict order; clients catch up after reconnecting. *(in progress)*
+- **Realtime at scale**: WebSocket connections spread across many servers, with presence, typing indicators and no dropped users during deploys. *(planned)*
+- **Event-driven background work**: slow jobs leave the request path through durable queues, with retries and dead-letter queues. *(planned)*
+- **Permission-aware AI assistant**: ask questions about your chat history and get cited answers, built only from conversations you're allowed to see. *(planned)*
+- **Infrastructure as code, keyless deploys**: all of AWS is defined in Terraform; GitHub Actions deploys without stored cloud keys and rolls back failed releases automatically.
+- **Scale-to-zero cost design**: the dev environment sleeps or hibernates when idle, costing a few dollars a month, with budget alerts.
+- **Quality and supply-chain gates**: every change passes tests, a coverage floor, static analysis and vulnerability scans of the code, image and infrastructure.
+- **Observability with user-facing SLOs**: metrics, logs and traces from every service, with targets on what users feel, such as message delivery time. *(planned)*
+- **Load- and chaos-tested**: soak tests, reconnect storms and failure drills, with published results. *(planned)*
 
 ---
 
@@ -33,7 +35,7 @@ The codebase enforces strict layering so that domain logic never depends on Spri
 |---|---|
 | Language | Java 21 |
 | Framework | Spring Boot 3.5.6 |
-| Database | PostgreSQL 15 |
+| Database | PostgreSQL 16 (Aurora Serverless v2 on AWS) |
 | ORM / Migrations | Spring Data JPA + Flyway |
 | Auth | JWT (nimbus-jose-jwt) |
 | Storage | AWS S3 (SDK v2, region: `us-east-1`) |
@@ -50,185 +52,119 @@ The codebase enforces strict layering so that domain logic never depends on Spri
 
 The project follows the **Ports & Adapters (Hexagonal) pattern** — the domain and application layers are completely isolated from framework and infrastructure concerns.
 
-### Layer Overview
-
-```
-com.devcool/
-├── domain/              # Pure business logic — zero Spring/JPA/AWS imports
-│   ├── auth/            # JWT tokens, refresh tokens
-│   ├── user/            # User, Role, UserStatus
-│   ├── channel/         # Channel types (Forum, Lounge, PrivateChat)
-│   ├── chat/            # Messages
-│   ├── member/          # Channel membership
-│   ├── media/           # Media upload (S3)
-│   └── common/          # Shared domain primitives
-│
-├── application/
-│   └── service/         # Use case implementations — wires domain ports together
-│
-└── adapters/
-    ├── in/
-    │   ├── web/          # REST controllers + request/response DTOs (MapStruct mappers)
-    │   └── websocket/    # WebSocket handlers + auth handshake interceptor
-    └── out/
-        ├── persistence/  # JPA entities + Spring Data repositories
-        ├── storage/      # S3StorageAdapter (AWS SDK v2)
-        ├── jwt/          # JWT issuance and validation
-        └── crypto/       # BCrypt password hashing
-```
-
-### Port Pattern
-
-Each domain module defines:
-
-- **Inbound ports** (`UseCase` / `Query` interfaces) — called by `adapters/in`
-- **Outbound ports** (`Port` interfaces) — implemented by `adapters/out`
-
-Application services implement inbound ports and depend **only** on outbound port interfaces — never directly on JPA repositories or the AWS SDK.
-
-```
-HTTP Request
-    │
-    ▼  adapters/in/web/controller        (HTTP → command object)
-    │
-    ▼  domain/.../port/in/UseCase        (inbound port interface)
-    │
-    ▼  application/service/...Service    (implements UseCase, calls Port)
-    │
-    ▼  domain/.../port/out/...Port       (outbound port interface)
-    │
-    ▼  adapters/out/...Adapter           (JPA / S3 / JWT implementation)
+```mermaid
+flowchart LR
+    subgraph in[Driving adapters]
+        rest[REST controllers]
+        ws[WebSocket handler]
+        sqs[Event consumers]
+        relay[Outbox relay]
+    end
+    subgraph core[Application core]
+        inport[/Inbound ports/]
+        svc[Application services]
+        domain[Domain model]
+        outport[/Outbound ports/]
+        inport --> svc --> domain
+        svc --> outport
+    end
+    subgraph out[Driven adapters]
+        db[Persistence]
+        storage[File storage]
+        tokens[Token issuer]
+        hash[Password hashing]
+        rt[Realtime backplane]
+        pub[Event publisher]
+        ai[AI models]
+        vec[Vector store]
+    end
+    rest & ws & sqs & relay --> inport
+    outport --> db & storage & tokens & hash & rt & pub & ai & vec
+    classDef planned stroke-dasharray: 5 5
+    class sqs,relay,pub,ai,vec planned
 ```
 
-### Example: Media Upload Request Flow
+Dashed boxes aren't built yet. The core defines two kinds of interfaces:
 
-```
-POST /api/v1/medias/upload (MultipartFile + channelId)
-  │
-  ▼ MediaController
-    - Extracts userId from Spring Security principal
-    - Calls MediaDtoMapper.toUploadMediaCommand(file, userId, channelId)
-  │
-  ▼ UploadMediaUseCase  [inbound port]
-  │
-  ▼ MediaService
-    - Validates file not empty → InvalidMediaContentException
-    - Validates contentType in allowlist → UnsupportedMediaTypeException
-    - Builds S3 key: "channel/{channelId}/{yyyy/MM/dd}/{uuid}.{ext}"
-    - Calls MediaStoragePort.upload(UploadRequest)
-  │
-  ▼ MediaStoragePort  [outbound port]
-  │
-  ▼ S3StorageAdapter
-    - Builds AWS PutObjectRequest
-    - Calls s3Client.putObject(...)
-    - Returns UploadResult(bucket, objectKey)
-  │
-  ▼ HTTP 200 { "data": { "key": "channel/123/2026/03/08/uuid.jpg" } }
-```
+- **Inbound ports** (`UseCase` / `Query`): what the application can do, called by driving adapters
+- **Outbound ports** (`Port`): what the application needs from the outside world, implemented by driven adapters
 
-### Boundaries enforced
-
-| Boundary | Rule |
-|---|---|
-| Domain | No Spring, JPA, or AWS imports |
-| Application service | Depends only on port interfaces — never on `@Repository` beans or SDKs |
-| Controllers | Only map HTTP types → domain commands; no business logic |
-| Domain exceptions | Thrown from the service layer; caught by a global `@ControllerAdvice` |
+| Part | Status | What it is |
+|---|---|---|
+| **REST controllers** | Available | Turn HTTP requests into calls on inbound ports |
+| **WebSocket handler** | Available | Receives realtime frames (subscribe, send) and pushes messages to clients |
+| **Event consumers** | Unavailable | React to queued events (notifications, AI indexing) |
+| **Outbox relay** | Unavailable | Publishes saved events to the queues, so no event is lost |
+| **Inbound ports** | Available | The use cases the application offers |
+| **Application services** | Available | Implement the use cases by coordinating the domain and outbound ports |
+| **Domain model** | Available | Business rules for users, auth, channels, members, chat and media; no framework code |
+| **Outbound ports** | Available | Interfaces for everything the core needs from outside |
+| **Persistence** | Available | Stores data in PostgreSQL |
+| **File storage** | Available | Stores uploaded media in S3 |
+| **Token issuer** | Available | Issues and verifies login tokens |
+| **Password hashing** | Available | Hashes and checks passwords |
+| **Realtime backplane** | Available (single server) | Delivers live messages between connections; in memory today, shared across servers with Valkey later |
+| **Event publisher** | Unavailable | Sends domain events to the queues |
+| **AI models** | Unavailable | Generates answers and embeddings |
+| **Vector store** | Unavailable | Finds chat history relevant to a question |
 
 ---
 
 ## AWS Architecture
 
-The production deployment runs on **AWS us-east-1 (N. Virginia)** using ECS Fargate, RDS PostgreSQL, and S3.
+DevCool runs on AWS. All infrastructure is defined as code with Terraform (`infra/`), and GitHub Actions deploys it automatically. The diagram shows the target design; dashed boxes aren't built yet.
 
-```
-                  Internet
-                     │
-                     ▼
-              ┌─────────────┐
-              │   Internet   │
-              │   Gateway    │
-              └──────┬───────┘
-                     │
-         ┌───────────┴───────────┐
-         │    VPC 10.0.0.0/16    │
-         │                       │
-         │  ┌─────────────────┐  │
-         │  │  Public Subnet  │  │
-         │  │  10.0.1.0/24    │  │
-         │  │  (AZ-a)         │  │
-         │  │                 │  │
-         │  │  ┌───────────┐  │  │
-         │  │  │ ECS Task  │  │  │
-         │  │  │ (Fargate) │──┼──┼──→ S3 (via Internet)
-         │  │  │ Public IP │  │  │
-         │  │  └─────┬─────┘  │  │
-         │  └────────┼────────┘  │
-         │           │           │
-         │  ┌────────┼────────┐  │
-         │  │  Private Subnet │  │
-         │  │  10.0.10.0/24   │  │
-         │  │  (AZ-a)         │  │
-         │  │  ┌───────────┐  │  │
-         │  │  │    RDS    │  │  │
-         │  │  │ PostgreSQL│  │  │
-         │  │  └───────────┘  │  │
-         │  └─────────────────┘  │
-         │                       │
-         │  ┌─────────────────┐  │
-         │  │  Private Subnet │  │
-         │  │  10.0.11.0/24   │  │
-         │  │  (AZ-b, RDS     │  │
-         │  │   subnet group) │  │
-         │  └─────────────────┘  │
-         └───────────────────────┘
+```mermaid
+flowchart LR
+    user([Browser]) --> cdn[CloudFront]
+    cdn --> spa[(S3: web app)]
+    cdn --> alb[Load balancer]
+    subgraph private[Private network]
+        alb --> api[API service]
+        api --> db[(Aurora PostgreSQL)]
+        api <--> cache[(Valkey)]
+        worker[Worker service] --> db
+    end
+    api --> media[(S3: media)]
+    api --> ai[Bedrock]
+    worker --> events[[SNS + SQS]] --> worker
+    worker --> ai
+    api & worker -.-> obs[Grafana Cloud]
+    ci[GitHub Actions] -.-> api
+    classDef planned stroke-dasharray: 5 5
+    class spa,cache,worker,events,ai,obs planned
 ```
 
-### Components
+| Component | Status | Role |
+|---|---|---|
+| **CloudFront** | Available | Single public entry point: serves the web app and forwards API and WebSocket traffic to the backend |
+| **Load balancer** | Available | Spreads requests across backend containers and only sends traffic to healthy ones |
+| **API service** (ECS Fargate) | Available | Runs the Spring Boot backend (REST and WebSocket) as containers, adding more under load |
+| **Aurora PostgreSQL** | Available | Managed database that scales down, and pauses, when idle |
+| **S3: media** | Available | Stores files users upload in chat |
+| **Secrets Manager** | Available | Holds passwords and keys, given to the app at startup |
+| **GitHub Actions** | Available | Tests, builds and deploys every change merged into `master` |
+| **S3: web app** (React) | Unavailable | The browser client, served through CloudFront |
+| **Valkey** | Unavailable | Shares realtime messages, presence and typing across API containers |
+| **Worker service** | Unavailable | Runs background jobs (notifications, cleanup, AI indexing) off the request path |
+| **SNS + SQS** | Unavailable | Durable event queues between the API and the worker |
+| **Bedrock** | Unavailable | AI answers over chat history and the embeddings that power search |
+| **Grafana Cloud** | Unavailable | Metrics, logs and traces from every service, with dashboards and alerts |
 
-| Component | Details |
-|---|---|
-| **ECS Fargate** | Spring Boot container in a public subnet; 0.5 vCPU / 1 GB RAM; exposes port 8080 |
-| **RDS PostgreSQL 15** | `db.t3.micro` in a private subnet; only reachable from the ECS security group |
-| **S3** | Private bucket `devcool-media`; application uses presigned URLs for client access |
-| **ECR** | Docker image registry for the Spring Boot container |
-| **IAM Task Role** | Grants the ECS task `s3:PutObject` and `s3:GetObject` on the media bucket |
-
-### Networking
-
-- 1 public subnet (ECS tasks — needs internet access for S3 and inbound traffic)
-- 2 private subnets in different AZs (required by RDS DB subnet group)
-- ECS security group: inbound TCP 8080 from `0.0.0.0/0`
-- RDS security group: inbound TCP 5432 from the ECS security group only
+The backend and database sit in a private network that isn't reachable from the internet. Passwords and keys are kept in AWS Secrets Manager and given to the app when it starts, never stored in code.
 
 ### Deployment flow
 
-```bash
-# Build and push image to ECR
-docker build -t devcool .
-docker tag devcool:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
-docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
+1. A change is merged into `master`.
+2. GitHub Actions builds a Docker image and pushes it to AWS.
+3. Database migrations run as a separate step before any new code goes live.
+4. The new containers replace the old ones gradually. If they fail their health checks, AWS rolls back to the previous version.
 
-# Force ECS to deploy the new image
-aws ecs update-service \
-  --cluster devcool-cluster \
-  --service devcool-service \
-  --force-new-deployment \
-  --region us-east-1
-```
+Infrastructure changes are previewed on the pull request and applied after merge. To save cost, the dev environment can be paused and resumed from a workflow.
 
-### Environment variables (ECS task definition)
-
-| Variable | Description |
-|---|---|
-| `SPRING_PROFILES_ACTIVE` | `ecs` |
-| `SPRING_DATASOURCE_URL` | RDS JDBC URL |
-| `SPRING_DATASOURCE_USERNAME` | RDS username |
-| `SPRING_DATASOURCE_PASSWORD` | RDS password |
-| `JWT_ACCESS_SECRET` | Min 32-char secret for access tokens |
-| `JWT_REFRESH_SECRET` | Min 32-char secret for refresh tokens |
-| `AWS_S3_BUCKET` | S3 bucket name |
+More detail:
+- Operating the environment: [`infra/README.md`](infra/README.md)
+- Running the production image locally: [`docker/ecs/README.md`](docker/ecs/README.md)
 
 ---
 
@@ -236,30 +172,58 @@ aws ecs update-service \
 
 ### Prerequisites
 
-- Java 21+
-- Maven 3.9+
-- Docker (for PostgreSQL via Docker Compose)
-- AWS credentials configured (for S3 — can use a local bucket or LocalStack)
+- Java 21
+- Docker
+- AWS credentials are optional: only media upload needs them
 
 ### Setup
 
-1. Clone the repository.
-2. Copy `local.env` and fill in your JWT secrets and AWS credentials.
-3. Start the application — Spring Boot will automatically start the PostgreSQL container:
+1. Create the Docker Compose settings and fill in the database and pgAdmin values:
 
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
-```
+   ```bash
+   cp docker/local/.env.example docker/local/.env
+   ```
 
-Docker Compose spins up:
-- **PostgreSQL 15** on `localhost:5432`
-- **pgAdmin 4** on `http://localhost:5050`
+2. Create `local.env` in the repo root (gitignored) with the app's secrets. Each one must be standard Base64 of at least 32 bytes:
+
+   ```bash
+   JWT_ACCESS_SECRET=<output of: openssl rand -base64 48>
+   JWT_REFRESH_SECRET=<output of: openssl rand -base64 48>
+   ```
+
+3. Start the app. The `local` profile starts Docker Compose and runs the database migrations on its own:
+
+   ```bash
+   set -a; . ./local.env; set +a
+   ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
+   ```
+
+   In IntelliJ, load `local.env` as the run configuration's env file instead.
+
+| Service | URL |
+|---|---|
+| API | `http://localhost:8080` |
+| Swagger UI | `http://localhost:8080/docs` |
+| Health | `http://localhost:8080/actuator/health` |
+| PostgreSQL 16 | `localhost:5432` |
+| pgAdmin | `http://localhost:5050` |
+
+### Optional
+
+- **Sample data** (fresh database only; the ids are fixed):
+
+  ```bash
+  docker compose -f docker/local/compose.yaml exec -T postgres \
+    sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < docker/local/seed/message-history-seed.sql
+  ```
+
+- **Production image:** to run the container that AWS runs, see [`docker/ecs/README.md`](docker/ecs/README.md).
 
 ### Useful commands
 
 ```bash
 # Build (skip tests)
-./mvnw clean package -DskipTests
+./mvnw package -DskipTests
 
 # Format code
 ./mvnw spotless:apply
