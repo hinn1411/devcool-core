@@ -4,35 +4,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
-import com.devcool.support.PostgresTestContainer;
+import com.devcool.support.AbstractMigrationIT;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 /**
  * V4 on a database that already holds messages (P3-T02): migrate to V3, seed rows the way the
  * pre-V4 app wrote them, then apply V4 and check the backfill and the new unique keys.
  */
-class V4BackfillIT {
+class V4BackfillIT extends AbstractMigrationIT {
 
   private static final long ALICE = 1, BOB = 2;
   private static final long BUSY = 10, QUIET = 20, EMPTY = 30;
 
-  private String url;
-  private JdbcTemplate jdbc;
-
   @BeforeEach
   void seedAtV3ThenApplyV4() {
-    url = PostgresTestContainer.freshDatabase("v4_it_");
-    var pg = PostgresTestContainer.POSTGRES;
-    jdbc = new JdbcTemplate(new DriverManagerDataSource(url, pg.getUsername(), pg.getPassword()));
+    openFreshDatabase("v4_it_");
 
     migrateTo("3");
     jdbc.batchUpdate(
@@ -139,15 +131,6 @@ class V4BackfillIT {
 
     assertThat(jdbc.queryForObject("select count(*) from message where seq is null", Long.class))
         .isEqualTo(2);
-  }
-
-  private void migrateTo(String version) {
-    var pg = PostgresTestContainer.POSTGRES;
-    Flyway.configure()
-        .dataSource(url, pg.getUsername(), pg.getPassword())
-        .target(version)
-        .load()
-        .migrate();
   }
 
   private void insertMessage(long id, long userId, long channelId, Long seq, UUID clientMsgId) {

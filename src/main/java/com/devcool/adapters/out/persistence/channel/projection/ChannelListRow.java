@@ -12,6 +12,7 @@ public record ChannelListRow(
     ChannelType channelType,
     BoundaryType boundaryType,
     Long unreadCount,
+    Instant lastMessageAt,
     Long lastMessageId,
     Long lastMessageSeq,
     Long lastSenderId,

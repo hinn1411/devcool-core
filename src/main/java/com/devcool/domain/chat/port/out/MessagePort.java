@@ -29,6 +29,12 @@ public interface MessagePort {
   /** Up to {@code size} messages with seq above {@code afterSeq}, seq ASC. */
   List<MessageItem> findAfterSeq(Long channelId, Long afterSeq, Integer size);
 
+  /** Live TEXT/MARKDOWN matches, seq DESC (null beforeSeq = newest). */
+  List<MessageItem> searchInChannel(String query, Long channelId, Long beforeSeq, Integer size);
+
+  /** Same, across the user's channels, id DESC. */
+  List<MessageItem> searchInMyChannels(String query, Long userId, Long beforeId, Integer size);
+
   /** The message unless it is unknown or deleted. */
   Optional<EditableMessage> findForEdit(Long messageId);
 

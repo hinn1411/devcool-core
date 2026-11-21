@@ -26,6 +26,7 @@ import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
 import com.devcool.domain.chat.port.in.GetMessageQuery;
 import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
+import com.devcool.domain.chat.port.in.SearchMessagesQuery;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
@@ -72,6 +73,7 @@ class MessageControllerTest {
   @MockitoBean private EditMessageUseCase messageEditor;
   @MockitoBean private DeleteMessageUseCase messageDeleter;
   @MockitoBean private ReactToMessageUseCase messageReactor;
+  @MockitoBean private SearchMessagesQuery messageSearcher;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;

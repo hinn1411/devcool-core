@@ -5,6 +5,7 @@ import java.util.List;
 
 public record MessageItemResponse(
     Long id,
+    Long channelId,
     Long seq,
     String content,
     String contentType,

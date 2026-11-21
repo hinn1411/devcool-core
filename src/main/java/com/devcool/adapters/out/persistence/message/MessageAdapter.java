@@ -15,8 +15,11 @@ import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -73,6 +76,29 @@ public class MessageAdapter implements MessagePort {
     return repo.findPageBeforeSeq(channelId, beforeSeq, PageRequest.of(0, size)).stream()
         .map(mapper::toItem)
         .toList();
+  }
+
+  @Override
+  public List<MessageItem> searchInChannel(
+      String query, Long channelId, Long beforeSeq, Integer size) {
+    return itemsInOrder(repo.searchIdsInChannel(query, channelId, beforeSeq, size));
+  }
+
+  @Override
+  public List<MessageItem> searchInMyChannels(
+      String query, Long userId, Long beforeId, Integer size) {
+    return itemsInOrder(repo.searchIdsInMemberChannels(query, userId, beforeId, size));
+  }
+
+  /** Load hits, keep search order. */
+  private List<MessageItem> itemsInOrder(List<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, MessageEntity> byId =
+        repo.findAllForItems(ids).stream()
+            .collect(Collectors.toMap(MessageEntity::getId, Function.identity()));
+    return ids.stream().map(byId::get).map(mapper::toItem).toList();
   }
 
   @Override

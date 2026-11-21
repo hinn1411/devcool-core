@@ -14,5 +14,6 @@ public interface ChannelMapper {
   Channel toDomain(ChannelEntity entity);
 
   @Mapping(target = "lastSeq", ignore = true)
+  @Mapping(target = "lastMessageAt", ignore = true)
   ChannelEntity toEntity(Channel channel);
 }

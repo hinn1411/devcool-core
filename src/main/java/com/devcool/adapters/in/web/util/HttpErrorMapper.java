@@ -26,8 +26,11 @@ public class HttpErrorMapper {
       case INVALID_CHANNEL_CONFIG,
               INVALID_MEDIA_CONTENT,
               INVALID_MESSAGE_CONFIG,
+              INVALID_CLIENT_MSG_ID,
               INVALID_HISTORY_CURSOR,
+              INVALID_CHANNEL_CURSOR,
               INVALID_EMOJI,
+              INVALID_SEARCH_QUERY,
               INVALID_OBJECT_KEY ->
           HttpStatus.BAD_REQUEST;
       case REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS, UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;

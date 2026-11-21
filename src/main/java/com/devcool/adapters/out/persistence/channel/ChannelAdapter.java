@@ -6,8 +6,10 @@ import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.adapters.out.persistence.channel.repository.ChannelRepository;
 import com.devcool.domain.channel.model.Channel;
 import com.devcool.domain.channel.model.ChannelAccessInfo;
+import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
+import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.model.ReplyPreview;
 import java.util.List;
@@ -33,18 +35,22 @@ public class ChannelAdapter implements ChannelPort {
   }
 
   @Override
-  public ChannelListPage loadChannels(Long memberId, Long currentCursor, Integer limit) {
+  public ChannelListPage loadChannels(Long memberId, ChannelCursor cursor, Integer limit) {
     // Use limit + 1 trick to check next data block
     Pageable pagination = PageRequest.of(0, limit + 1);
     List<ChannelListRow> channelRows =
-        repo.findChannelPageByMemberId(memberId, currentCursor, pagination);
+        repo.findChannelPageByMemberId(
+            memberId,
+            Objects.isNull(cursor) ? null : cursor.lastMessageAt(),
+            Objects.isNull(cursor) ? null : cursor.id(),
+            Objects.nonNull(cursor) && Objects.nonNull(cursor.lastMessageAt()),
+            pagination);
     boolean hasMore = channelRows.size() > limit;
     List<ChannelListRow> page = hasMore ? channelRows.subList(0, limit) : channelRows;
-    Long nextCursor =
-        Optional.of(page)
-            .filter(rows -> !rows.isEmpty())
-            .map(rows -> rows.getLast().id())
-            .orElse(null);
+    ChannelCursor nextCursor =
+        page.isEmpty()
+            ? null
+            : new ChannelCursor(page.getLast().lastMessageAt(), page.getLast().id());
 
     return new ChannelListPage(
         page.stream().map(ChannelAdapter::toListItem).toList(), nextCursor, hasMore);
@@ -71,7 +77,18 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public Optional<ChannelAccessInfo> findAccessInfo(Long id) {
     return repo.findAccessRowById(id)
-        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers()));
+        .map(row -> new ChannelAccessInfo(row.channelType(), row.totalOfMembers(), row.leaderId()));
+  }
+
+  @Override
+  public Optional<ChannelAccessInfo> findAccessInfoForUpdate(Long id) {
+    return repo.lockAccessRowById(id)
+        .map(
+            row ->
+                new ChannelAccessInfo(
+                    ChannelType.valueOf(row.getChannelType()),
+                    row.getTotalOfMembers(),
+                    row.getLeaderId()));
   }
 
   @Override
@@ -96,6 +113,11 @@ public class ChannelAdapter implements ChannelPort {
   @Override
   public boolean increaseTotalMembers(Long channelId, Integer newMembers) {
     return repo.increaseTotalMembers(channelId, newMembers) > 0;
+  }
+
+  @Override
+  public boolean updateLeader(Long channelId, Long expectedLeaderId, Long newLeaderId) {
+    return repo.updateLeader(channelId, expectedLeaderId, newLeaderId) > 0;
   }
 
   @Override

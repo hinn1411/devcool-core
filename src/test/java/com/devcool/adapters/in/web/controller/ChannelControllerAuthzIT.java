@@ -1,9 +1,11 @@
 package com.devcool.adapters.in.web.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.devcool.adapters.in.web.dto.request.AddMembersRequest;
@@ -411,6 +413,194 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
     }
   }
 
+  /** P3-T11. The target is {@code newcomer}, a plain member. */
+  @Nested
+  class RemoveMember {
+
+    static Stream<Arguments> matrix() {
+      return Stream.of(
+          Arguments.of(ChannelType.LOUNGE, Caller.NON_MEMBER, 403, "MEMBER_404"),
+          Arguments.of(ChannelType.LOUNGE, Caller.MEMBER, 403, "SVR_403"),
+          Arguments.of(ChannelType.LOUNGE, Caller.CREATOR, 204, null),
+          Arguments.of(ChannelType.FORUM, Caller.LEADER, 204, null));
+    }
+
+    @ParameterizedTest(name = "{0} {1} -> {2} {3}")
+    @MethodSource("matrix")
+    void authenticatedCaller(
+        ChannelType type, Caller caller, int expectedStatus, String expectedCode) throws Exception {
+      Long channelId = channelWithNewcomer(type);
+      MemberCounts before = memberCounts(channelId);
+
+      ResultActions result = removeMember(channelId, newcomer.id(), bearer(account(caller)));
+
+      if (expectedStatus == 204) {
+        result.andExpect(status().isNoContent());
+        assertNotMember(channelId, newcomer.id());
+        assertThat(memberCounts(channelId))
+            .isEqualTo(new MemberCounts(before.total() - 1, before.rows() - 1));
+      } else {
+        expectResponse(result, expectedStatus, expectedCode);
+        assertThat(memberCounts(channelId)).isEqualTo(before);
+      }
+    }
+
+    @Test
+    void theForumLeader_cannotBeRemoved() throws Exception {
+      Long channelId = channelWithNewcomer(ChannelType.FORUM);
+
+      expectResponse(removeMember(channelId, leader.id(), bearer(creator)), 400, "CHANNEL_400");
+      assertThat(memberRole(channelId, leader.id())).contains("LEADER");
+    }
+
+    @Test
+    void removedUser_canBeAddedAgain() throws Exception {
+      Long channelId = channelWithNewcomer(ChannelType.LOUNGE);
+      removeMember(channelId, newcomer.id(), bearer(creator)).andExpect(status().isNoContent());
+
+      expectResponse(
+          addMembers(channelId, bearer(creator), new AddMembersRequest(List.of(newcomer.id()))),
+          200,
+          ErrorCode.OK.code());
+      assertThat(memberRole(channelId, newcomer.id())).contains("MEMBER");
+    }
+
+    @Test
+    void removedUser_cannotReadHistory() throws Exception {
+      Long channelId = channelWithNewcomer(ChannelType.LOUNGE);
+      removeMember(channelId, newcomer.id(), bearer(creator)).andExpect(status().isNoContent());
+
+      ResultActions result =
+          mvc.perform(
+              get("/api/v1/channels/{id}/messages", channelId)
+                  .header(HttpHeaders.AUTHORIZATION, bearer(newcomer)));
+
+      expectResponse(result, 403, "MEMBER_404");
+    }
+  }
+
+  /** P3-T11. */
+  @Nested
+  class LeaveChannel {
+
+    static Stream<Arguments> matrix() {
+      return Stream.of(
+          Arguments.of(ChannelType.LOUNGE, Caller.NON_MEMBER, 403, "MEMBER_404"),
+          Arguments.of(ChannelType.LOUNGE, Caller.MEMBER, 204, null),
+          Arguments.of(ChannelType.FORUM, Caller.LEADER, 400, "CHANNEL_400"),
+          Arguments.of(ChannelType.PRIVATE_CHAT, Caller.MEMBER, 400, "CHANNEL_400"));
+    }
+
+    @ParameterizedTest(name = "{0} {1} -> {2} {3}")
+    @MethodSource("matrix")
+    void authenticatedCaller(
+        ChannelType type, Caller caller, int expectedStatus, String expectedCode) throws Exception {
+      Long channelId = seedChannel(type);
+      MemberCounts before = memberCounts(channelId);
+
+      ResultActions result = leave(channelId, bearer(account(caller)));
+
+      if (expectedStatus == 204) {
+        result.andExpect(status().isNoContent());
+        assertNotMember(channelId, account(caller).id());
+        assertThat(memberCounts(channelId))
+            .isEqualTo(new MemberCounts(before.total() - 1, before.rows() - 1));
+      } else {
+        expectResponse(result, expectedStatus, expectedCode);
+        assertThat(memberCounts(channelId)).isEqualTo(before);
+      }
+    }
+  }
+
+  /** P3-T11. */
+  @Nested
+  class TransferLeader {
+
+    @Test
+    void leaderToMember_swapsRolesAndLeaderId() throws Exception {
+      Long channelId = seedChannel(ChannelType.FORUM);
+
+      transfer(channelId, member.id(), bearer(leader)).andExpect(status().isNoContent());
+
+      assertThat(memberRole(channelId, leader.id())).contains("MEMBER");
+      assertThat(memberRole(channelId, member.id())).contains("LEADER");
+      assertThat(leaderId(channelId)).isEqualTo(member.id());
+    }
+
+    @Test
+    void creatorWhoIsNotTheLeader_isForbidden() throws Exception {
+      Long channelId = seedChannel(ChannelType.FORUM);
+
+      expectResponse(transfer(channelId, member.id(), bearer(creator)), 403, "SVR_403");
+      assertThat(leaderId(channelId)).isEqualTo(leader.id());
+    }
+  }
+
+  /** P3-T12. */
+  @Nested
+  class DirectChat {
+
+    @Test
+    void withoutToken() throws Exception {
+      expectUnauthenticated(openDirect(member.id(), null));
+    }
+
+    @Test
+    void firstOpen_creates201_thenTheOtherSideGetsTheSameChat200() throws Exception {
+      MvcResult created =
+          expectResponse(openDirect(member.id(), bearer(creator)), 201, "SVR_201").andReturn();
+      Long channelId = channelIdOf(created);
+
+      MvcResult reopened =
+          expectResponse(openDirect(creator.id(), bearer(member)), 200, "SVR_200").andReturn();
+
+      assertThat(channelIdOf(reopened)).isEqualTo(channelId);
+      assertThat(memberRole(channelId, creator.id())).contains("CREATOR");
+      assertThat(memberRole(channelId, member.id())).contains("MEMBER");
+      assertThat(memberCounts(channelId)).isEqualTo(new MemberCounts(2, 2));
+    }
+
+    @Test
+    void legacyCreate_returnsTheExistingDirectChat() throws Exception {
+      Long channelId =
+          channelIdOf(
+              expectResponse(openDirect(member.id(), bearer(creator)), 201, "SVR_201").andReturn());
+
+      Long viaLegacy = createChannel(member, ChannelType.PRIVATE_CHAT, List.of(creator.id()), null);
+
+      assertThat(viaLegacy).isEqualTo(channelId);
+    }
+
+    @Test
+    void withYourself_is400() throws Exception {
+      expectResponse(openDirect(creator.id(), bearer(creator)), 400, "CHANNEL_400");
+    }
+
+    @Test
+    void unknownUser_is404() throws Exception {
+      expectResponse(openDirect(Long.MAX_VALUE, bearer(creator)), 404, "USR_404");
+    }
+
+    @Test
+    void blockedUser_is404() throws Exception {
+      jdbc.update("update app_user set status = 'BLOCKED' where id = ?", outsider.id());
+
+      expectResponse(openDirect(outsider.id(), bearer(creator)), 404, "USR_404");
+    }
+
+    private ResultActions openDirect(Long userId, String authorization) throws Exception {
+      return mvc.perform(
+          withAuth(post("/api/v1/channels/direct"), authorization)
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(json.writeValueAsString(Map.of("userId", userId))));
+    }
+
+    private Long channelIdOf(MvcResult result) throws Exception {
+      return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.data.channelId"))
+          .longValue();
+    }
+  }
+
   private static void expectUnauthenticated(ResultActions result) throws Exception {
     result
         .andExpect(status().isUnauthorized())
@@ -583,6 +773,36 @@ class ChannelControllerAuthzIT extends AbstractIntegrationTest {
         withAuth(post("/api/v1/channels/{id}/members", channelId), authorization)
             .contentType(MediaType.APPLICATION_JSON)
             .content(json.writeValueAsString(body)));
+  }
+
+  /** {@link #seedChannel} plus {@code newcomer} as a MEMBER. */
+  private Long channelWithNewcomer(ChannelType type) throws Exception {
+    Long leaderId = type == ChannelType.FORUM ? leader.id() : null;
+    return createChannel(creator, type, List.of(member.id(), newcomer.id()), leaderId);
+  }
+
+  private Long leaderId(Long channelId) {
+    return jdbc.queryForObject("select leader_id from channel where id = ?", Long.class, channelId);
+  }
+
+  private ResultActions removeMember(Long channelId, Long userId, String authorization)
+      throws Exception {
+    return mvc.perform(
+        withAuth(
+            delete("/api/v1/channels/{id}/members/{userId}", channelId, userId), authorization));
+  }
+
+  private ResultActions leave(Long channelId, String authorization) throws Exception {
+    return mvc.perform(
+        withAuth(delete("/api/v1/channels/{id}/members/me", channelId), authorization));
+  }
+
+  private ResultActions transfer(Long channelId, Long newLeaderId, String authorization)
+      throws Exception {
+    return mvc.perform(
+        withAuth(put("/api/v1/channels/{id}/leader", channelId), authorization)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json.writeValueAsString(Map.of("userId", newLeaderId))));
   }
 
   /** {@code authorization == null} sends no Authorization header at all. */

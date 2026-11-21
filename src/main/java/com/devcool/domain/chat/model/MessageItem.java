@@ -13,6 +13,7 @@ import lombok.Setter;
 @Builder
 public class MessageItem {
   private Long id;
+  private Long channelId;
   private Long seq;
   private String content;
   private ContentType contentType;

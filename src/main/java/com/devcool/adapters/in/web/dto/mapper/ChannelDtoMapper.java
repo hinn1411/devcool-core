@@ -8,6 +8,8 @@ import com.devcool.adapters.in.web.dto.response.ChannelListItemResponse;
 import com.devcool.adapters.in.web.dto.response.CreateChannelResponse;
 import com.devcool.adapters.in.web.dto.response.GetChannelResponse;
 import com.devcool.adapters.in.web.dto.response.UpdateChannelResponse;
+import com.devcool.adapters.in.web.util.ChannelCursorCodec;
+import com.devcool.domain.channel.model.ChannelCursor;
 import com.devcool.domain.channel.model.ChannelListItem;
 import com.devcool.domain.channel.model.ChannelListPage;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
@@ -43,11 +45,19 @@ public interface ChannelDtoMapper {
   @Mapping(target = "memberAdded", expression = "java(isMemberAdded)")
   AddMembersResponse toAddMembersResponse(Boolean isMemberAdded);
 
-  GetChannelCommand toGetChannelCommand(Long memberId, Long cursorId, Integer limit);
+  GetChannelCommand toGetChannelCommand(Long memberId, String cursor, Integer limit);
 
   @Mapping(target = "channels", source = "items")
-  @Mapping(target = "nextCursorId", source = "cursorId")
   GetChannelResponse toGetChannelResponse(ChannelListPage page);
 
   ChannelListItemResponse toChannelListItemResponse(ChannelListItem item);
+
+  /** Null = first page. */
+  default ChannelCursor toChannelCursor(String token) {
+    return token == null ? null : ChannelCursorCodec.decode(token);
+  }
+
+  default String toCursorToken(ChannelCursor cursor) {
+    return cursor == null ? null : ChannelCursorCodec.encode(cursor);
+  }
 }

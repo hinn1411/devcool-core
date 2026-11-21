@@ -13,8 +13,11 @@ import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.media.exception.InvalidMediaContentException;
 import com.devcool.domain.media.exception.InvalidObjectKeyException;
+import com.devcool.domain.media.exception.MediaTooLargeException;
 import com.devcool.domain.media.exception.UnsupportedMediaTypeException;
 import com.devcool.domain.media.port.in.GetMediaUrlUseCase.PresignedUrlResult;
+import com.devcool.domain.media.port.in.PresignUploadUseCase.PresignedUpload;
+import com.devcool.domain.media.port.in.command.PresignUploadCommand;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import com.devcool.domain.media.port.out.MediaStoragePort;
 import com.devcool.domain.member.exception.MemberNotFoundException;
@@ -23,11 +26,14 @@ import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -42,6 +48,8 @@ class MediaServiceTest {
   private static final String UUID_PART = "123e4567-e89b-12d3-a456-426614174000";
   private static final byte[] DATA = "data".getBytes();
   private static final String VALID_KEY = "channel/42/2026/03/08/" + UUID_PART + ".jpg";
+  private static final long MB = 1024L * 1024L;
+  private static final String PUT_URL = "https://s3.example.com/put?sig=abc";
 
   @Mock private MediaStoragePort storagePort;
   @Mock private ChannelPort channelPort;
@@ -276,6 +284,94 @@ class MediaServiceTest {
             new MediaStoragePort.PresignedGetResult("https://s3.example.com/f", Instant.now()));
 
     assertThatCode(() -> mediaService.getPresignedUrl(USER_ID, key)).doesNotThrowAnyException();
+  }
+
+  // ── presignUpload (P3-T14) ───────────────────────────────────────────────────
+
+  @ParameterizedTest
+  @CsvSource({"image/jpeg,.jpg", "image/png,.png", "image/webp,.webp", "video/mp4,.mp4"})
+  void presignUpload_member_returnsChannelKeyWithExtFromType_andSigns5MinPut(
+      String contentType, String ext) {
+    stubMember(CHANNEL_ID);
+    Instant expiresAt = Instant.parse("2026-11-19T10:05:00Z");
+    when(storagePort.presignPut(any()))
+        .thenReturn(new MediaStoragePort.PresignedPutResult(PUT_URL, expiresAt));
+
+    PresignedUpload result =
+        mediaService.presignUpload(
+            new PresignUploadCommand(USER_ID, CHANNEL_ID, contentType, 1024));
+
+    assertThat(result.url()).isEqualTo(PUT_URL);
+    assertThat(result.expiresAt()).isEqualTo(expiresAt);
+    assertThat(result.key())
+        .matches("channel/42/\\d{4}/\\d{2}/\\d{2}/[0-9a-f-]{36}" + ext.replace(".", "\\."));
+    ArgumentCaptor<MediaStoragePort.PresignPutRequest> captor =
+        ArgumentCaptor.forClass(MediaStoragePort.PresignPutRequest.class);
+    verify(storagePort).presignPut(captor.capture());
+    assertThat(captor.getValue())
+        .isEqualTo(
+            new MediaStoragePort.PresignPutRequest(
+                result.key(), contentType, 1024, Duration.ofMinutes(5)));
+  }
+
+  @Test
+  void presignUpload_keyIsAcceptedByPresignedGet() {
+    stubMember(CHANNEL_ID);
+    when(storagePort.presignPut(any()))
+        .thenReturn(new MediaStoragePort.PresignedPutResult(PUT_URL, Instant.now()));
+    when(storagePort.presignGet(any()))
+        .thenReturn(new MediaStoragePort.PresignedGetResult("https://s3/get", Instant.now()));
+    String key =
+        mediaService
+            .presignUpload(new PresignUploadCommand(USER_ID, CHANNEL_ID, "image/png", 10))
+            .key();
+
+    assertThatCode(() -> mediaService.getPresignedUrl(USER_ID, key)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void presignUpload_nonMember_signsNothing() {
+    when(memberPort.existMemberOfChannelByUserId(9L, USER_ID)).thenReturn(false);
+    PresignUploadCommand command = new PresignUploadCommand(USER_ID, 9L, "image/png", 10);
+
+    assertThatThrownBy(() -> mediaService.presignUpload(command))
+        .isInstanceOf(MemberNotFoundException.class);
+    verifyNoInteractions(storagePort);
+  }
+
+  @ParameterizedTest
+  @MethodSource("badUploads")
+  void presignUpload_rejectsBadTypeOrSize(
+      String contentType, long size, Class<? extends Throwable> expected) {
+    stubMember(CHANNEL_ID);
+    PresignUploadCommand command = new PresignUploadCommand(USER_ID, CHANNEL_ID, contentType, size);
+
+    assertThatThrownBy(() -> mediaService.presignUpload(command)).isInstanceOf(expected);
+    verifyNoInteractions(storagePort);
+  }
+
+  static Stream<Arguments> badUploads() {
+    return Stream.of(
+        Arguments.of("application/pdf", 10, UnsupportedMediaTypeException.class),
+        Arguments.of(null, 10, UnsupportedMediaTypeException.class),
+        Arguments.of("image/png", 0, InvalidMediaContentException.class),
+        Arguments.of("image/png", -1, InvalidMediaContentException.class),
+        Arguments.of("image/png", 5 * MB + 1, MediaTooLargeException.class),
+        Arguments.of("video/mp4", 10 * MB, MediaTooLargeException.class));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"image/png,5242880", "video/mp4,10485759", "image/jpeg,1"})
+  void presignUpload_acceptsExactLimits(String contentType, long size) {
+    stubMember(CHANNEL_ID);
+    when(storagePort.presignPut(any()))
+        .thenReturn(new MediaStoragePort.PresignedPutResult(PUT_URL, Instant.now()));
+
+    assertThatCode(
+            () ->
+                mediaService.presignUpload(
+                    new PresignUploadCommand(USER_ID, CHANNEL_ID, contentType, size)))
+        .doesNotThrowAnyException();
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────────

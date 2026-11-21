@@ -27,4 +27,10 @@ public interface MemberPort {
    * user is not a member of the channel (no row matched).
    */
   boolean advanceLastReadSeq(Long channelId, Long userId, long seq);
+
+  /** False when there was no row. */
+  boolean removeMember(Long channelId, Long userId);
+
+  /** False when the user is not a member. */
+  boolean updateRole(Long channelId, Long userId, MemberType role);
 }

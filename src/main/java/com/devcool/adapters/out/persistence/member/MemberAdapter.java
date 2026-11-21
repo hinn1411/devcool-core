@@ -72,4 +72,14 @@ public class MemberAdapter implements MemberPort {
   public boolean advanceLastReadSeq(Long channelId, Long userId, long seq) {
     return repo.advanceLastReadSeq(channelId, userId, seq) > 0;
   }
+
+  @Override
+  public boolean removeMember(Long channelId, Long userId) {
+    return repo.deleteByChannelIdAndUserId(channelId, userId) > 0;
+  }
+
+  @Override
+  public boolean updateRole(Long channelId, Long userId, MemberType role) {
+    return repo.updateRole(channelId, userId, role) > 0;
+  }
 }
