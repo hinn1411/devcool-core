@@ -162,12 +162,14 @@ POST /api/v1/medias/upload (MultipartFile + channelId)
 └───────────────────────────────────────────────────────────┘
 ```
 
+The diagram shows the awake state. `sleep` scales `api` to 0 tasks. `hibernate` destroys the ALB and ECS and turns off the NAT and the interface endpoints, leaving CloudFront, S3 and a paused Aurora.
+
 | Component | Details |
 |---|---|
 | **CloudFront** (`edge`) | One distribution: the SPA from S3, the API paths to the ALB. Survives hibernate, so the SPA still loads while the API returns 502 |
 | **ALB** (`app`) | HTTPS only; rejects requests without CloudFront's `X-Origin-Verify` header (403). Health check: `/actuator/health/readiness` |
 | **ECS Fargate** (`app`) | `api` service, 0.5 vCPU / 1 GB, 1–2 tasks on CPU target tracking, private subnets, read-only root filesystem |
-| **Aurora Serverless v2** (`data`) | PostgreSQL, 0–4 ACU: pauses when idle, so the first request after a pause waits up to ~60 s |
+| **Aurora Serverless v2** (`data`) | PostgreSQL, 0–4 ACU: pauses when idle; a resume after a long pause can take ≥ 30 s, so the client timeouts allow 60 s |
 | **S3** (`data`, `edge`) | Private media bucket (presigned URLs) and the SPA bucket |
 | **ECR** (`bootstrap`) | `devcool` repository, immutable `:<git sha>` tags |
 | **Secrets Manager** (`data`) | The RDS-managed DB secret and the JWT secrets, injected as task `secrets` |
@@ -178,9 +180,9 @@ Security groups chain alb → api → aurora; tasks reach AWS APIs through the e
 
 | Change | Workflow | What happens |
 |---|---|---|
-| Backend merge to `master` | `deploy.yml` | build and push `:<sha>` → run the `ecs,migrate` task → roll `api` (circuit breaker rolls back) → smoke `/actuator/health` |
+| Backend merge to `master` | `deploy.yml` | build and push `:<sha>` → run the `ecs,migrate` task → roll `api` (circuit breaker rolls back) → smoke `/actuator/health`. Asleep: no smoke. Hibernated: only registers the revision; `resume` migrates and rolls it out |
 | PR touching `infra/` | `infra-plan.yml` | `terraform plan` per changed stack, posted as a PR comment |
-| Infra merge to `master` | `infra-apply.yml` | apply every stack, then roll `api` onto the new task definition |
+| Infra merge to `master` | `infra-apply.yml` | apply every stack, then roll `api` onto the new task definition (`app` skipped while hibernated) |
 | Manual, nightly | `env-power.yml` | `sleep` / `wake` / `hibernate` / `resume`; hibernated is the default state |
 
 Migrations run as their own one-off task before the rollout, so the app never runs Flyway on start (`ecs` profile). Terraform doesn't own the image tag: `deploy.yml` registers each new revision.
