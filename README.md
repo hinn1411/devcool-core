@@ -4,7 +4,7 @@ A real-time chat and collaboration platform backend built with **Spring Boot 3.5
 
 ## Table of Contents
 
-- [Introduction](#introduction)
+- [Highlights](#highlights)
 - [Tech Stack](#tech-stack)
 - [Hexagonal Architecture](#hexagonal-architecture)
 - [AWS Architecture](#aws-architecture)
@@ -14,16 +14,18 @@ A real-time chat and collaboration platform backend built with **Spring Boot 3.5
 
 ---
 
-## Introduction
+## Highlights
 
-DevCool is a backend API service that powers a developer-focused chat platform. It supports:
-
-- **Authentication** — JWT-based auth with access tokens and HttpOnly refresh token cookies
-- **Channels** — Forum, Lounge, and Private Chat channel types with membership management
-- **Real-time messaging** — Raw WebSocket connections with custom message protocol (Subscribe / Unsubscribe / SendMessage)
-- **Media uploads** — Multipart file upload to S3 (JPEG, PNG, WebP, MP4; max 10 MB) with presigned URL retrieval
-
-The codebase enforces strict layering so that domain logic never depends on Spring, JPA, or AWS — making it easy to test in isolation and swap infrastructure adapters without touching business rules.
+- **Clean, enforced architecture**: hexagonal (ports and adapters). Business logic never depends on Spring, the database or AWS, and automated architecture tests keep it that way.
+- **Reliable messaging**: a message is saved before it's acknowledged or broadcast; retries never create duplicates; every channel keeps a strict order; clients catch up after reconnecting. *(in progress)*
+- **Realtime at scale**: WebSocket connections spread across many servers, with presence, typing indicators and no dropped users during deploys. *(planned)*
+- **Event-driven background work**: slow jobs leave the request path through durable queues, with retries and dead-letter queues. *(planned)*
+- **Permission-aware AI assistant**: ask questions about your chat history and get cited answers, built only from conversations you're allowed to see. *(planned)*
+- **Infrastructure as code, keyless deploys**: all of AWS is defined in Terraform; GitHub Actions deploys without stored cloud keys and rolls back failed releases automatically.
+- **Scale-to-zero cost design**: the dev environment sleeps or hibernates when idle, costing a few dollars a month, with budget alerts.
+- **Quality and supply-chain gates**: every change passes tests, a coverage floor, static analysis and vulnerability scans of the code, image and infrastructure.
+- **Observability with user-facing SLOs**: metrics, logs and traces from every service, with targets on what users feel, such as message delivery time. *(planned)*
+- **Load- and chaos-tested**: soak tests, reconnect storms and failure drills, with published results. *(planned)*
 
 ---
 
