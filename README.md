@@ -108,42 +108,6 @@ Dashed boxes aren't built yet. The core defines two kinds of interfaces:
 | **AI models** | Unavailable | Generates answers and embeddings |
 | **Vector store** | Unavailable | Finds chat history relevant to a question |
 
-### Example: Media Upload Request Flow
-
-```
-POST /api/v1/medias/upload (MultipartFile + channelId)
-  │
-  ▼ MediaController
-    - Extracts userId from Spring Security principal
-    - Calls MediaDtoMapper.toUploadMediaCommand(file, userId, channelId)
-  │
-  ▼ UploadMediaUseCase  [inbound port]
-  │
-  ▼ MediaService
-    - Validates file not empty → InvalidMediaContentException
-    - Validates contentType in allowlist → UnsupportedMediaTypeException
-    - Builds S3 key: "channel/{channelId}/{yyyy/MM/dd}/{uuid}.{ext}"
-    - Calls MediaStoragePort.upload(UploadRequest)
-  │
-  ▼ MediaStoragePort  [outbound port]
-  │
-  ▼ S3StorageAdapter
-    - Builds AWS PutObjectRequest
-    - Calls s3Client.putObject(...)
-    - Returns UploadResult(bucket, objectKey)
-  │
-  ▼ HTTP 200 { "data": { "key": "channel/123/2026/03/08/uuid.jpg" } }
-```
-
-### Boundaries enforced
-
-| Boundary | Rule |
-|---|---|
-| Domain | No Spring, JPA, or AWS imports |
-| Application service | Depends only on port interfaces — never on `@Repository` beans or SDKs |
-| Controllers | Only map HTTP types → domain commands; no business logic |
-| Domain exceptions | Thrown from the service layer; caught by a global `@ControllerAdvice` |
-
 ---
 
 ## AWS Architecture
