@@ -140,69 +140,43 @@ POST /api/v1/medias/upload (MultipartFile + channelId)
 
 ## AWS Architecture
 
-`dev` runs in **us-east-1**, built by Terraform (`infra/`, ADR-0003) and deployed by GitHub Actions through OIDC: no AWS keys are stored in GitHub. Design: [phase 2](docs/plans/phases/phase-2-infra-cicd-walking-skeleton.md), ADR-0002, ADR-0013.
+DevCool runs on AWS. All infrastructure is defined as code with Terraform (`infra/`), and GitHub Actions deploys it automatically.
 
-```
-            https://<domain>  (Route 53 + ACM)
-                     │
-              ┌──────┴──────┐
-              │ CloudFront  │── default ──▶ S3 (SPA bucket)
-              └──────┬──────┘
-     /api/*, /ws, /actuator/health  (+ X-Origin-Verify header)
-                     │
-┌─ VPC, 2 AZs ───────┼──────────────────────────────────────┐
-│  public subnets    ▼                                      │
-│             ALB  origin.<domain>       NAT gateway        │
-│                    │                        ▲             │
-│  private subnets   ▼                        │ egress      │
-│        ECS Fargate: api (1–2 tasks) ────────┘             │
-│                    │      └──▶ VPC endpoints: ECR, Logs,  │
-│                    ▼           Secrets Manager, S3        │
-│        Aurora PostgreSQL Serverless v2 (0–4 ACU)          │
-└───────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    user([User's browser]) --> cdn[CloudFront<br/>CDN + HTTPS]
+    cdn -->|web app files| spa[(S3<br/>web app)]
+    cdn -->|API and WebSocket| alb[Load balancer]
+    subgraph private[Private network]
+        alb --> api[Backend containers<br/>ECS Fargate]
+        api --> db[(PostgreSQL<br/>Aurora Serverless)]
+    end
+    api --> media[(S3<br/>uploaded media)]
+    ci[GitHub Actions] -.->|build and deploy| api
 ```
 
-The diagram shows the awake state. `sleep` scales `api` to 0 tasks. `hibernate` destroys the ALB and ECS and turns off the NAT and the interface endpoints, leaving CloudFront, S3 and a paused Aurora.
-
-| Component | Details |
+| Part | Role |
 |---|---|
-| **CloudFront** (`edge`) | One distribution: the SPA from S3, the API paths to the ALB. Survives hibernate, so the SPA still loads while the API returns 502 |
-| **ALB** (`app`) | HTTPS only; rejects requests without CloudFront's `X-Origin-Verify` header (403). Health check: `/actuator/health/readiness` |
-| **ECS Fargate** (`app`) | `api` service, 0.5 vCPU / 1 GB, 1–2 tasks on CPU target tracking, private subnets, read-only root filesystem |
-| **Aurora Serverless v2** (`data`) | PostgreSQL, 0–4 ACU: pauses when idle; a resume after a long pause can take ≥ 30 s, so the client timeouts allow 60 s |
-| **S3** (`data`, `edge`) | Private media bucket (presigned URLs) and the SPA bucket |
-| **ECR** (`bootstrap`) | `devcool` repository, immutable `:<git sha>` tags |
-| **Secrets Manager** (`data`) | The RDS-managed DB secret and the JWT secrets, injected as task `secrets` |
+| **CloudFront** | Single public entry point: serves the web app and forwards API and WebSocket traffic to the backend |
+| **Load balancer** | Spreads requests across backend containers and only sends traffic to healthy ones |
+| **ECS Fargate** | Runs the Spring Boot backend as containers, adding more under load |
+| **Aurora Serverless** | Managed PostgreSQL that scales down, and pauses, when idle |
+| **S3** | Stores the web app's files and users' uploaded media |
 
-Security groups chain alb → api → aurora; tasks reach AWS APIs through the endpoints or the NAT.
+The backend and database sit in a private network that isn't reachable from the internet. Passwords and keys are kept in AWS Secrets Manager and given to the app when it starts, never stored in code.
 
 ### Deployment flow
 
-| Change | Workflow | What happens |
-|---|---|---|
-| Backend merge to `master` | `deploy.yml` | build and push `:<sha>` → run the `ecs,migrate` task → roll `api` (circuit breaker rolls back) → smoke `/actuator/health`. Asleep: no smoke. Hibernated: only registers the revision; `resume` migrates and rolls it out |
-| PR touching `infra/` | `infra-plan.yml` | `terraform plan` per changed stack, posted as a PR comment |
-| Infra merge to `master` | `infra-apply.yml` | apply every stack, then roll `api` onto the new task definition (`app` skipped while hibernated) |
-| Manual, nightly | `env-power.yml` | `sleep` / `wake` / `hibernate` / `resume`; hibernated is the default state |
+1. A change is merged into `master`.
+2. GitHub Actions builds a Docker image and pushes it to AWS.
+3. Database migrations run as a separate step before any new code goes live.
+4. The new containers replace the old ones gradually. If they fail their health checks, AWS rolls back to the previous version.
 
-Migrations run as their own one-off task before the rollout, so the app never runs Flyway on start (`ecs` profile). Terraform doesn't own the image tag: `deploy.yml` registers each new revision.
+Infrastructure changes are previewed on the pull request and applied after merge. To save cost, the dev environment can be paused and resumed from a workflow.
 
-Commands, first-time setup, costs and gotchas: [`infra/README.md`](infra/README.md). To run the production image locally with the `ecs` profile: [`docker/ecs/README.md`](docker/ecs/README.md).
-
-### Environment variables (ECS task definition)
-
-Set in `infra/stacks/app/service.tf`. Secret values are Secrets Manager ARNs that ECS resolves at task start.
-
-| Variable | Source | Description |
-|---|---|---|
-| `SPRING_PROFILES_ACTIVE` | env | `ecs` (`ecs,migrate` for the migrate task) |
-| `SPRING_DATASOURCE_URL` | env | Aurora writer endpoint, `sslmode=require`, raised connect timeouts for resume |
-| `AWS_S3_BUCKET` | env | Media bucket name |
-| `WS_ALLOWED_ORIGINS` | env | `https://<domain>`: the app sees `Host: origin.<domain>` behind CloudFront (allowlist: P4-T06) |
-| `SPRING_DATASOURCE_USERNAME` | secret | RDS-managed secret, `username` key |
-| `SPRING_DATASOURCE_PASSWORD` | secret | RDS-managed secret, `password` key |
-| `JWT_ACCESS_SECRET` | secret | `devcool/<env>/jwt-access`: standard Base64 of ≥ 32 bytes (`openssl rand -base64 48`) |
-| `JWT_REFRESH_SECRET` | secret | `devcool/<env>/jwt-refresh`: same format |
+More detail:
+- Operating the environment: [`infra/README.md`](infra/README.md)
+- Running the production image locally: [`docker/ecs/README.md`](docker/ecs/README.md)
 
 ---
 
@@ -226,7 +200,7 @@ Set in `infra/stacks/app/service.tf`. Secret values are Secrets Manager ARNs tha
 ```
 
 Docker Compose spins up:
-- **PostgreSQL 15** on `localhost:5432`
+- **PostgreSQL 16** on `localhost:5432`
 - **pgAdmin 4** on `http://localhost:5050`
 
 ### Useful commands
