@@ -140,28 +140,44 @@ POST /api/v1/medias/upload (MultipartFile + channelId)
 
 ## AWS Architecture
 
-DevCool runs on AWS. All infrastructure is defined as code with Terraform (`infra/`), and GitHub Actions deploys it automatically.
+DevCool runs on AWS. All infrastructure is defined as code with Terraform (`infra/`), and GitHub Actions deploys it automatically. The diagram shows the target design; dashed boxes aren't built yet.
 
 ```mermaid
 flowchart LR
     user([User's browser]) --> cdn[CloudFront<br/>CDN + HTTPS]
-    cdn -->|web app files| spa[(S3<br/>web app)]
+    cdn -->|web app| spa[(S3<br/>React web app)]
     cdn -->|API and WebSocket| alb[Load balancer]
     subgraph private[Private network]
-        alb --> api[Backend containers<br/>ECS Fargate]
-        api --> db[(PostgreSQL<br/>Aurora Serverless)]
+        alb --> api[API service<br/>REST + WebSocket]
+        api --> db[(PostgreSQL + pgvector<br/>Aurora Serverless)]
+        api <--> cache[(Valkey<br/>realtime fan-out, presence)]
+        worker[Worker service<br/>background jobs] --> db
     end
     api --> media[(S3<br/>uploaded media)]
+    api --> ai[Bedrock<br/>AI answers + embeddings]
+    worker --> events[[SNS + SQS<br/>event queues]] --> worker
+    worker --> ai
+    api & worker -.->|metrics, logs, traces| obs[Grafana Cloud]
     ci[GitHub Actions] -.->|build and deploy| api
+    classDef planned stroke-dasharray: 5 5
+    class spa,cache,worker,events,ai,obs planned
 ```
 
-| Part | Role |
-|---|---|
-| **CloudFront** | Single public entry point: serves the web app and forwards API and WebSocket traffic to the backend |
-| **Load balancer** | Spreads requests across backend containers and only sends traffic to healthy ones |
-| **ECS Fargate** | Runs the Spring Boot backend as containers, adding more under load |
-| **Aurora Serverless** | Managed PostgreSQL that scales down, and pauses, when idle |
-| **S3** | Stores the web app's files and users' uploaded media |
+| Component | Status | Role |
+|---|---|---|
+| **CloudFront** | Available | Single public entry point: serves the web app and forwards API and WebSocket traffic to the backend |
+| **Load balancer** | Available | Spreads requests across backend containers and only sends traffic to healthy ones |
+| **API service** (ECS Fargate) | Available | Runs the Spring Boot backend (REST and WebSocket) as containers, adding more under load |
+| **Aurora PostgreSQL** | Available | Managed database that scales down, and pauses, when idle |
+| **S3 media** | Available | Stores files users upload in chat |
+| **Secrets Manager** | Available | Holds passwords and keys, given to the app at startup |
+| **GitHub Actions** | Available | Tests, builds and deploys every change merged into `master` |
+| **React web app** (S3) | Unavailable | The browser client, served through CloudFront |
+| **Valkey** | Unavailable | Shares realtime messages, presence and typing across API containers |
+| **Worker service** | Unavailable | Runs background jobs (notifications, cleanup, AI indexing) off the request path |
+| **SNS + SQS** | Unavailable | Durable event queues between the API and the worker |
+| **Bedrock** | Unavailable | AI answers over chat history and the embeddings that power search |
+| **Grafana Cloud** | Unavailable | Metrics, logs and traces from every service, with dashboards and alerts |
 
 The backend and database sit in a private network that isn't reachable from the internet. Passwords and keys are kept in AWS Secrets Manager and given to the app when it starts, never stored in code.
 
