@@ -33,7 +33,7 @@ The codebase enforces strict layering so that domain logic never depends on Spri
 |---|---|
 | Language | Java 21 |
 | Framework | Spring Boot 3.5.6 |
-| Database | PostgreSQL 15 |
+| Database | PostgreSQL 16 (Aurora Serverless v2 on AWS) |
 | ORM / Migrations | Spring Data JPA + Flyway |
 | Auth | JWT (nimbus-jose-jwt) |
 | Storage | AWS S3 (SDK v2, region: `us-east-1`) |
@@ -140,95 +140,67 @@ POST /api/v1/medias/upload (MultipartFile + channelId)
 
 ## AWS Architecture
 
-The production deployment runs on **AWS us-east-1 (N. Virginia)** using ECS Fargate, RDS PostgreSQL, and S3.
+`dev` runs in **us-east-1**, built by Terraform (`infra/`, ADR-0003) and deployed by GitHub Actions through OIDC: no AWS keys are stored in GitHub. Design: [phase 2](docs/plans/phases/phase-2-infra-cicd-walking-skeleton.md), ADR-0002, ADR-0013.
 
 ```
-                  Internet
+            https://<domain>  (Route 53 + ACM)
                      │
-                     ▼
-              ┌─────────────┐
-              │   Internet   │
-              │   Gateway    │
-              └──────┬───────┘
+              ┌──────┴──────┐
+              │ CloudFront  │── default ──▶ S3 (SPA bucket)
+              └──────┬──────┘
+     /api/*, /ws, /actuator/health  (+ X-Origin-Verify header)
                      │
-         ┌───────────┴───────────┐
-         │    VPC 10.0.0.0/16    │
-         │                       │
-         │  ┌─────────────────┐  │
-         │  │  Public Subnet  │  │
-         │  │  10.0.1.0/24    │  │
-         │  │  (AZ-a)         │  │
-         │  │                 │  │
-         │  │  ┌───────────┐  │  │
-         │  │  │ ECS Task  │  │  │
-         │  │  │ (Fargate) │──┼──┼──→ S3 (via Internet)
-         │  │  │ Public IP │  │  │
-         │  │  └─────┬─────┘  │  │
-         │  └────────┼────────┘  │
-         │           │           │
-         │  ┌────────┼────────┐  │
-         │  │  Private Subnet │  │
-         │  │  10.0.10.0/24   │  │
-         │  │  (AZ-a)         │  │
-         │  │  ┌───────────┐  │  │
-         │  │  │    RDS    │  │  │
-         │  │  │ PostgreSQL│  │  │
-         │  │  └───────────┘  │  │
-         │  └─────────────────┘  │
-         │                       │
-         │  ┌─────────────────┐  │
-         │  │  Private Subnet │  │
-         │  │  10.0.11.0/24   │  │
-         │  │  (AZ-b, RDS     │  │
-         │  │   subnet group) │  │
-         │  └─────────────────┘  │
-         └───────────────────────┘
+┌─ VPC, 2 AZs ───────┼──────────────────────────────────────┐
+│  public subnets    ▼                                      │
+│             ALB  origin.<domain>       NAT gateway        │
+│                    │                        ▲             │
+│  private subnets   ▼                        │ egress      │
+│        ECS Fargate: api (1–2 tasks) ────────┘             │
+│                    │      └──▶ VPC endpoints: ECR, Logs,  │
+│                    ▼           Secrets Manager, S3        │
+│        Aurora PostgreSQL Serverless v2 (0–4 ACU)          │
+└───────────────────────────────────────────────────────────┘
 ```
-
-### Components
 
 | Component | Details |
 |---|---|
-| **ECS Fargate** | Spring Boot container in a public subnet; 0.5 vCPU / 1 GB RAM; exposes port 8080 |
-| **RDS PostgreSQL 15** | `db.t3.micro` in a private subnet; only reachable from the ECS security group |
-| **S3** | Private bucket `devcool-media`; application uses presigned URLs for client access |
-| **ECR** | Docker image registry for the Spring Boot container |
-| **IAM Task Role** | Grants the ECS task `s3:PutObject` and `s3:GetObject` on the media bucket |
+| **CloudFront** (`edge`) | One distribution: the SPA from S3, the API paths to the ALB. Survives hibernate, so the SPA still loads while the API returns 502 |
+| **ALB** (`app`) | HTTPS only; rejects requests without CloudFront's `X-Origin-Verify` header (403). Health check: `/actuator/health/readiness` |
+| **ECS Fargate** (`app`) | `api` service, 0.5 vCPU / 1 GB, 1–2 tasks on CPU target tracking, private subnets, read-only root filesystem |
+| **Aurora Serverless v2** (`data`) | PostgreSQL, 0–4 ACU: pauses when idle, so the first request after a pause waits up to ~60 s |
+| **S3** (`data`, `edge`) | Private media bucket (presigned URLs) and the SPA bucket |
+| **ECR** (`bootstrap`) | `devcool` repository, immutable `:<git sha>` tags |
+| **Secrets Manager** (`data`) | The RDS-managed DB secret and the JWT secrets, injected as task `secrets` |
 
-### Networking
-
-- 1 public subnet (ECS tasks — needs internet access for S3 and inbound traffic)
-- 2 private subnets in different AZs (required by RDS DB subnet group)
-- ECS security group: inbound TCP 8080 from `0.0.0.0/0`
-- RDS security group: inbound TCP 5432 from the ECS security group only
+Security groups chain alb → api → aurora; tasks reach AWS APIs through the endpoints or the NAT.
 
 ### Deployment flow
 
-```bash
-# Build and push image to ECR
-docker build -t devcool .
-docker tag devcool:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
-docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/devcool:latest
+| Change | Workflow | What happens |
+|---|---|---|
+| Backend merge to `master` | `deploy.yml` | build and push `:<sha>` → run the `ecs,migrate` task → roll `api` (circuit breaker rolls back) → smoke `/actuator/health` |
+| PR touching `infra/` | `infra-plan.yml` | `terraform plan` per changed stack, posted as a PR comment |
+| Infra merge to `master` | `infra-apply.yml` | apply every stack, then roll `api` onto the new task definition |
+| Manual, nightly | `env-power.yml` | `sleep` / `wake` / `hibernate` / `resume`; hibernated is the default state |
 
-# Force ECS to deploy the new image
-aws ecs update-service \
-  --cluster devcool-cluster \
-  --service devcool-service \
-  --force-new-deployment \
-  --region us-east-1
-```
+Migrations run as their own one-off task before the rollout, so the app never runs Flyway on start (`ecs` profile). Terraform doesn't own the image tag: `deploy.yml` registers each new revision.
+
+Commands, first-time setup, costs and gotchas: [`infra/README.md`](infra/README.md). To run the production image locally with the `ecs` profile: [`docker/ecs/README.md`](docker/ecs/README.md).
 
 ### Environment variables (ECS task definition)
 
-| Variable | Description |
-|---|---|
-| `SPRING_PROFILES_ACTIVE` | `ecs` |
-| `SPRING_DATASOURCE_URL` | RDS JDBC URL |
-| `SPRING_DATASOURCE_USERNAME` | RDS username |
-| `SPRING_DATASOURCE_PASSWORD` | RDS password |
-| `JWT_ACCESS_SECRET` | Min 32-char secret for access tokens |
-| `JWT_REFRESH_SECRET` | Min 32-char secret for refresh tokens |
-| `AWS_S3_BUCKET` | S3 bucket name |
+Set in `infra/stacks/app/service.tf`. Secret values are Secrets Manager ARNs that ECS resolves at task start.
+
+| Variable | Source | Description |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | env | `ecs` (`ecs,migrate` for the migrate task) |
+| `SPRING_DATASOURCE_URL` | env | Aurora writer endpoint, `sslmode=require`, raised connect timeouts for resume |
+| `AWS_S3_BUCKET` | env | Media bucket name |
+| `WS_ALLOWED_ORIGINS` | env | `https://<domain>`: the app sees `Host: origin.<domain>` behind CloudFront (allowlist: P4-T06) |
+| `SPRING_DATASOURCE_USERNAME` | secret | RDS-managed secret, `username` key |
+| `SPRING_DATASOURCE_PASSWORD` | secret | RDS-managed secret, `password` key |
+| `JWT_ACCESS_SECRET` | secret | `devcool/<env>/jwt-access`: standard Base64 of ≥ 32 bytes (`openssl rand -base64 48`) |
+| `JWT_REFRESH_SECRET` | secret | `devcool/<env>/jwt-refresh`: same format |
 
 ---
 

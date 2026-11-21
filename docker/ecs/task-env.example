@@ -1,0 +1,16 @@
+# The api task's environment (infra/stacks/app/service.tf), pointed at docker/local's Postgres.
+# Copy to docker/ecs/task-env (gitignored) and fill in the placeholders. Never commit real values.
+SPRING_PROFILES_ACTIVE=ecs
+
+# Plain env on ECS. Host `postgres` = the Compose service on the local_default network.
+# ECS adds sslmode=require&connectTimeout=60&sslResponseTimeout=60000; local Postgres has no TLS.
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/<POSTGRES_DB>
+AWS_S3_BUCKET=devcool-media
+WS_ALLOWED_ORIGINS=http://localhost:5173
+
+# Secrets on ECS (Secrets Manager). Use the POSTGRES_* values from docker/local/.env.
+SPRING_DATASOURCE_USERNAME=<POSTGRES_USER>
+SPRING_DATASOURCE_PASSWORD=<POSTGRES_PASSWORD>
+# Standard Base64 that decodes to >= 32 bytes (HS256): `openssl rand -base64 48`.
+JWT_ACCESS_SECRET=<openssl rand -base64 48>
+JWT_REFRESH_SECRET=<openssl rand -base64 48>

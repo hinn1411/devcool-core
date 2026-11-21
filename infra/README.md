@@ -6,7 +6,7 @@ Layout, commands and conventions: [`CLAUDE.md`](CLAUDE.md). Design: [phase 2](..
 bootstrap (by hand) → network → data → edge → app. Sleep, wake, hibernate and resume: [`env-power`](#env-power-sleep-wake-hibernate-resume-p2-t09).
 
 ## `data`: set the JWT secrets (once per environment)
-Terraform creates `devcool/<env>/jwt-access` and `devcool/<env>/jwt-refresh` **without a value**, so the value never lands in state and `gha-plan` never needs `GetSecretValue` ([bootstrap review #4](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)). After the first `data` apply, set each one. The `$(…)` keeps the value out of your shell history; the app needs at least 32 characters.
+Terraform creates `devcool/<env>/jwt-access` and `devcool/<env>/jwt-refresh` **without a value**, so the value never lands in state and `gha-plan` never needs `GetSecretValue` ([bootstrap review #4](../docs/improvements/2026-10-14-bootstrap-review-improvements.md#p2-t03--data-stack)). After the first `data` apply, set each one. The `$(…)` keeps the value out of your shell history; the app Base64-decodes it and needs at least 32 bytes (a `-` or `_` fails startup).
 
 ```bash
 for k in access refresh; do
