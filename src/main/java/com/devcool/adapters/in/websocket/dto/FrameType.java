@@ -1,6 +1,6 @@
 package com.devcool.adapters.in.websocket.dto;
 
-public enum WsMessageType {
+public enum FrameType {
   SUBSCRIBE,
   UNSUBSCRIBE,
   SEND_MESSAGE,

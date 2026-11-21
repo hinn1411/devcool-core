@@ -43,7 +43,7 @@ class WsVirtualThreadsIT extends AbstractWsIT {
               return invocation.callRealMethod();
             })
         .when(sendMessageUseCase)
-        .sendMessage(any());
+        .sendMessage(any(), any());
   }
 
   @Test

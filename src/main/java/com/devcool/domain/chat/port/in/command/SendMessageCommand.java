@@ -1,7 +1,7 @@
 package com.devcool.domain.chat.port.in.command;
 
+import com.devcool.domain.chat.model.ClientMsgId;
 import com.devcool.domain.chat.model.enums.ContentType;
-import java.util.UUID;
 
 public record SendMessageCommand(
     String connectionId,
@@ -9,7 +9,7 @@ public record SendMessageCommand(
     Long channelId,
     ContentType contentType,
     String content,
-    UUID clientMsgId,
+    ClientMsgId clientMsgId,
     Long replyToId) {
 
   /** Not a reply. */
@@ -19,7 +19,7 @@ public record SendMessageCommand(
       Long channelId,
       ContentType contentType,
       String content,
-      UUID clientMsgId) {
+      ClientMsgId clientMsgId) {
     this(connectionId, userId, channelId, contentType, content, clientMsgId, null);
   }
 }

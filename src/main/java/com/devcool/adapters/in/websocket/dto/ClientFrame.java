@@ -2,8 +2,8 @@ package com.devcool.adapters.in.websocket.dto;
 
 import com.devcool.domain.chat.model.enums.ContentType;
 
-public record WsClientFrame(
-    WsMessageType action,
+public record ClientFrame(
+    FrameType action,
     Long channelId,
     ContentType contentType,
     String content,
@@ -11,8 +11,8 @@ public record WsClientFrame(
     Long replyToId) {
 
   /** Not a reply. */
-  public WsClientFrame(
-      WsMessageType action,
+  public ClientFrame(
+      FrameType action,
       Long channelId,
       ContentType contentType,
       String content,

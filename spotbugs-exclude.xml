@@ -14,9 +14,8 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
     <Or>
       <Source name="~(SecurityConfig|ChannelController|ApiAuthenticationEntryPoint|JwtAuthFilter)\.java"/>
-      <Source name="~(RawWebSocketHandler|WsRealtimeEmitterAdapter)\.java"/>
       <Source name="~(Auth|Member|Message|S3Storage)Adapter\.java"/>
-      <Source name="~(AuthenticateUser|Media|RefreshToken|User|Channel|Message|WsSendMessage|WsSubscribe)Service\.java"/>
+      <Source name="~(AuthenticateUser|Media|RefreshToken|User|Channel|Message)Service\.java"/>
       <Source name="~Abstract(Channel|Message)CreationStrategy\.java"/>
     </Or>
   </Match>

@@ -1,6 +1,6 @@
-package com.devcool.adapters.in.websocket.handler;
+package com.devcool.adapters.in.websocket.logging;
 
-import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
+import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import java.util.Objects;
 import org.slf4j.MDC;
 import org.springframework.web.socket.CloseStatus;
@@ -16,12 +16,12 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
  * connection. The MDC is per thread: executor work doesn't see them. Spring's "Closing session due
  * to exception" log runs after cleanup, so it lacks these fields.
  */
-public class MdcWebSocketHandlerDecorator extends WebSocketHandlerDecorator {
+public class MdcHandlerDecorator extends WebSocketHandlerDecorator {
 
   static final String USER_ID = "userId";
   static final String CONNECTION_ID = "connectionId";
 
-  public MdcWebSocketHandlerDecorator(WebSocketHandler delegate) {
+  public MdcHandlerDecorator(WebSocketHandler delegate) {
     super(delegate);
   }
 
@@ -48,7 +48,7 @@ public class MdcWebSocketHandlerDecorator extends WebSocketHandlerDecorator {
   }
 
   private static void withMdc(WebSocketSession session, Callback callback) throws Exception {
-    Object userId = session.getAttributes().get(WsAuthHandShakeInterceptor.ATTR_USER_ID);
+    Object userId = session.getAttributes().get(AuthHandshakeInterceptor.ATTR_USER_ID);
     MDC.put(CONNECTION_ID, session.getId());
     if (Objects.nonNull(userId)) {
       MDC.put(USER_ID, userId.toString());

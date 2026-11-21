@@ -11,12 +11,17 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 @Component
-public class WsAuthHandShakeInterceptor implements HandshakeInterceptor {
+public class AuthHandshakeInterceptor implements HandshakeInterceptor {
   public static final String ATTR_USER_ID = "userId";
-  private static final Logger log = LoggerFactory.getLogger(WsAuthHandShakeInterceptor.class);
+  private static final Logger log = LoggerFactory.getLogger(AuthHandshakeInterceptor.class);
+
+  public static Long userIdOf(WebSocketSession session) {
+    return (Long) session.getAttributes().get(ATTR_USER_ID);
+  }
 
   @Override
   public boolean beforeHandshake(

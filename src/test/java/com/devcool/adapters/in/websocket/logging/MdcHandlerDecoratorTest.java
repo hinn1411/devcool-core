@@ -1,4 +1,4 @@
-package com.devcool.adapters.in.websocket.handler;
+package com.devcool.adapters.in.websocket.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
-import com.devcool.adapters.in.websocket.security.WsAuthHandShakeInterceptor;
+import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,18 +23,18 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 
 @ExtendWith(MockitoExtension.class)
-class MdcWebSocketHandlerDecoratorTest {
+class MdcHandlerDecoratorTest {
 
   @Mock private WebSocketHandler delegate;
   @Mock private WebSocketSession session;
 
   private final Map<String, Object> attributes = new HashMap<>();
-  private MdcWebSocketHandlerDecorator decorator;
+  private MdcHandlerDecorator decorator;
 
   @BeforeEach
   void setUp() {
-    decorator = new MdcWebSocketHandlerDecorator(delegate);
-    attributes.put(WsAuthHandShakeInterceptor.ATTR_USER_ID, 42);
+    decorator = new MdcHandlerDecorator(delegate);
+    attributes.put(AuthHandshakeInterceptor.ATTR_USER_ID, 42);
     when(session.getId()).thenReturn("conn-1");
     when(session.getAttributes()).thenReturn(attributes);
   }
