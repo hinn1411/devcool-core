@@ -52,55 +52,61 @@ A real-time chat and collaboration platform backend built with **Spring Boot 3.5
 
 The project follows the **Ports & Adapters (Hexagonal) pattern** — the domain and application layers are completely isolated from framework and infrastructure concerns.
 
-### Layer Overview
-
+```mermaid
+flowchart LR
+    subgraph in[Driving adapters]
+        rest[REST controllers]
+        ws[WebSocket handler]
+        sqs[Event consumers]
+        relay[Outbox relay]
+    end
+    subgraph core[Application core]
+        inport[/Inbound ports/]
+        svc[Application services]
+        domain[Domain model]
+        outport[/Outbound ports/]
+        inport --> svc --> domain
+        svc --> outport
+    end
+    subgraph out[Driven adapters]
+        db[Persistence]
+        storage[File storage]
+        tokens[Token issuer]
+        hash[Password hashing]
+        rt[Realtime backplane]
+        pub[Event publisher]
+        ai[AI models]
+        vec[Vector store]
+    end
+    rest & ws & sqs & relay --> inport
+    outport --> db & storage & tokens & hash & rt & pub & ai & vec
+    classDef planned stroke-dasharray: 5 5
+    class sqs,relay,pub,ai,vec planned
 ```
-com.devcool/
-├── domain/              # Pure business logic — zero Spring/JPA/AWS imports
-│   ├── auth/            # JWT tokens, refresh tokens
-│   ├── user/            # User, Role, UserStatus
-│   ├── channel/         # Channel types (Forum, Lounge, PrivateChat)
-│   ├── chat/            # Messages
-│   ├── member/          # Channel membership
-│   ├── media/           # Media upload (S3)
-│   └── common/          # Shared domain primitives
-│
-├── application/
-│   └── service/         # Use case implementations — wires domain ports together
-│
-└── adapters/
-    ├── in/
-    │   ├── web/          # REST controllers + request/response DTOs (MapStruct mappers)
-    │   └── websocket/    # WebSocket handlers + auth handshake interceptor
-    └── out/
-        ├── persistence/  # JPA entities + Spring Data repositories
-        ├── storage/      # S3StorageAdapter (AWS SDK v2)
-        ├── jwt/          # JWT issuance and validation
-        └── crypto/       # BCrypt password hashing
-```
 
-### Port Pattern
+Dashed boxes aren't built yet. The core defines two kinds of interfaces:
 
-Each domain module defines:
+- **Inbound ports** (`UseCase` / `Query`): what the application can do, called by driving adapters
+- **Outbound ports** (`Port`): what the application needs from the outside world, implemented by driven adapters
 
-- **Inbound ports** (`UseCase` / `Query` interfaces) — called by `adapters/in`
-- **Outbound ports** (`Port` interfaces) — implemented by `adapters/out`
-
-Application services implement inbound ports and depend **only** on outbound port interfaces — never directly on JPA repositories or the AWS SDK.
-
-```
-HTTP Request
-    │
-    ▼  adapters/in/web/controller        (HTTP → command object)
-    │
-    ▼  domain/.../port/in/UseCase        (inbound port interface)
-    │
-    ▼  application/service/...Service    (implements UseCase, calls Port)
-    │
-    ▼  domain/.../port/out/...Port       (outbound port interface)
-    │
-    ▼  adapters/out/...Adapter           (JPA / S3 / JWT implementation)
-```
+| Part | Status | What it is |
+|---|---|---|
+| **REST controllers** | Available | Turn HTTP requests into calls on inbound ports |
+| **WebSocket handler** | Available | Receives realtime frames (subscribe, send) and pushes messages to clients |
+| **Event consumers** | Unavailable | React to queued events (notifications, AI indexing) |
+| **Outbox relay** | Unavailable | Publishes saved events to the queues, so no event is lost |
+| **Inbound ports** | Available | The use cases the application offers |
+| **Application services** | Available | Implement the use cases by coordinating the domain and outbound ports |
+| **Domain model** | Available | Business rules for users, auth, channels, members, chat and media; no framework code |
+| **Outbound ports** | Available | Interfaces for everything the core needs from outside |
+| **Persistence** | Available | Stores data in PostgreSQL |
+| **File storage** | Available | Stores uploaded media in S3 |
+| **Token issuer** | Available | Issues and verifies login tokens |
+| **Password hashing** | Available | Hashes and checks passwords |
+| **Realtime backplane** | Available (single server) | Delivers live messages between connections; in memory today, shared across servers with Valkey later |
+| **Event publisher** | Unavailable | Sends domain events to the queues |
+| **AI models** | Unavailable | Generates answers and embeddings |
+| **Vector store** | Unavailable | Finds chat history relevant to a question |
 
 ### Example: Media Upload Request Flow
 
