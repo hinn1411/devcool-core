@@ -144,21 +144,21 @@ DevCool runs on AWS. All infrastructure is defined as code with Terraform (`infr
 
 ```mermaid
 flowchart LR
-    user([User's browser]) --> cdn[CloudFront<br/>CDN + HTTPS]
-    cdn -->|web app| spa[(S3<br/>React web app)]
-    cdn -->|API and WebSocket| alb[Load balancer]
+    user([Browser]) --> cdn[CloudFront]
+    cdn --> spa[(S3: web app)]
+    cdn --> alb[Load balancer]
     subgraph private[Private network]
-        alb --> api[API service<br/>REST + WebSocket]
-        api --> db[(PostgreSQL + pgvector<br/>Aurora Serverless)]
-        api <--> cache[(Valkey<br/>realtime fan-out, presence)]
-        worker[Worker service<br/>background jobs] --> db
+        alb --> api[API service]
+        api --> db[(Aurora PostgreSQL)]
+        api <--> cache[(Valkey)]
+        worker[Worker service] --> db
     end
-    api --> media[(S3<br/>uploaded media)]
-    api --> ai[Bedrock<br/>AI answers + embeddings]
-    worker --> events[[SNS + SQS<br/>event queues]] --> worker
+    api --> media[(S3: media)]
+    api --> ai[Bedrock]
+    worker --> events[[SNS + SQS]] --> worker
     worker --> ai
-    api & worker -.->|metrics, logs, traces| obs[Grafana Cloud]
-    ci[GitHub Actions] -.->|build and deploy| api
+    api & worker -.-> obs[Grafana Cloud]
+    ci[GitHub Actions] -.-> api
     classDef planned stroke-dasharray: 5 5
     class spa,cache,worker,events,ai,obs planned
 ```
@@ -169,10 +169,10 @@ flowchart LR
 | **Load balancer** | Available | Spreads requests across backend containers and only sends traffic to healthy ones |
 | **API service** (ECS Fargate) | Available | Runs the Spring Boot backend (REST and WebSocket) as containers, adding more under load |
 | **Aurora PostgreSQL** | Available | Managed database that scales down, and pauses, when idle |
-| **S3 media** | Available | Stores files users upload in chat |
+| **S3: media** | Available | Stores files users upload in chat |
 | **Secrets Manager** | Available | Holds passwords and keys, given to the app at startup |
 | **GitHub Actions** | Available | Tests, builds and deploys every change merged into `master` |
-| **React web app** (S3) | Unavailable | The browser client, served through CloudFront |
+| **S3: web app** (React) | Unavailable | The browser client, served through CloudFront |
 | **Valkey** | Unavailable | Shares realtime messages, presence and typing across API containers |
 | **Worker service** | Unavailable | Runs background jobs (notifications, cleanup, AI indexing) off the request path |
 | **SNS + SQS** | Unavailable | Durable event queues between the API and the worker |
