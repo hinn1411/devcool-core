@@ -53,7 +53,7 @@ An empty page runs no statement at all.
 **"The race condition I chose to keep."** Hook: write skew explained with emoji reactions, and three ways to fix it, priced.
 
 ## Code
-- [`ReactionService.react`](../../../src/main/java/com/devcool/application/service/chat/ReactionService.java#L48)
-- [`MessageReactionRepository`](../../../src/main/java/com/devcool/adapters/out/persistence/reaction/repository/MessageReactionRepository.java)
-- Migration: [`V7__message_reaction.sql`](../../../src/main/resources/db/migration/V7__message_reaction.sql)
-- Tests: [`ReactionAdapterIT`](../../../src/test/java/com/devcool/adapters/out/persistence/reaction/ReactionAdapterIT.java) (`addTwice_keepsOneRow`, `summarize_aWholePage_isOneStatement`, `summarize_emptyPage_runsNoStatement`), [`MessageReactionIT.concurrentReacts_sameUserAndEmoji_leaveOneRow`](../../../src/test/java/com/devcool/adapters/in/web/controller/MessageReactionIT.java#L118) (20 threads)
+- [`ReactionService.react`](../../../../src/main/java/com/devcool/application/service/chat/ReactionService.java#L48)
+- [`MessageReactionRepository`](../../../../src/main/java/com/devcool/adapters/out/persistence/reaction/repository/MessageReactionRepository.java)
+- Migration: [`V7__message_reaction.sql`](../../../../src/main/resources/db/migration/V7__message_reaction.sql)
+- Tests: [`ReactionAdapterIT`](../../../../src/test/java/com/devcool/adapters/out/persistence/reaction/ReactionAdapterIT.java) (`addTwice_keepsOneRow`, `summarize_aWholePage_isOneStatement`, `summarize_emptyPage_runsNoStatement`), [`MessageReactionIT.concurrentReacts_sameUserAndEmoji_leaveOneRow`](../../../../src/test/java/com/devcool/adapters/in/web/controller/MessageReactionIT.java#L118) (20 threads)

@@ -33,5 +33,5 @@ Application checks race. Two requests can both pass "is this user already a memb
 **"Your database is the only thing that sees every request."** Hook: the four constraints that stop four real race conditions in a chat app.
 
 ## Code
-- [`V1__baseline.sql`](../../../src/main/resources/db/migration/V1__baseline.sql), [`V3__ids_to_bigint.sql`](../../../src/main/resources/db/migration/V3__ids_to_bigint.sql), [`V7__message_reaction.sql`](../../../src/main/resources/db/migration/V7__message_reaction.sql)
-- Test: [`DevCoolApplicationIT`](../../../src/test/java/com/devcool/DevCoolApplicationIT.java) (Flyway applies on an empty DB, then `validate` passes)
+- [`V1__baseline.sql`](../../../../src/main/resources/db/migration/V1__baseline.sql), [`V3__ids_to_bigint.sql`](../../../../src/main/resources/db/migration/V3__ids_to_bigint.sql), [`V7__message_reaction.sql`](../../../../src/main/resources/db/migration/V7__message_reaction.sql)
+- Test: [`DevCoolApplicationIT`](../../../../src/test/java/com/devcool/DevCoolApplicationIT.java) (Flyway applies on an empty DB, then `validate` passes)

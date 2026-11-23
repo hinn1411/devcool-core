@@ -42,7 +42,7 @@ Logout revokes the same way (`revoke` = `consumed_time IS NULL` guard) and bumps
 **"Single-use tokens with one SQL statement."** Hook: the TOCTOU bug in most refresh-token tutorials.
 
 ## Code
-- [`RefreshTokenService.refresh`](../../../src/main/java/com/devcool/application/service/RefreshTokenService.java#L36)
-- [`RefreshTokenRepository.consumeIfValid`](../../../src/main/java/com/devcool/adapters/out/persistence/auth/repository/RefreshTokenRepository.java#L22)
-- [`Sha256TokenHashAdapter`](../../../src/main/java/com/devcool/adapters/out/crypto/Sha256TokenHashAdapter.java)
-- Test: [`AuthFlowIT`](../../../src/test/java/com/devcool/adapters/in/web/controller/AuthFlowIT.java) (`validCookie_returnsNewAccessTokenAndRotatedCookie`, `oldCredential_isRejected`, `rejectedCookie_isUnauthorizedAndChangesNothing`)
+- [`RefreshTokenService.refresh`](../../../../src/main/java/com/devcool/application/service/RefreshTokenService.java#L36)
+- [`RefreshTokenRepository.consumeIfValid`](../../../../src/main/java/com/devcool/adapters/out/persistence/auth/repository/RefreshTokenRepository.java#L22)
+- [`Sha256TokenHashAdapter`](../../../../src/main/java/com/devcool/adapters/out/crypto/Sha256TokenHashAdapter.java)
+- Test: [`AuthFlowIT`](../../../../src/test/java/com/devcool/adapters/in/web/controller/AuthFlowIT.java) (`validCookie_returnsNewAccessTokenAndRotatedCookie`, `oldCredential_isRejected`, `rejectedCookie_isUnauthorizedAndChangesNothing`)

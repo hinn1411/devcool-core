@@ -1,6 +1,6 @@
 # 02 — Idempotent send (notes)
 
-Diagram: [../02-idempotent-send.md](../02-idempotent-send.md) · Decision: [ADR-0012](../../plans/architecture/adr/0012-message-ordering-per-channel-seq.md) "Consequences"
+Diagram: [../02-idempotent-send.md](../02-idempotent-send.md) · Decision: [ADR-0012](../../../plans/architecture/adr/0012-message-ordering-per-channel-seq.md) "Consequences"
 
 ## Problem
 On mobile, a send times out but the server actually stored it. The client retries. Without idempotency the channel shows the message twice, and the retry burns a seq.
@@ -43,7 +43,7 @@ On mobile, a send times out but the server actually stored it. The client retrie
 **"Idempotent writes in Postgres: the race your retry logic forgot."** Hook: why `SELECT then INSERT` isn't enough, and why the recovery needs a second transaction.
 
 ## Code
-- [`MessageService.save`](../../../src/main/java/com/devcool/application/service/chat/MessageService.java#L71)
-- [`MessageAdapter.save`](../../../src/main/java/com/devcool/adapters/out/persistence/message/MessageAdapter.java#L49) (constraint-name match)
-- [`MessageRepository.findKeyRow`](../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L82)
-- Tests: [`SendMessageSeqIT`](../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java): `returnsSameSeqOnRetriedClientMsgId`, `concurrentRetriesOfOneKey_storeOneRow_andBumpOnce`, `keyReusedInAnotherChannel_isRejected_andNothingIsStoredThere`
+- [`MessageService.save`](../../../../src/main/java/com/devcool/application/service/chat/MessageService.java#L71)
+- [`MessageAdapter.save`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/MessageAdapter.java#L49) (constraint-name match)
+- [`MessageRepository.findKeyRow`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L82)
+- Tests: [`SendMessageSeqIT`](../../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java): `returnsSameSeqOnRetriedClientMsgId`, `concurrentRetriesOfOneKey_storeOneRow_andBumpOnce`, `keyReusedInAnotherChannel_isRejected_andNothingIsStoredThere`

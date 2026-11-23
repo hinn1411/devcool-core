@@ -40,7 +40,7 @@ WHERE ms.id = :id AND ms.deletedTime IS NULL
 **"Soft delete done right: idempotent, race-safe, and honest about GDPR."**
 
 ## Code
-- [`DeleteMessageService.delete`](../../../src/main/java/com/devcool/application/service/chat/DeleteMessageService.java#L43)
-- [`MessageRepository.markDeletedIfLive`](../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L129)
-- [`MessageDeletePolicy`](../../../src/main/java/com/devcool/domain/chat/policy/MessageDeletePolicy.java)
-- Tests: [`DeleteMessageIT`](../../../src/test/java/com/devcool/application/service/chat/DeleteMessageIT.java): `concurrentDeletes_allSucceed_oneTimestamp` (20 threads), `repeatDelete_succeeds_andKeepsTheFirstTimestamp`, plus the role matrix
+- [`DeleteMessageService.delete`](../../../../src/main/java/com/devcool/application/service/chat/DeleteMessageService.java#L43)
+- [`MessageRepository.markDeletedIfLive`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L129)
+- [`MessageDeletePolicy`](../../../../src/main/java/com/devcool/domain/chat/policy/MessageDeletePolicy.java)
+- Tests: [`DeleteMessageIT`](../../../../src/test/java/com/devcool/application/service/chat/DeleteMessageIT.java): `concurrentDeletes_allSucceed_oneTimestamp` (20 threads), `repeatDelete_succeeds_andKeepsTheFirstTimestamp`, plus the role matrix

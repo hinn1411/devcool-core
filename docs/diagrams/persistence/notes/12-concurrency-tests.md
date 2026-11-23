@@ -1,6 +1,6 @@
 # 12 — Testing concurrency on a real Postgres (notes)
 
-Diagram: [../12-concurrency-tests.md](../12-concurrency-tests.md) · Guides: [learning/12 Integration testing](../../learning/12-integration-testing-guide.md)
+Diagram: [../12-concurrency-tests.md](../12-concurrency-tests.md) · Guides: [learning/12 Integration testing](../../../learning/12-integration-testing-guide.md)
 
 ## Problem
 A race-condition fix that's only reasoned about isn't proven. Unit tests with mocks can't show that a row lock serializes, that `ON CONFLICT` waits, or that a blocked UPDATE re-checks its WHERE. Only the real database can.
@@ -34,6 +34,6 @@ Row-lock queuing (01), unique-index waits on in-flight inserts (02, 05), the REA
 **"20 threads and a latch: testing Postgres race conditions with Testcontainers."**
 
 ## Code
-- [`PostgresTestContainer`](../../../src/test/java/com/devcool/support/PostgresTestContainer.java), [`AbstractIntegrationTest`](../../../src/test/java/com/devcool/support/AbstractIntegrationTest.java), [`AbstractJpaIT`](../../../src/test/java/com/devcool/support/AbstractJpaIT.java)
-- Latch helper: [`SendMessageSeqIT.inParallel`](../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java#L159)
-- Statement counting: [`ChannelAdapterIT.aPageOfChannels_isOneStatement`](../../../src/test/java/com/devcool/adapters/out/persistence/channel/ChannelAdapterIT.java#L110)
+- [`PostgresTestContainer`](../../../../src/test/java/com/devcool/support/PostgresTestContainer.java), [`AbstractIntegrationTest`](../../../../src/test/java/com/devcool/support/AbstractIntegrationTest.java), [`AbstractJpaIT`](../../../../src/test/java/com/devcool/support/AbstractJpaIT.java)
+- Latch helper: [`SendMessageSeqIT.inParallel`](../../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java#L159)
+- Statement counting: [`ChannelAdapterIT.aPageOfChannels_isOneStatement`](../../../../src/test/java/com/devcool/adapters/out/persistence/channel/ChannelAdapterIT.java#L110)

@@ -1,6 +1,6 @@
 # 01 — Per-channel message sequence (notes)
 
-Diagram: [../01-per-channel-seq.md](../01-per-channel-seq.md) · Decision: [ADR-0012](../../plans/architecture/adr/0012-message-ordering-per-channel-seq.md)
+Diagram: [../01-per-channel-seq.md](../01-per-channel-seq.md) · Decision: [ADR-0012](../../../plans/architecture/adr/0012-message-ordering-per-channel-seq.md)
 
 ## Problem
 A client that reconnects must ask "give me everything after message N in #general" and see gaps it missed. That needs a number that is **per channel, gapless and in commit order**.
@@ -47,7 +47,7 @@ Inside one transaction, `MessageService.saveOnce` runs: replay check → reply-t
 **"Ordering chat messages with one UPDATE statement."** Hook: a gapless per-channel sequence without Redis, Snowflake or a distributed lock, and what it costs.
 
 ## Code
-- [`ChannelRepository.bumpLastSeq`](../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L97)
-- [`MessageService.saveOnce`](../../../src/main/java/com/devcool/application/service/chat/MessageService.java#L103)
-- Migration: [`V4__message_seq_and_read_state.sql`](../../../src/main/resources/db/migration/V4__message_seq_and_read_state.sql)
-- Test: [`SendMessageSeqIT.parallelSends_getGaplessSeqs`](../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java#L85) (20 threads → seqs 1..20)
+- [`ChannelRepository.bumpLastSeq`](../../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L97)
+- [`MessageService.saveOnce`](../../../../src/main/java/com/devcool/application/service/chat/MessageService.java#L103)
+- Migration: [`V4__message_seq_and_read_state.sql`](../../../../src/main/resources/db/migration/V4__message_seq_and_read_state.sql)
+- Test: [`SendMessageSeqIT.parallelSends_getGaplessSeqs`](../../../../src/test/java/com/devcool/application/service/chat/SendMessageSeqIT.java#L85) (20 threads → seqs 1..20)

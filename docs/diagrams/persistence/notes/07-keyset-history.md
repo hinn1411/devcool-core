@@ -45,6 +45,6 @@ ORDER BY ms.seq ASC
 **"One index, three queries: keyset pagination for a chat history."**
 
 ## Code
-- [`MessageRepository.findPageBeforeSeq`](../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L50), [`findPageAfterSeq`](../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L67)
-- Migrations: [`V2`](../../../src/main/resources/db/migration/V2__message_channel_id_index.sql), [`V4`](../../../src/main/resources/db/migration/V4__message_seq_and_read_state.sql)
-- Tests: [`MessageAdapterIT`](../../../src/test/java/com/devcool/adapters/out/persistence/message/MessageAdapterIT.java): `seqPaging_followsSeqEvenWhenIdOrderDiffers`, `beforeSeq_returnsOlderBySeqDescending_excludingTheBound`, `afterSeq_returnsNewerBySeqAscending_excludingTheBound`, `pageOfReplies_isOneSqlStatement`
+- [`MessageRepository.findPageBeforeSeq`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L50), [`findPageAfterSeq`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L67)
+- Migrations: [`V2`](../../../../src/main/resources/db/migration/V2__message_channel_id_index.sql), [`V4`](../../../../src/main/resources/db/migration/V4__message_seq_and_read_state.sql)
+- Tests: [`MessageAdapterIT`](../../../../src/test/java/com/devcool/adapters/out/persistence/message/MessageAdapterIT.java): `seqPaging_followsSeqEvenWhenIdOrderDiffers`, `beforeSeq_returnsOlderBySeqDescending_excludingTheBound`, `afterSeq_returnsNewerBySeqAscending_excludingTheBound`, `pageOfReplies_isOneSqlStatement`

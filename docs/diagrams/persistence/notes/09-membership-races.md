@@ -43,7 +43,7 @@ If the insert hits `uk_member_channel_user`, `ApiExceptionHandler` matches **tha
 **"Check-then-act: two bugs in one endpoint, and the one-line SQL fixes."**
 
 ## Code
-- [`ChannelService.addMember`](../../../src/main/java/com/devcool/application/service/channel/ChannelService.java#L102)
-- [`ChannelRepository.increaseTotalMembers`](../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L25)
-- [`ApiExceptionHandler.isMemberUniqueViolation`](../../../src/main/java/com/devcool/adapters/in/web/handler/ApiExceptionHandler.java#L141)
-- Tests: [`ApiExceptionHandlerTest`](../../../src/test/java/com/devcool/adapters/in/web/handler/ApiExceptionHandlerTest.java), [`MemberAdapterIT.addMembers_startCaughtUpAtLastSeq`](../../../src/test/java/com/devcool/adapters/out/persistence/member/MemberAdapterIT.java#L70)
+- [`ChannelService.addMember`](../../../../src/main/java/com/devcool/application/service/channel/ChannelService.java#L102)
+- [`ChannelRepository.increaseTotalMembers`](../../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L25)
+- [`ApiExceptionHandler.isMemberUniqueViolation`](../../../../src/main/java/com/devcool/adapters/in/web/handler/ApiExceptionHandler.java#L141)
+- Tests: [`ApiExceptionHandlerTest`](../../../../src/test/java/com/devcool/adapters/in/web/handler/ApiExceptionHandlerTest.java), [`MemberAdapterIT.addMembers_startCaughtUpAtLastSeq`](../../../../src/test/java/com/devcool/adapters/out/persistence/member/MemberAdapterIT.java#L70)

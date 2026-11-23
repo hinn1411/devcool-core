@@ -1,6 +1,6 @@
 # 10 — Zero-downtime migrations (notes)
 
-Diagram: [../10-migrations.md](../10-migrations.md) · Deep dive: [learning/11 Flyway and schema management](../../learning/11-flyway-and-schema-management.md) (§7 covers the migrate task and expand/contract)
+Diagram: [../10-migrations.md](../10-migrations.md) · Deep dive: [learning/11 Flyway and schema management](../../../learning/11-flyway-and-schema-management.md) (§7 covers the migrate task and expand/contract)
 
 ## Problem
 The schema must change under a running system: 2+ ECS tasks are serving traffic, and during a rolling deploy old and new code run at the same time against one database.
@@ -46,5 +46,5 @@ Every file starts with `SET LOCAL lock_timeout = '5s'`. Flyway runs each migrati
 **"Adding a NOT NULL column to a live chat table: expand, deploy, contract."** Hook: the V4/V5 files, line by line.
 
 ## Code
-- [`db/migration/`](../../../src/main/resources/db/migration/)
-- Tests: [`V4BackfillIT`](../../../src/test/java/com/devcool/V4BackfillIT.java) and [`V5ContractIT`](../../../src/test/java/com/devcool/V5ContractIT.java) migrate a fresh database **to a target version** (`Flyway.configure().target(version)`), seed rows as the old code would, then apply the next version and assert. Also [`BigintIdsIT`](../../../src/test/java/com/devcool/BigintIdsIT.java) (ids above 2³¹ through REST, WS and history) and [`MigrateProfileIT`](../../../src/test/java/com/devcool/MigrateProfileIT.java).
+- [`db/migration/`](../../../../src/main/resources/db/migration/)
+- Tests: [`V4BackfillIT`](../../../../src/test/java/com/devcool/V4BackfillIT.java) and [`V5ContractIT`](../../../../src/test/java/com/devcool/V5ContractIT.java) migrate a fresh database **to a target version** (`Flyway.configure().target(version)`), seed rows as the old code would, then apply the next version and assert. Also [`BigintIdsIT`](../../../../src/test/java/com/devcool/BigintIdsIT.java) (ids above 2³¹ through REST, WS and history) and [`MigrateProfileIT`](../../../../src/test/java/com/devcool/MigrateProfileIT.java).

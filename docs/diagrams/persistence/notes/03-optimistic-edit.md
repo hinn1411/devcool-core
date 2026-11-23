@@ -41,6 +41,6 @@ WHERE ms.id = :id AND ms.version = :expected AND ms.deletedTime IS NULL
 **"Lost updates and the one-line fix: `WHERE version = :expected`."** Hook: why Hibernate's `@Version` didn't fit, and the READ COMMITTED re-check that makes the plain version safe.
 
 ## Code
-- [`EditMessageService.edit`](../../../src/main/java/com/devcool/application/service/chat/EditMessageService.java#L41)
-- [`MessageRepository.updateContentIfVersion`](../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L139)
-- Tests: [`EditMessageConcurrencyIT`](../../../src/test/java/com/devcool/application/service/chat/EditMessageConcurrencyIT.java): `concurrentEditsOnOneVersion_exactlyOneWins` (20 threads), `staleClient_getsConflict_andTheNewerEditSurvives`. [`MessageAdapterIT`](../../../src/test/java/com/devcool/adapters/out/persistence/message/MessageAdapterIT.java): `updateContent_staleVersion_leavesRowUnchanged`, `updateContent_onDeletedMessage_matchesNothing`
+- [`EditMessageService.edit`](../../../../src/main/java/com/devcool/application/service/chat/EditMessageService.java#L41)
+- [`MessageRepository.updateContentIfVersion`](../../../../src/main/java/com/devcool/adapters/out/persistence/message/repository/MessageRepository.java#L139)
+- Tests: [`EditMessageConcurrencyIT`](../../../../src/test/java/com/devcool/application/service/chat/EditMessageConcurrencyIT.java): `concurrentEditsOnOneVersion_exactlyOneWins` (20 threads), `staleClient_getsConflict_andTheNewerEditSurvives`. [`MessageAdapterIT`](../../../../src/test/java/com/devcool/adapters/out/persistence/message/MessageAdapterIT.java): `updateContent_staleVersion_leavesRowUnchanged`, `updateContent_onDeletedMessage_matchesNothing`

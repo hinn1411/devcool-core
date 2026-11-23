@@ -41,7 +41,7 @@ WHERE member.user_id = :userId and member.channel_id = :channelId and member.cha
 **"Unread counts at O(1): two numbers and a subtraction."** Hook: why `COUNT(*)` doesn't scale and how `GREATEST` handles multi-device chaos.
 
 ## Code
-- [`MemberRepository.advanceLastReadSeq`](../../../src/main/java/com/devcool/adapters/out/persistence/member/repository/MemberRepository.java#L42), [`catchUpMembers`](../../../src/main/java/com/devcool/adapters/out/persistence/member/repository/MemberRepository.java#L58)
-- [`ChannelRepository.findChannelPageByMemberId`](../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L72)
-- [`ReadStateService.markRead`](../../../src/main/java/com/devcool/application/service/channel/ReadStateService.java)
-- Tests: [`MemberAdapterIT`](../../../src/test/java/com/devcool/adapters/out/persistence/member/MemberAdapterIT.java) (`advance_movesForward_neverBack`, `advance_clampsToLastSeq`), [`ChannelReadIT.concurrentReads_endAtTheHighestSeq`](../../../src/test/java/com/devcool/adapters/in/web/controller/ChannelReadIT.java#L102), [`ChannelAdapterIT`](../../../src/test/java/com/devcool/adapters/out/persistence/channel/ChannelAdapterIT.java) (`unreadCount_isLastSeqMinusLastReadSeq`, `aPageOfChannels_isOneStatement`)
+- [`MemberRepository.advanceLastReadSeq`](../../../../src/main/java/com/devcool/adapters/out/persistence/member/repository/MemberRepository.java#L42), [`catchUpMembers`](../../../../src/main/java/com/devcool/adapters/out/persistence/member/repository/MemberRepository.java#L58)
+- [`ChannelRepository.findChannelPageByMemberId`](../../../../src/main/java/com/devcool/adapters/out/persistence/channel/repository/ChannelRepository.java#L72)
+- [`ReadStateService.markRead`](../../../../src/main/java/com/devcool/application/service/channel/ReadStateService.java)
+- Tests: [`MemberAdapterIT`](../../../../src/test/java/com/devcool/adapters/out/persistence/member/MemberAdapterIT.java) (`advance_movesForward_neverBack`, `advance_clampsToLastSeq`), [`ChannelReadIT.concurrentReads_endAtTheHighestSeq`](../../../../src/test/java/com/devcool/adapters/in/web/controller/ChannelReadIT.java#L102), [`ChannelAdapterIT`](../../../../src/test/java/com/devcool/adapters/out/persistence/channel/ChannelAdapterIT.java) (`unreadCount_isLastSeqMinusLastReadSeq`, `aPageOfChannels_isOneStatement`)
