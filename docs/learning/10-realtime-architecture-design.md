@@ -2,15 +2,16 @@
 
 Chapter 04 lists the realtime *bugs*. This chapter is the map that was missing: how the `/ws` layer is put together, where it stops scaling, and what to move to when it does.
 
-It assumes **one ECS task today** and asks what the path to several looks like. Options B-K in §6 are **designs, not code**. None of them exists in the repo.
+It describes the code **after P3** (protocol v1, a single-node registry). The `api` service already runs 1–2 ECS tasks under CPU target tracking (`api_min_count = 1`, `api_max_count = 2`, `infra/stacks/app/variables.tf:19-28`), so the multi-node problem in §5.1 is real today, not hypothetical. Options B-K in §6 are **designs, not code**. ADR-0006 has since chosen B for P4.
 
 **How to read the claims**
 
 | Marker | Meaning |
 |---|---|
-| `file:line` | Read in this repo on 2026-09-24 |
+| `file:line` | Read in this repo on 2026-11-26 (first written against the 2026-09-24 code) |
 | *(docs)* | Checked against the Spring 6.2, PostgreSQL or Redis documentation on 2026-09-24 |
 | *(general)* | Not checked here. Verify before you decide |
+| **Fixed in P3-Txx** | A gap the first version listed, kept for the lesson |
 
 ---
 
@@ -19,39 +20,43 @@ It assumes **one ECS task today** and asks what the path to several looks like. 
 ```
  client ⇄ /ws   Authorization: Bearer <jwt>
     │
- ┌──▼─ adapters/in ────────────────────────────────────────┐
- │ JwtAuthFilter ▶ WsAuthHandShakeInterceptor              │
- │ ▶ RawWebSocketHandler   (one switch on frame.action)    │
- └────────┬─────────────────────────┬──────────────────────┘
-          │ SUBSCRIBE               │ SEND_MESSAGE
- ┌────────▼─ application ───────────▼──────────────────────┐
- │ WsSubscribeService        WsSendMessageService          │
- │ WsUnsubscribeService = empty stub, not wired            │
- └────────┬─────────────────────────┬──────────────────────┘
-          │ outbound ports          │
- ┌────────▼─────────────────────────▼──────────────────────┐
- │ ConnectionRegistryPort      RealtimeEmitterPort         │
- └────────┬─────────────────────────┬──────────────────────┘
- ┌────────▼─ adapters/out ──────────▼──────────────────────┐
- │ InMemoryConnectionRegistry-   WsRealtimeEmitterAdapter  │
- │ Adapter (2 ConcurrentHashMaps)  └▶ WsSessionStore       │
+ ┌──▼─ adapters/in/websocket ──────────────────────────────┐
+ │ JwtAuthFilter ▶ AuthHandshakeInterceptor                │
+ │ ▶ MdcHandlerDecorator ▶ ChatHandler                     │
+ │      EnumMap<FrameType, FrameAction> dispatcher         │
+ │      Subscribe / Unsubscribe / SendMessage / Ping       │
+ │ FrameWriter · SessionRegistry · SessionEmitterAdapter ◀─┼──┐
+ └────────┬─────────────────────────┬──────────────────────┘  │
+          │ ConnectionLifecycle-    │ SendMessageUseCase      │
+          │ UseCase, ChannelSub-    │                         │
+          │ scriptionUseCase        │                         │
+ ┌────────▼─ application ───────────▼──────────────────────┐  │
+ │ ConnectionService           SendMessageService          │  │
+ │ (ChannelAuthorizer)         (→ SaveMessageUseCase)      │  │
+ └────────┬─────────────────────────┬──────────────────────┘  │
+          │ outbound ports          │                         │
+ ┌────────▼─────────────────────────▼──────────────────────┐  │
+ │ ConnectionRegistryPort      RealtimeEmitterPort ────────┼──┘
+ └────────┬────────────────────────────────────────────────┘
+ ┌────────▼─ adapters/out/realtime/immemory ───────────────┐
+ │ InMemoryConnectionRegistryAdapter (2 ConcurrentHashMaps)│
  └─────────────────────────────────────────────────────────┘
 ```
 
-`WsSendMessageService` also calls `SaveMessageUseCase` (→ `MessageService` → PostgreSQL) before it touches the registry. Everything realtime-specific sits behind the two ports. That is what makes the options in §6 possible.
+`RealtimeEmitterPort` is implemented **inside the inbound adapter** (`SessionEmitterAdapter`, `adapters/in/websocket/session`). The socket is a bidirectional transport, so the session map and the code that writes to it stay in one adapter package, and `adapters/in` and `adapters/out` never import each other (`.claude/rules/hexagonal.md`). `SendMessageService` also calls `SaveMessageUseCase` (→ `MessageService` → PostgreSQL) before it touches the registry. Everything realtime-specific sits behind the two outbound ports, and that is what makes the options in §6 possible.
 
-**The protocol.** One endpoint, `/ws` (`WebSocketConfig.java:21`), one JSON frame per message.
+**The protocol (v1).** One endpoint, `/ws` (`WebSocketConfig.java:25`), one JSON frame per message. ADR-0005 replaces it with v2 in P4.
 
 | Direction | Frame | Handled? | Where |
 |---|---|---|---|
-| client → server | `PING` | yes, replies `ACK "PONG"` | `RawWebSocketHandler:67-72` |
-| client → server | `SUBSCRIBE` (`channelId`) | yes | `:73-83` |
-| client → server | `SEND_MESSAGE` (`channelId`, `contentType`, `content`) | yes | `:84-96` |
-| client → server | `UNSUBSCRIBE` | declared in `WsMessageType`, **no case**, so `ERROR "Unsupported action"` | `:97-103` |
-| server → client | `ACK` / `ERROR` as `WsServerFrame(type, clientMsgId, data)` | after each frame | `WsServerFrame.java` |
-| server → client | push as `OutboundWsEvent(type, channelId, senderId, contentType, content)` | to other connections | `WsSendMessageService:58` |
+| client → server | `PING` | yes, replies `ACK "PONG"` | `PingAction:28` |
+| client → server | `SUBSCRIBE` (`channelId`) | yes, members only | `SubscribeAction:33-41` |
+| client → server | `UNSUBSCRIBE` (`channelId`) | yes. **Fixed in P3-T16**: it used to fall through to `ERROR "Unsupported action"` | `UnsubscribeAction:32-38` |
+| client → server | `SEND_MESSAGE` (`channelId`, `contentType`, `content`, `clientMsgId`, `replyToId?`) | yes, idempotent by `clientMsgId` | `SendMessageAction:36-66` |
+| server → client | `ACK` / `ERROR` as `ServerFrame(type, clientMsgId, data)`. A SEND ACK's `data` is `SendAck{messageId, seq, createdTime}` | after each frame | `ServerFrame.java`, `SendAck.java` |
+| server → client | push as `MessagePush{type:"MESSAGE", channelId, senderId, contentType, content, messageId, seq, createdTime, replyToId}` | to other connections | `MessagePush.from` ← domain `MessageEvent` |
 
-Two envelope shapes share one socket. `"MESSAGE"` is a plain string, since `WsMessageType` has no such constant, so a client has to tell the shapes apart by their fields.
+The dispatcher is built once from every `FrameAction` bean. Two actions for one `FrameType` fail at startup (`ChatHandler:49-53`). Two envelope shapes still share one socket: `"MESSAGE"` is a plain string, not a `FrameType` constant, so a client has to tell the shapes apart by their fields. That is one of ADR-0005's decision drivers.
 
 ---
 
@@ -63,53 +68,62 @@ Two envelope shapes share one socket. `"MESSAGE"` is a plain string, since `WsMe
 
 | Value | Who supplies it | Source |
 |---|---|---|
-| `connectionId` | **server** | `session.getId()` (`RawWebSocketHandler:37,43,109`), a UUID string from Spring's `StandardWebSocketSession` (6.2.11, read from the jar) |
-| `userId` | **server** | the JWT principal, stored as a handshake attribute (`WsAuthHandShakeInterceptor:46`) |
+| `connectionId` | **server** | `session.getId()` (`ChatHandler:60,81`), a UUID string from Spring's `StandardWebSocketSession` (6.2.11, read from the jar) |
+| `userId` | **server** | the JWT principal, stored as a handshake attribute (`AuthHandshakeInterceptor:45`) and read back with `AuthHandshakeInterceptor.userIdOf(session)` |
 | `channelId` | client | the frame field |
 
-The server builds `SubscribeCommand(connectionId, userId, channelId)` itself (`RawWebSocketHandler:74-75`). The client never sends, and never learns, its `connectionId`. This is a security property: a client cannot subscribe someone else's connection or claim another user id, because it cannot name either.
+The server builds `SubscribeCommand(connectionId, userId, channelId)` itself (`SubscribeAction:38-40`). The client never sends, and never learns, its `connectionId`. This is a security property: a client cannot subscribe someone else's connection or claim another user id, because it cannot name either.
 
-Two consequences that matter later:
+Three consequences that matter later:
 
-- **Subscription is not membership.** Membership lives in the DB and is checked once, at subscribe time (`WsSubscribeService:40-50`). The registry only records *who is listening right now*.
-- **The sender is skipped by connection, not by user** (`WsSendMessageService:42-44`). The same user's second tab or phone is a different connection and still receives the message. Clients must render an event whose `senderId` is their own user id as "mine".
+- **Subscription is not membership.** Membership lives in the DB and is checked at subscribe time (`ConnectionService:38-42` → `ChannelAuthorizer.requireMember`). The registry only records *who is listening right now*.
+- **Losing membership cuts off live pushes.** Remove-member and leave call `unsubscribeUser(userId, channelId)` **after commit** (`MemberManagementService:124-138`), which drops every connection of that user from the channel. **Fixed in P3-T16**: before it, a removed member kept receiving pushes until they reconnected. A SUBSCRIBE that read the member row just before the commit can still slip in. The fan-out membership re-check in P4 closes that.
+- **The sender is skipped by connection, not by user** (`SendMessageService:46`). The same user's second tab or phone is a different connection and still receives the message. Clients must render an event whose `senderId` is their own user id as "mine".
 
 ---
 
 ## 3. Lifecycle
 
-**Connect** (`RawWebSocketHandler:34-39`)
-1. The handshake interceptor refuses the upgrade unless the principal is a user id.
-2. `sessionStore.put(session)` and `registerConnection(connectionId, userId)`.
+**Connect** (`ChatHandler:57-61`)
+1. The handshake interceptor refuses the upgrade unless the principal is a `Long` user id (`AuthHandshakeInterceptor:32-43`).
+2. `sessionRegistry.put(session)`, then `ConnectionLifecycleUseCase.connect(ConnectCommand)` → `registerConnection(connectionId, userId)`.
 3. Nothing is sent to the client.
 
-**Subscribe** (`RawWebSocketHandler:73-83`, `WsSubscribeService:28-53`, `@Transactional`)
-1. Channel exists, else `ChannelNotFoundException`.
-2. User is a member, else `MemberNotFoundException`.
+Every callback runs inside `MdcHandlerDecorator`, which puts `userId` and `connectionId` into the MDC and removes them in `finally` (P1-T15).
+
+**Subscribe** (`SubscribeAction:33-41`, `ConnectionService:36-42`, `@Transactional`)
+1. A missing `channelId` → `ERROR "Missing channelId"`.
+2. `ChannelAuthorizer.requireMember`: the channel exists and the user is a member, else a `DomainException`. `ChatHandler.dispatch` turns that into an `ERROR` frame carrying the error code.
 3. `registry.subscribe(connectionId, channelId)`, then `ACK "Subscribe successfully"`.
 4. One frame subscribes one channel. Send several frames to subscribe to several channels.
+
+**Unsubscribe** (`UnsubscribeAction:32-38`, `ConnectionService:44-47`). No membership check: it only shrinks this connection's own subscriptions.
 
 **Send a message**
 
 ```
- sender      handler       WsSendMessageService        PG        other sockets
-   │─ SEND ──▶│                    │                     │              │
-   │          │─ sendMessage ─────▶│                     │              │
-   │          │                    │─ save (tx) ────────▶│              │
-   │          │                    │◀──── id, COMMIT ────│              │
-   │          │                    │ registry: who is on channel?       │
-   │          │                    │ for each conn ≠ sender's:          │
-   │          │                    │────── OutboundWsEvent ────────────▶│
-   │          │◀───── returns ─────│                                    │
-   │◀─ ACK "SENT" (:92-95)         │                                    │
+ sender      SendMessageAction   SendMessageService   MessageService    PG     other sockets
+   │─ SEND ──▶│                     │                    │               │            │
+   │          │─ sendMessage(cmd,  ▶│                    │               │            │
+   │          │   onCommitted)      │─ save ────────────▶│ tx: authz,    │            │
+   │          │                     │                    │ replay?, seq  │            │
+   │          │                     │                    │ bump, INSERT ▶│            │
+   │          │                     │◀── SavedMessage ───│◀── COMMIT ────│            │
+   │◀── ACK SendAck{messageId, seq, createdTime} (onCommitted)           │            │
+   │          │                     │ if !duplicate: each conn ≠ sender  │            │
+   │          │                     │────────────── MessagePush ──────────────────────▶│
 ```
 
-The ordering is the key design fact. `MessageService.save` is `@Transactional` (`MessageService:48-49`) and returns the new `Integer` id. It commits when it returns. `WsSendMessageService` has no transaction of its own, so the broadcast happens **after** the commit. The database is the source of truth, and a failed broadcast can never lose a message. (Line 30 discards the returned id, which §5.4 comes back to.)
+The ordering is the key design fact: **commit → ACK → publish**. `MessageService.save` (`:71-85`) runs each attempt in its own transaction (`TransactionTemplate`), because a lost `clientMsgId` race aborts the transaction and the re-read needs a fresh one. The seq comes from a row lock on the channel until commit (ADR-0012, `:114`). `SendMessageService` has no transaction of its own (`:17`), so the ACK and the broadcast both happen **after** the commit. The database is the source of truth, and a failed broadcast can never lose a message.
 
-**Disconnect** (`RawWebSocketHandler:107-112`)
-1. `sessionStore.remove` and `registry.removeConnection`.
-2. `handleTransportError` is not overridden.
-3. `removeConnection` clears `connectionToUser` and removes the id from **every** channel's set, so only that connection leaves its channels. The empty sets are kept. This was fixed on 2026-09-24. 04 §3 describes the earlier behaviour, where the id stayed in every channel set. One edge case remains: a `subscribe` that races with the disconnect can re-add the id after the cleanup has passed that set (04 §1).
+Two details in `SendMessageService:30-40`:
+- A **retried** `clientMsgId` returns the original `SavedMessage` with `duplicate = true`. The sender gets the same ACK again, and nothing is re-broadcast, because the first send already pushed it.
+- The publish runs in `finally`, so an ACK write that fails still pushes to everyone else.
+
+**Disconnect** (`ChatHandler:80-84`)
+1. `sessionRegistry.remove` and `ConnectionLifecycleUseCase.disconnect` → `registry.removeConnection`.
+2. `handleTransportError` is not overridden in `ChatHandler`. `MdcHandlerDecorator` only wraps it, so cleanup relies on `afterConnectionClosed` following a transport error *(general)*.
+3. `removeConnection` clears `connectionToUser` and removes the id from **every** channel's set, so only that connection leaves its channels (`InMemoryConnectionRegistryAdapter:21-29`). The empty sets are kept. This was fixed on 2026-09-24. 04 §3 describes the earlier behaviour, where the id stayed in every channel set. One edge case remains: a `subscribe` that races with the disconnect can re-add the id after the cleanup has passed that set (04 §1).
 
 ---
 
@@ -117,12 +131,14 @@ The ordering is the key design fact. `MessageService.save` is `@Transactional` (
 
 Keep these whatever you choose in §6.
 
-- **Persist, then broadcast.** Only committed messages are ever pushed (`WsSendMessageService:30` before `:43`).
+- **Commit, then ACK, then broadcast.** Only committed messages are ever acknowledged or pushed (`SendMessageService:31-38`).
 - **Server-derived identity.** §2. No client-supplied user or connection id.
-- **Authorization at subscribe.** Channel and membership are checked before the registry is touched.
-- **Framework-free ports.** `ConnectionRegistryPort` and `RealtimeEmitterPort` take a `String` connection id, not a `WebSocketSession`. Swapping the adapter does not touch `domain/`.
+- **Authorization at subscribe, and revocation on remove/leave.** Membership is checked before the registry is touched, and losing membership unsubscribes every connection of that user.
+- **Framework-free ports.** `ConnectionRegistryPort` and `RealtimeEmitterPort` take a `String` connection id and a domain `MessageEvent`, not a `WebSocketSession` or a DTO. Swapping the adapter does not touch `domain/`.
+- **Events can be ordered, deduplicated and resumed.** Every push and SEND ACK carries `messageId`, `seq` and `createdTime`. **Fixed in P3-T03/T04** (was §5.4).
 - **A catch-up path already exists.** `GET /api/v1/channels/{id}/messages?cursorId=` is built and working. It is what makes a lossy push acceptable (§7).
-- **The REST side is stateless.** `SessionCreationPolicy.STATELESS` (`SecurityConfig:49`), and a grep of `src/main` for `ConcurrentHashMap`, `@Scheduled`, `@Cacheable` and static maps finds nothing outside the WebSocket and realtime adapters. The WebSocket layer is the only thing that pins you to one task.
+- **A frame-level domain error does not close the socket.** `ChatHandler.dispatch` (`:87-98`) turns a `DomainException` into an `ERROR` frame (04 §7). Any other exception still escapes, and Spring closes the socket with 1011 (§7, Stage 1).
+- **The REST side is stateless.** `SessionCreationPolicy.STATELESS` (`SecurityConfig:54`), and the only `ConcurrentHashMap`s in `src/main` hold the WebSocket sessions and the registry. The WebSocket layer is the only thing that pins state to one task.
 
 ---
 
@@ -132,7 +148,7 @@ Keep these whatever you choose in §6.
 
 **The concept.** A `ConcurrentHashMap` is shared by threads, not by processes. With two tasks you have two registries, and each knows only its own sockets.
 
-**In your code.** `InMemoryConnectionRegistryAdapter` (the `connectionToUser` and `channelToConnections` fields) and `WsSessionStore:11`.
+**In your code.** `InMemoryConnectionRegistryAdapter:12-13` (`connectionToUser`, `channelToConnections`) and `SessionRegistry:11`.
 
 ```
    A ⇄ ┌────────────────────┐          ┌────────────────────┐ ⇄ B
@@ -142,32 +158,47 @@ Keep these whatever you choose in §6.
        └────────────────────┘  no path └────────────────────┘
 ```
 
-**Why it matters.** The message is saved, so B sees it on the next REST fetch. B never gets it live. Nothing fails, so nothing alerts.
+**Why it matters.** The message is saved, so B sees it on the next REST fetch. B never gets it live. Nothing fails, so nothing alerts. With `api_max_count = 2`, this happens as soon as CPU scaling adds the second task.
 
 **Sticky sessions do not fix this.** They pin a *client* to a node. A and B are both correctly pinned, and they are still on different nodes.
 
+**Status:** open. P4 adds the Redis backplane (ADR-0006).
+
 ### 5.2 Sending is blocking and unsynchronized
 
-The fan-out runs on the *sender's* thread and calls `session.sendMessage` directly (`WsRealtimeEmitterAdapter:23-34`). Spring's reference documentation says *(docs)* that with the raw `WebSocketHandler` API the application must synchronize sending, because the underlying standard (JSR-356) session does not support concurrent sends, and that `ConcurrentWebSocketSessionDecorator` is the tool for it. Two consequences:
+The fan-out runs on the *sender's* thread. `SessionEmitterAdapter.send` (`:28-40`) calls `FrameWriter.send`, which calls `session.sendMessage` on the raw session (`FrameWriter:30-31`). Spring's reference documentation says *(docs)* that with the raw `WebSocketHandler` API the application must synchronize sending, because the underlying standard (JSR-356) session does not support concurrent sends, and that `ConcurrentWebSocketSessionDecorator` is the tool for it. Two consequences:
 
-- **Concurrent writes** to one recipient from two senders' threads. Details and fix: 04 §2. The failing behaviour is documented but was not reproduced in this repo.
-- **One slow client stalls the sender.** The loop is sequential and each send blocks (04 §2), so the sender's `SENT` ACK waits for the slowest recipient. The decorator's send-time and buffer limits *(docs)* are the missing bound.
+- **Concurrent writes** to one recipient from two senders' threads. Details and fix: 04 §2. The failing behaviour is documented but was not reproduced in this repo. The adapter catches `IOException | IllegalStateException` per recipient and logs it (at-most-once), so one broken recipient no longer aborts the loop.
+- **One slow client stalls the sender's thread.** The loop is sequential and each send blocks (04 §2). The sender's ACK no longer waits for it, since the ACK is written before the fan-out (§3), but the sender's next frame does. The decorator's send-time and buffer limits *(docs)* are the missing bound.
+
+**Status:** open. P4-T01.
 
 ### 5.3 Restart and deploy drop everything
 
-Registry and session store are in memory. Every deploy closes every socket and forgets every subscription. Clients must reconnect, subscribe again, and re-fetch what they missed over REST. This is tolerable when it is rare, and painful when the API deploys often.
+Registry and session map are in memory. Every deploy closes every socket and forgets every subscription. Clients must reconnect, subscribe again, and re-fetch what they missed over REST. This is tolerable when it is rare, and painful when the API deploys often.
 
-### 5.4 Events cannot be ordered, deduplicated or resumed
+**Status:** open. P4 adds `RECONNECT{afterMs}`, close code 1012, and `RESUME{lastSeq}` (ADR-0005).
 
-`OutboundWsEvent` has no message id and no timestamp (`WsSendMessageService:58`). `SaveMessageUseCase.save` returns the id and `:30` throws it away. A client cannot tell whether it already has a message, and cannot ask for "everything after id 42". Chapter 04 §6 covers the fix. Every backplane option in §6 makes this more important, because they all deliver at-most-once or at-least-once, never exactly-once.
+### 5.4 Events cannot be ordered, deduplicated or resumed — **fixed in P3-T03/T04**
+
+The first version found that the push had no message id and no timestamp, and that `save` returned the id only for it to be thrown away. Today:
+- `SavedMessage{id, seq, createdTime, duplicate}` flows into a domain `MessageEvent` (`SendMessageService:52-62`).
+- `MessagePush` carries `messageId`, `seq` and `createdTime`.
+- `seq` is per channel and gap-free under the row lock (ADR-0012), so a client can detect a gap and ask for "everything after seq 42".
+
+This still matters more with every backplane option in §6, because they all deliver at-most-once or at-least-once, never exactly-once. The ids are what make that safe. The `RESUME` frame that uses them is P4.
 
 ### 5.5 Handshake authentication depends on the client
 
-`JwtAuthFilter:32` reads only the `Authorization: Bearer` header. `/ws` is `permitAll` (`SecurityConfig:41`) and `WsAuthHandShakeInterceptor` is the real gate. A browser's `WebSocket` constructor cannot set custom headers *(general)*, so a browser client needs another mechanism: a token in the query string, a subprotocol, or a short-lived one-time ticket. A native mobile client can send the header as is. **This depends on a client type this repo does not reveal.** It is not a scaling limit, but it changes what the design must look like, so it is listed here.
+`JwtAuthFilter:32` reads only the `Authorization: Bearer` header. `/ws` is `permitAll` (`SecurityConfig:44`) and `AuthHandshakeInterceptor` is the real gate. A browser's `WebSocket` constructor cannot set custom headers *(general)*, so a browser client needs another mechanism. The client is now known to be the browser SPA (`frontend/`, P5), and ADR-0011 chose a short-lived one-time ticket (`POST /api/v1/ws/ticket`, redeemed with `GETDEL`) plus an origin allowlist. Today `WebSocketConfig:27` still sets `setAllowedOrigins("*")`.
+
+**Status:** open. P4-T06.
 
 ### 5.6 No capacity numbers exist
 
 Nothing in the repo measures connections per task, send latency or the largest channel. Before choosing anything past Stage 1 in §7, measure three things: sockets held per task, p95 duration of `sendMessage` (save plus fan-out), and fan-out time for your biggest channel. Any threshold in this chapter would be invented.
+
+**Status:** open.
 
 ---
 
@@ -181,7 +212,7 @@ Diagram legend: `Task N` = an ECS task, `PG` = PostgreSQL.
 
 #### A. Harden the single node
 
-*In the hexagon:* no port change. Adapters get safer: `ConcurrentWebSocketSessionDecorator` in `WsSessionStore`, a reverse index in the registry.
+*In the hexagon:* no port change. Adapters get safer: `ConcurrentWebSocketSessionDecorator` in `SessionRegistry`, a reverse index in the registry.
 
 ```
  A ─┐
@@ -345,7 +376,7 @@ Every node still tracks only its own sockets. A message is published once and ev
 ```
 
 - **Pros:** *(docs)* with a full-featured broker each app instance connects to the broker, and a message broadcast from one instance is routed to clients on any other. Spring's simple in-memory broker does not support multiple instances. Subscribe, unsubscribe, heartbeats and fan-out come built in and battle-tested.
-- **Cons:** it rewrites the protocol, so every client changes; you run and operate a broker; per-destination authorization has to be written as interceptors; `CLAUDE.md` records the raw protocol as a design choice, so this reverses it.
+- **Cons:** it rewrites the protocol, so every client changes; you run and operate a broker; per-destination authorization has to be written as interceptors; ADR-0005 records the raw protocol as a design choice, so this reverses it.
 - **Fits when:** you would rather adopt a standard protocol than maintain a custom one.
 
 #### H. A dedicated WebSocket gateway plus an internal bus
@@ -370,7 +401,7 @@ Every node still tracks only its own sockets. A message is published once and ev
 
 #### E. A managed realtime layer (API Gateway WebSocket API, Ably, Pusher, Centrifugo)
 
-*In the hexagon:* `RealtimeEmitterPort` gets an adapter that calls the vendor to push. Connection lifecycle moves out of `RawWebSocketHandler` into route handlers.
+*In the hexagon:* `RealtimeEmitterPort` gets an adapter that calls the vendor to push. Connection lifecycle moves out of `ChatHandler` into route handlers.
 
 ```
  clients ⇄ ┌──────────────────────────────┐   1 routes: $connect, subscribe,
@@ -431,17 +462,18 @@ Upgrades B, C, I and J from "maybe delivered" to "delivered at least once".
 
 ## 7. Recommended path
 
-The recommendation follows from one fact (§5.6): there is no evidence yet that you need more than one task. So do the work that every option needs, and defer the choice that only one option needs.
+The recommendation was written when there was no evidence of a need for more than one task (§5.6). So: do the work every option needs, and defer the choice only one option needs. Since then the `api` service can scale to two tasks (`api_max_count = 2`), and ADR-0006 has made the Stage 2 choice: **B**, Redis pub/sub. Both stages are now P4 work.
 
-### Stage 1, now: harden the single node (A)
+### Stage 1: harden the single node (A)
 
-| Change | Where |
-|---|---|
-| Wrap stored sessions in `ConcurrentWebSocketSessionDecorator` | 04 §2 |
-| Clean up on every exit path (`handleTransportError` is not overridden). A reverse index `connectionToChannels` would make `removeConnection` O(1) instead of a scan over all channels, but is optional | 04 §3 |
-| Catch per frame and reply `ERROR`, instead of closing the socket | 04 §7 |
-| Put the persisted message id and `createdTime` in `OutboundWsEvent` | 04 §6 |
-| Wire `UNSUBSCRIBE` end to end | 04 §8 |
+| Change | Where | Status |
+|---|---|---|
+| Wrap stored sessions in `ConcurrentWebSocketSessionDecorator` | 04 §2 | open, P4-T01. `FrameWriter:31` still writes to the raw session |
+| Clean up on every exit path (`handleTransportError` is not overridden). A reverse index `connectionToChannels` would make `removeConnection` O(1) instead of a scan over all channels, but is optional | 04 §3 | open, P4-T01 |
+| Catch per frame and reply `ERROR`, instead of closing the socket | 04 §7 | partly done: `DomainException` → `ERROR` (`ChatHandler:93-97`). Any other exception (for example the `UncheckedIOException` from a failed SEND ACK, `SendMessageAction:64`) still closes the socket with 1011. P4-T02 |
+| Put the persisted message id, `seq` and `createdTime` in the push | 04 §6 | **done**, P3-T03/T04 (`MessagePush`, `SendAck`) |
+| Wire `UNSUBSCRIBE` end to end | 04 §8 | **done**, P3-T16 |
+| Cut off live pushes when a member is removed or leaves | — | **done**, P3-T16 (`unsubscribeUser` after commit) |
 
 The registry bugs found while testing it (the `null` return, the `unsubscribe` NPE, the missing connection cleanup and the inconsistent return contract) are already fixed in `InMemoryConnectionRegistryAdapter`.
 
@@ -453,16 +485,16 @@ The registry bugs found while testing it (the `null` return, the `unsubscribe` N
 
 `c2` is subscribed and never receives anything. Either keep empty sets (they are bounded by the number of channels), or make `subscribe` do the `add` inside `compute`, so both operations are atomic per key. This is 04 §1's own lesson applied to 04 §3. The current `removeConnection` takes the first option.
 
-### Stage 2, when a second task is needed: a backplane with local registries
+### Stage 2: a backplane with local registries (P4)
 
-Default to **B** (Redis). Choose **J** if you would rather not run Redis, or **C** for two or three tasks and no new service.
+**B** (Redis/Valkey pub/sub, ADR-0006). **J** or **C** were the alternatives: J if you would rather not run Redis, C for two or three tasks and no new service.
 
-The key refactor is the same for all three: move the fan-out loop out of `WsSendMessageService` to the delivery side.
+The key refactor is the same for all three: move the fan-out loop out of `SendMessageService` to the delivery side.
 
 ```
  Task 1                                     Task 2  (same code)
 ┌───────────────────────────┐             ┌───────────────────────────┐
-│ WsSendMessageService      │             │ BackplaneListener         │
+│ SendMessageService        │             │ BackplaneListener         │
 │  1 save ──▶ PG            │             │   │ event                 │
 │  2 broadcastToChannel     │             │   ▼                       │
 │    (RealtimeEmitterPort)  │             │ DeliverToLocalConnections │
@@ -473,8 +505,9 @@ The key refactor is the same for all three: move the fan-out loop out of `WsSend
  every task also runs a listener, and skips originConnectionId when delivering
 ```
 
-- The port becomes `RealtimeEmitterPort.broadcastToChannel(channelId, payload, originConnectionId)`. The loop over connections moves into a local-delivery use case that the backplane listener calls on every node.
-- The payload carries `originConnectionId` (so the sender's own connection is still skipped) and the persisted message id (so clients can dedupe and order).
+- The port changes from today's `RealtimeEmitterPort.send(connectionId, MessageEvent)` to `broadcastToChannel(channelId, event, originConnectionId)`. The loop over connections (`SendMessageService:42-50`) moves into a local-delivery use case that the backplane listener calls on every node.
+- The payload carries `originConnectionId` (so the sender's own connection is still skipped) and the `messageId`/`seq` that `MessageEvent` already has (so clients can dedupe and order).
+- `unsubscribeUser` (remove/leave) must reach every node too: ADR-0006's cross-node `chat:user:{id}` "removed" event (P4-T08).
 - At-most-once is acceptable **because** of §4: the database is the source of truth, and a client that reconnects catches up over the cursor endpoint.
 
 ### Later, only if the trigger in §8 appears
@@ -489,7 +522,7 @@ The key refactor is the same for all three: move the fan-out loop out of `WsSend
 
 | If you see... | Then |
 |---|---|
-| You need a second ECS task, for availability or for CPU | Stage 2: B, or C or J (§7) |
+| You need a second ECS task, for availability or for CPU (already possible: `api_max_count = 2`) | Stage 2: B (ADR-0006) |
 | Sockets drop on every API deploy and users notice | H, or drain connections gracefully on deploy first *(general)* |
 | One slow client delays other users' sends | Stage 1: the decorator's send limits (04 §2) |
 | You need presence, typing indicators or offline push | Reconsider D, E or I |
@@ -524,8 +557,8 @@ Today the registry is the only such state (§4, last bullet). That is why one ch
 
 ## 10. Open questions
 
-These change the recommendation. This repo cannot answer them.
+These changed the recommendation. Two are now answered.
 
-1. **What is the client?** A browser or a native app decides how the handshake authenticates (§5.5).
-2. **How many concurrent connections do you expect,** and how large is your biggest channel? (§5.6)
-3. **How many ECS tasks run today, and is a second one planned?** If it is planned soon, Stage 2 stops being optional.
+1. ~~**What is the client?**~~ **Answered:** the browser SPA (P5), so the handshake uses a one-time ticket (ADR-0011, P4-T06) (§5.5).
+2. **How many concurrent connections do you expect,** and how large is your biggest channel? (§5.6) Still open: measure it in P4.
+3. ~~**How many ECS tasks run today, and is a second one planned?**~~ **Answered:** 1 to 2 under CPU target tracking (`infra/stacks/app/variables.tf:19-28`). Stage 2 is no longer optional.
