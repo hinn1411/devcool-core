@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,7 +17,11 @@ import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.exception.InvalidChannelConfigException;
 import com.devcool.domain.channel.port.in.CreateChannelUseCase;
 import com.devcool.domain.channel.port.in.GetChannelQuery;
+import com.devcool.domain.channel.port.in.LeaveChannelUseCase;
 import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
+import com.devcool.domain.channel.port.in.OpenDirectChatUseCase;
+import com.devcool.domain.channel.port.in.RemoveMemberUseCase;
+import com.devcool.domain.channel.port.in.TransferLeaderUseCase;
 import com.devcool.domain.channel.port.in.UpdateChannelUseCase;
 import com.devcool.domain.channel.port.in.command.AddMembersCommand;
 import com.devcool.domain.channel.port.in.command.UpdateChannelCommand;
@@ -58,6 +63,10 @@ class ChannelControllerTest {
   @MockitoBean private CreateChannelUseCase channelCreator;
   @MockitoBean private GetChannelQuery channelQuerier;
   @MockitoBean private MarkChannelReadUseCase channelReader;
+  @MockitoBean private RemoveMemberUseCase memberRemover;
+  @MockitoBean private LeaveChannelUseCase channelLeaver;
+  @MockitoBean private TransferLeaderUseCase leaderTransferrer;
+  @MockitoBean private OpenDirectChatUseCase directChats;
 
   // JwtAuthFilter is still created as a bean in the slice, so its ports need stand-ins.
   @MockitoBean private TokenIssuerPort tokenIssuerPort;
@@ -182,5 +191,26 @@ class ChannelControllerTest {
                 .content(UPDATE_BODY))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("SVR_403"));
+  }
+
+  @Test
+  void getChannels_malformedCursor_is400_andNeverReachesTheUseCase() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/channels").param("cursor", "not-a-cursor").principal(CALLER))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CHANNEL_403"));
+
+    verifyNoInteractions(channelQuerier);
+  }
+
+  /** {@code ?cursor=} is not "no cursor": only an absent param means the first page. */
+  @Test
+  void getChannels_emptyCursor_is400() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/channels").param("cursor", "").principal(CALLER))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("CHANNEL_403"));
+
+    verifyNoInteractions(channelQuerier);
   }
 }

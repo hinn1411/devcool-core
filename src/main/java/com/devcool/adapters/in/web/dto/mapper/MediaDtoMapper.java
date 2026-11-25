@@ -1,5 +1,9 @@
 package com.devcool.adapters.in.web.dto.mapper;
 
+import com.devcool.adapters.in.web.dto.request.PresignUploadRequest;
+import com.devcool.adapters.in.web.dto.response.PresignUploadResponse;
+import com.devcool.domain.media.port.in.PresignUploadUseCase.PresignedUpload;
+import com.devcool.domain.media.port.in.command.PresignUploadCommand;
 import com.devcool.domain.media.port.in.command.UploadMediaCommand;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,4 +18,8 @@ public interface MediaDtoMapper {
   @Mapping(target = "size", source = "file.size")
   @Mapping(target = "content", expression = "java(file::getInputStream)")
   UploadMediaCommand toUploadMediaCommand(MultipartFile file, Long userId, Long channelId);
+
+  PresignUploadCommand toPresignUploadCommand(PresignUploadRequest request, Long userId);
+
+  PresignUploadResponse toPresignUploadResponse(PresignedUpload upload);
 }

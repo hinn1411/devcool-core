@@ -15,20 +15,28 @@ public final class ChannelPermissionPolicy {
   /** Whether the action exists at all for this channel type. */
   public static boolean supports(ChannelType type, ChannelAction action) {
     return switch (type) {
-      case ChannelType.LOUNGE, ChannelType.FORUM -> true;
+      case ChannelType.LOUNGE -> action != ChannelAction.TRANSFER_LEADER;
+      case ChannelType.FORUM -> true;
       case ChannelType.PRIVATE_CHAT -> Objects.equals(action, ChannelAction.UPDATE_CHANNEL);
     };
   }
 
-  /** Whether a member with this role may perform the action in a channel of this type. */
+  /** Role check only; the service checks {@code leader_id} for TRANSFER_LEADER. */
   public static boolean allows(ChannelType type, MemberType role, ChannelAction action) {
     if (!supports(type, action)) {
       return false;
     }
-    return switch (type) {
-      case ChannelType.LOUNGE, ChannelType.PRIVATE_CHAT -> true;
-      case ChannelType.FORUM ->
-          Objects.equals(role, MemberType.CREATOR) || Objects.equals(role, MemberType.LEADER);
+    // No default: a new action must get a rule
+    return switch (action) {
+      case UPDATE_CHANNEL, ADD_MEMBERS -> type != ChannelType.FORUM || isForumAdmin(role);
+      case REMOVE_MEMBER ->
+          type == ChannelType.FORUM ? isForumAdmin(role) : role == MemberType.CREATOR;
+      case LEAVE_CHANNEL -> true;
+      case TRANSFER_LEADER -> isForumAdmin(role);
     };
+  }
+
+  private static boolean isForumAdmin(MemberType role) {
+    return Objects.equals(role, MemberType.CREATOR) || Objects.equals(role, MemberType.LEADER);
   }
 }

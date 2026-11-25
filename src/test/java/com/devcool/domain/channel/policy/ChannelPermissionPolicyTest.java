@@ -18,6 +18,15 @@ class ChannelPermissionPolicyTest {
     "FORUM, ADD_MEMBERS, true",
     "PRIVATE_CHAT, UPDATE_CHANNEL, true",
     "PRIVATE_CHAT, ADD_MEMBERS, false",
+    "LOUNGE, REMOVE_MEMBER, true",
+    "LOUNGE, LEAVE_CHANNEL, true",
+    "LOUNGE, TRANSFER_LEADER, false",
+    "FORUM, REMOVE_MEMBER, true",
+    "FORUM, LEAVE_CHANNEL, true",
+    "FORUM, TRANSFER_LEADER, true",
+    "PRIVATE_CHAT, REMOVE_MEMBER, false",
+    "PRIVATE_CHAT, LEAVE_CHANNEL, false",
+    "PRIVATE_CHAT, TRANSFER_LEADER, false",
   })
   void supports(ChannelType type, ChannelAction action, boolean expected) {
     assertThat(ChannelPermissionPolicy.supports(type, action)).isEqualTo(expected);
@@ -46,6 +55,25 @@ class ChannelPermissionPolicyTest {
     "PRIVATE_CHAT, MEMBER, ADD_MEMBERS, false",
     "PRIVATE_CHAT, CREATOR, ADD_MEMBERS, false",
     "PRIVATE_CHAT, LEADER, ADD_MEMBERS, false",
+    // P3-T11
+    "LOUNGE, MEMBER, REMOVE_MEMBER, false",
+    "LOUNGE, CREATOR, REMOVE_MEMBER, true",
+    "LOUNGE, LEADER, REMOVE_MEMBER, false",
+    "FORUM, MEMBER, REMOVE_MEMBER, false",
+    "FORUM, CREATOR, REMOVE_MEMBER, true",
+    "FORUM, LEADER, REMOVE_MEMBER, true",
+    "PRIVATE_CHAT, CREATOR, REMOVE_MEMBER, false",
+    "LOUNGE, MEMBER, LEAVE_CHANNEL, true",
+    "LOUNGE, CREATOR, LEAVE_CHANNEL, true",
+    "FORUM, MEMBER, LEAVE_CHANNEL, true",
+    "FORUM, CREATOR, LEAVE_CHANNEL, true",
+    "FORUM, LEADER, LEAVE_CHANNEL, true",
+    "PRIVATE_CHAT, MEMBER, LEAVE_CHANNEL, false",
+    "FORUM, MEMBER, TRANSFER_LEADER, false",
+    "FORUM, CREATOR, TRANSFER_LEADER, true",
+    "FORUM, LEADER, TRANSFER_LEADER, true",
+    "LOUNGE, CREATOR, TRANSFER_LEADER, false",
+    "PRIVATE_CHAT, CREATOR, TRANSFER_LEADER, false",
   })
   void allows(ChannelType type, MemberType role, ChannelAction action, boolean expected) {
     assertThat(ChannelPermissionPolicy.allows(type, role, action)).isEqualTo(expected);

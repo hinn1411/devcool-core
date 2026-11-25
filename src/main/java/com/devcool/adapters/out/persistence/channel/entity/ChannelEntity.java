@@ -39,6 +39,10 @@ public class ChannelEntity {
   @Column(name = "LAST_SEQ", nullable = false, insertable = false, updatable = false)
   private Long lastSeq;
 
+  /** Read-only; set by the seq bump. Null until the first message. */
+  @Column(name = "LAST_MESSAGE_AT", insertable = false, updatable = false)
+  private Instant lastMessageAt;
+
   @Column(name = "CHANNEL_TYPE", nullable = false)
   @Enumerated(EnumType.STRING)
   private ChannelType channelType;

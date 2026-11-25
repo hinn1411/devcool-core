@@ -23,6 +23,7 @@ public interface MessageMapper {
   @Mapping(target = "replyTo", ignore = true)
   MessageEntity toEntity(Message message);
 
+  @Mapping(target = "channelId", source = "channel.id")
   @Mapping(target = "userId", source = "user.id")
   @Mapping(target = "senderName", source = "user.name")
   @Mapping(target = "senderAvatar", source = "user.avatar")

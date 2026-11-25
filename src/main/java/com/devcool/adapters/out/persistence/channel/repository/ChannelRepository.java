@@ -1,6 +1,7 @@
 package com.devcool.adapters.out.persistence.channel.repository;
 
 import com.devcool.adapters.out.persistence.channel.entity.ChannelEntity;
+import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessLockedRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow;
 import com.devcool.adapters.out.persistence.channel.projection.ChannelListRow;
 import com.devcool.domain.channel.model.enums.BoundaryType;
@@ -24,6 +25,20 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       """)
   int increaseTotalMembers(@Param("channelId") Long channelId, @Param("delta") int delta);
 
+  /** Compare-and-set: 0 rows when the leader already changed. */
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE channel SET leader_id = :newLeaderId
+          WHERE id = :channelId AND leader_id = :expectedLeaderId
+          """,
+      nativeQuery = true)
+  int updateLeader(
+      @Param("channelId") Long channelId,
+      @Param("expectedLeaderId") Long expectedLeaderId,
+      @Param("newLeaderId") Long newLeaderId);
+
   /** A null argument keeps the stored value. */
   @Modifying
   @Query(
@@ -45,6 +60,8 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
   /**
    * One statement per page (P3-T10): unread is a subtraction, and the newest message is found by
    * {@code seq = last_seq} through {@code UNIQUE(channel_id, seq)}. LEFT joins keep empty channels.
+   *
+   * <p>{@code :datedCursor} replaces {@code :cursorAt IS NULL}, which Postgres can't type.
    */
   @Query(
       """
@@ -54,6 +71,7 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       c.channelType,
       c.boundaryType,
       c.lastSeq - m.lastReadSeq,
+      c.lastMessageAt,
       msg.id,
       msg.seq,
       sender.id,
@@ -66,22 +84,49 @@ public interface ChannelRepository extends JpaRepository<ChannelEntity, Long> {
       JOIN c.members m
       LEFT JOIN MessageEntity msg ON msg.channel = c AND msg.seq = c.lastSeq
       LEFT JOIN msg.user sender
-      WHERE m.user.id = :memberId AND (:cursorId IS NULL OR c.id < :cursorId)
-      ORDER BY c.id DESC
+      WHERE m.user.id = :memberId
+        AND (
+              :cursorId IS NULL
+           OR (:datedCursor = TRUE
+               AND (c.lastMessageAt < :cursorAt
+                    OR (c.lastMessageAt = :cursorAt AND c.id < :cursorId)
+                    OR c.lastMessageAt IS NULL))
+           OR (:datedCursor = FALSE
+               AND c.lastMessageAt IS NULL
+               AND c.id < :cursorId)
+        )
+      ORDER BY c.lastMessageAt DESC NULLS LAST, c.id DESC
       """)
   List<ChannelListRow> findChannelPageByMemberId(
-      @Param("memberId") Long memberId, @Param("cursorId") Long cursorId, Pageable pageable);
+      @Param("memberId") Long memberId,
+      @Param("cursorAt") Instant cursorAt,
+      @Param("cursorId") Long cursorId,
+      @Param("datedCursor") boolean datedCursor,
+      Pageable pageable);
 
   @Query(
       """
       SELECT new com.devcool.adapters.out.persistence.channel.projection.ChannelAccessRow(
       c.channelType,
-      c.totalOfMembers
+      c.totalOfMembers,
+      c.leader.id
       )
       FROM ChannelEntity c
       WHERE c.id = :id
       """)
   Optional<ChannelAccessRow> findAccessRowById(@Param("id") Long id);
+
+  /** NO KEY UPDATE: blocks other channel UPDATEs, not FK inserts. */
+  @Query(
+      value =
+          """
+          SELECT channel_type AS channelType, total_of_members AS totalOfMembers,
+                 leader_id AS leaderId
+          FROM channel WHERE id = :id
+          FOR NO KEY UPDATE
+          """,
+      nativeQuery = true)
+  Optional<ChannelAccessLockedRow> lockAccessRowById(@Param("id") Long id);
 
   /**
    * ADR-0012 bump; locks the channel row until commit. Not {@code @Modifying}: it returns a row.

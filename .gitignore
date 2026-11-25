@@ -38,6 +38,7 @@ local.env
 .env
 .env.local
 .env.*.local
+docker/ecs/task-env
 
 ### Frontend ###
 node_modules/

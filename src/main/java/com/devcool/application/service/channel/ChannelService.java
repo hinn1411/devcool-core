@@ -101,7 +101,8 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Transactional
   public boolean addMember(Long channelId, AddMembersCommand command) {
     ChannelAccessInfo channel =
-        channelAuthorizer.requireAllowed(channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
+        channelAuthorizer.requireAllowedForUpdate(
+            channelId, command.callerId(), ChannelAction.ADD_MEMBERS);
 
     Set<Long> distinctMemberIds = new HashSet<>(command.userIds());
     if (distinctMemberIds.size() < command.userIds().size()) {
@@ -135,6 +136,6 @@ public class ChannelService implements CreateChannelUseCase, UpdateChannelUseCas
   @Override
   public ChannelListPage getChannels(GetChannelCommand command) {
     log.info("Get Channels by member Id");
-    return channelPort.loadChannels(command.memberId(), command.cursorId(), command.limit());
+    return channelPort.loadChannels(command.memberId(), command.cursor(), command.limit());
   }
 }

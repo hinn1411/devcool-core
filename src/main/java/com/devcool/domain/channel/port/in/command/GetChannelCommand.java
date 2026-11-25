@@ -1,3 +1,6 @@
 package com.devcool.domain.channel.port.in.command;
 
-public record GetChannelCommand(Long memberId, Long cursorId, Integer limit) {}
+import com.devcool.domain.channel.model.ChannelCursor;
+
+/** {@code cursor} is null for the first page. */
+public record GetChannelCommand(Long memberId, ChannelCursor cursor, Integer limit) {}
