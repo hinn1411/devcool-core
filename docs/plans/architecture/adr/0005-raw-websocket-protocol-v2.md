@@ -5,7 +5,14 @@
 - **Phase:** P4
 
 ## Context
-`RawWebSocketHandler` handles `WsClientFrame{action, channelId, contentType, content, clientMsgId}` with actions SUBSCRIBE / SEND_MESSAGE / PING. It has no request ids for most actions and no message id or seq in pushes. UNSUBSCRIBE is unhandled, and any exception closes the socket. The roadmap adds edit/delete, typing, presence, receipts, resume and AI streaming.
+**At decision time (2026-09-29):** `RawWebSocketHandler` handles `WsClientFrame{action, channelId, contentType, content, clientMsgId}` with actions SUBSCRIBE / SEND_MESSAGE / PING. It has no request ids for most actions and no message id or seq in pushes. UNSUBSCRIBE is unhandled, and any exception closes the socket. The roadmap adds edit/delete, typing, presence, receipts, resume and AI streaming.
+
+**Update (2026-11-25, after P3):** the legacy v1 protocol is now `ChatHandler` with a flat `ClientFrame{action, channelId, contentType, content, clientMsgId, replyToId}`.
+- Actions: SUBSCRIBE, UNSUBSCRIBE (P3-T16), SEND_MESSAGE and PING, dispatched through an `EnumMap<FrameType, FrameAction>`.
+- Replies: `ServerFrame{type: ACK|ERROR, clientMsgId, data}`. `SEND_MESSAGE` is ACKed with `SendAck{messageId, seq, createdTime}`.
+- Pushes: `MessagePush{type: "MESSAGE", …, messageId, seq, createdTime, replyToId}`, so rule 3 below is already met.
+- Errors: a `DomainException` becomes an `ERROR` frame. Any other exception still closes the socket (1011, through Spring's `ExceptionWebSocketHandlerDecorator`).
+- Still missing: `v`, `reqId` (`clientMsgId` does double duty), NACK codes and close codes. A v2 frame sent today gets `ERROR "Missing action"`.
 
 ## Options considered
 
