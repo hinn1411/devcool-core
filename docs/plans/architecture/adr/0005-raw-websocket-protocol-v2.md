@@ -14,6 +14,15 @@
 - Errors: a `DomainException` becomes an `ERROR` frame. Any other exception still closes the socket (1011, through Spring's `ExceptionWebSocketHandlerDecorator`).
 - Still missing: `v`, `reqId` (`clientMsgId` does double duty), NACK codes and close codes. A v2 frame sent today gets `ERROR "Missing action"`.
 
+## Decision drivers
+- **Every reply matches its request.** v1 has only `clientMsgId`, so a SEND with a bad id gets `ERROR{clientMsgId: null}` (`SendMessageAction.java:42`), and the client can't tell which in-flight request failed. v2 adds `reqId`.
+- **Errors the client can act on.** v1 errors are free text. EDIT conflicts, rate limits and access denials each need a different client reaction, so v2 has `NACK{code, retryAfterMs?}`.
+- **Room for new actions.** EDIT, REACT, READ, RESUME and ASK each have their own fields. A flat frame would grow to about 13 nullable fields; v2 gives each type its own `payload`.
+- **Self-describing events.** `"MESSAGE"` can't say new, edited or deleted, and acks and pushes have different shapes. v2 names every event (`MESSAGE_NEW`, `MESSAGE_UPDATED`, `PRESENCE`…).
+- **Rolling deploys.** An SPA tab outlives a deploy. `v` lets the server close with 4400, so the client reloads instead of misbehaving.
+- **Streaming.** One `ASK` produces many `AI_CHUNK` frames and can be cancelled. One `reqId` ties them together ([04](../04-genai-rag-design.md)).
+- **One socket for everything.** Chat, presence and AI share one connection and one error contract: a frame error never closes the socket.
+
 ## Options considered
 
 ### A — Raw WebSocket with a versioned, typed envelope
