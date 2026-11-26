@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.devcool.adapters.in.websocket.config.WsIdleProps;
 import com.devcool.adapters.in.websocket.config.WsSendLimitsProps;
 import com.devcool.domain.chat.model.MessageEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
@@ -223,7 +224,8 @@ class SessionEmitterAdapterTest {
   }
 
   private static SessionRegistry registry(Duration timeLimit, DataSize bufferSizeLimit) {
-    return new SessionRegistry(new WsSendLimitsProps(timeLimit, bufferSizeLimit, LONG));
+    return new SessionRegistry(
+        new WsSendLimitsProps(timeLimit, bufferSizeLimit, LONG), new WsIdleProps(LONG));
   }
 
   private static FakeWsSession registered(SessionRegistry registry, String id) {

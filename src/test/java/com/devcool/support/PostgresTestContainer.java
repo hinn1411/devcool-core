@@ -39,7 +39,12 @@ public interface PostgresTestContainer {
   }
 
   private static PostgreSQLContainer<?> startedPostgres() {
-    PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(PGVECTOR).withReuse(true);
+    // Each cached Spring context holds a 10-connection Hikari pool; 100 (the default) ran out at
+    // 10.
+    PostgreSQLContainer<?> postgres =
+        new PostgreSQLContainer<>(PGVECTOR)
+            .withCommand("postgres", "-c", "fsync=off", "-c", "max_connections=300")
+            .withReuse(true);
     postgres.start();
     return postgres;
   }
