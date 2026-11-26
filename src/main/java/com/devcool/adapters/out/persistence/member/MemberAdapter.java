@@ -71,10 +71,8 @@ public class MemberAdapter implements MemberPort {
 
   @Override
   public Optional<ReadMarker> advanceLastReadSeq(Long channelId, Long userId, long seq) {
-    // P4-T04 Red: membership only, no before/after yet
-    return repo.advanceLastReadSeq(channelId, userId, seq) > 0
-        ? Optional.of(new ReadMarker(seq, seq))
-        : Optional.empty();
+    return repo.advanceLastReadSeq(channelId, userId, seq)
+        .map(row -> new ReadMarker(row.getPreviousSeq(), row.getSeq()));
   }
 
   @Override

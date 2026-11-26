@@ -1,6 +1,7 @@
 package com.devcool.adapters.out.persistence.member.repository;
 
 import com.devcool.adapters.out.persistence.member.entity.MemberEntity;
+import com.devcool.adapters.out.persistence.member.projection.ReadMarkerRow;
 import com.devcool.domain.member.model.enums.MemberType;
 import java.util.Collection;
 import java.util.List;
@@ -46,20 +47,26 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
       @Param("role") MemberType role);
 
   /**
-   * Forward-only, clamped read marker (P3-T10). Returns the matched row count: 0 when the user is
-   * not a member of the channel. A no-op (older seq) still matches, so it returns 1.
+   * Forward-only, clamped read marker (P3-T10) with its value before and after (P4-T04). Empty when
+   * the user is not a member. A no-op (older seq) still matches, with both values equal. The CTE
+   * locks the row first, so a concurrent advance can't make "before" stale.
    */
-  @Modifying
   @Query(
       value =
           """
+          WITH old AS (
+            SELECT last_read_seq FROM member
+            WHERE user_id = :userId AND channel_id = :channelId
+            FOR UPDATE
+          )
           UPDATE member
-          SET last_read_seq = GREATEST(last_read_seq, LEAST(:seq, channel.last_seq))
-          FROM channel
+          SET last_read_seq = GREATEST(member.last_read_seq, LEAST(:seq, channel.last_seq))
+          FROM channel, old
           WHERE member.user_id = :userId and member.channel_id = :channelId and member.channel_id = channel.id
+          RETURNING old.last_read_seq AS previousSeq, member.last_read_seq AS seq
           """,
       nativeQuery = true)
-  int advanceLastReadSeq(
+  Optional<ReadMarkerRow> advanceLastReadSeq(
       @Param("channelId") Long channelId, @Param("userId") Long userId, @Param("seq") long seq);
 
   /**

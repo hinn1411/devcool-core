@@ -4,6 +4,7 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.model.DeletableMessage;
+import com.devcool.domain.chat.model.MessageDeletedEvent;
 import com.devcool.domain.chat.policy.MessageDeletePolicy;
 import com.devcool.domain.chat.port.in.DeleteMessageUseCase;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
@@ -64,8 +65,13 @@ public class DeleteMessageService implements DeleteMessageUseCase {
     if (!MessageDeletePolicy.mayDelete(isSender, channelType, role)) {
       throw new ForbiddenException("Only the sender or a channel admin can delete this message");
     }
-    if (message.deletedTime() == null) {
-      messagePort.markDeleted(message.id(), Instant.now(clock));
+    // A lost race to another delete answers the same, but only the winner broadcasts.
+    if (message.deletedTime() == null
+        && messagePort.markDeleted(message.id(), Instant.now(clock))) {
+      eventPublisher.publishAfterCommit(
+          new MessageDeletedEvent(
+              message.channelId(), message.id(), message.seq(), message.createdTime()),
+          command.connectionId());
     }
   }
 }

@@ -4,6 +4,8 @@ import com.devcool.application.service.chat.ChannelEventPublisher;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
 import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
+import com.devcool.domain.chat.model.ReadReceiptEvent;
+import com.devcool.domain.member.model.ReadMarker;
 import com.devcool.domain.member.port.out.MemberPort;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
@@ -31,15 +33,22 @@ public class ReadStateService implements MarkChannelReadUseCase {
   @Override
   @Transactional
   public long markRead(MarkChannelReadCommand command) {
-    if (memberPort
-        .advanceLastReadSeq(command.channelId(), command.userId(), command.seq())
-        .isEmpty()) {
-      log.warn(
-          "User {} marked channel {} read outside their channels",
-          command.userId(),
-          command.channelId());
-      throw new ChannelNotFoundException(command.channelId());
+    ReadMarker marker =
+        memberPort
+            .advanceLastReadSeq(command.channelId(), command.userId(), command.seq())
+            .orElseThrow(
+                () -> {
+                  log.warn(
+                      "User {} marked channel {} read outside their channels",
+                      command.userId(),
+                      command.channelId());
+                  return new ChannelNotFoundException(command.channelId());
+                });
+    if (marker.advanced()) {
+      eventPublisher.publishAfterCommit(
+          new ReadReceiptEvent(command.channelId(), command.userId(), marker.seq()),
+          command.connectionId());
     }
-    return command.seq(); // P4-T04 Red
+    return marker.seq();
   }
 }

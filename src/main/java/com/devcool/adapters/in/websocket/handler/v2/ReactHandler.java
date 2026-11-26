@@ -2,8 +2,11 @@ package com.devcool.adapters.in.websocket.handler.v2;
 
 import com.devcool.adapters.in.websocket.dto.v2.ClientEnvelope;
 import com.devcool.adapters.in.websocket.dto.v2.ReactPayload;
+import com.devcool.adapters.in.websocket.dto.v2.ServerEnvelope;
+import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
+import com.devcool.domain.chat.port.in.command.ReactionCommand;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,17 @@ public class ReactHandler implements FrameHandler<ReactPayload> {
   @Override
   public void handle(WebSocketSession session, ClientEnvelope frame, ReactPayload payload)
       throws IOException {
-    throw new UnsupportedOperationException("P4-T04 Red");
+    ReactionCommand command =
+        new ReactionCommand(
+            session.getId(),
+            AuthHandshakeInterceptor.userIdOf(session),
+            Required.field(payload.messageId(), "messageId"),
+            Required.field(payload.emoji(), "emoji"));
+    if (Required.field(payload.on(), "on")) {
+      reactToMessageUseCase.react(command);
+    } else {
+      reactToMessageUseCase.unreact(command);
+    }
+    writer.send(session, ServerEnvelope.ack(frame.reqId(), null));
   }
 }

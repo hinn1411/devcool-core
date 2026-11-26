@@ -27,8 +27,7 @@ public class ReactionAdapter implements ReactionPort {
 
   @Override
   public boolean add(Long messageId, Long userId, Emoji emoji, Instant reactedAt) {
-    repo.insertIfAbsent(messageId, userId, emoji.value(), reactedAt);
-    return true; // P4-T04 Red
+    return repo.insertIfAbsent(messageId, userId, emoji.value(), reactedAt) == 1;
   }
 
   @Override
@@ -38,8 +37,7 @@ public class ReactionAdapter implements ReactionPort {
 
   @Override
   public boolean remove(Long messageId, Long userId, Emoji emoji) {
-    repo.deleteOwn(messageId, userId, emoji.value());
-    return true; // P4-T04 Red
+    return repo.deleteOwn(messageId, userId, emoji.value()) == 1;
   }
 
   @Override

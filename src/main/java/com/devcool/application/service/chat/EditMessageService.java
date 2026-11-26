@@ -7,6 +7,7 @@ import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.MessageVersionConflictException;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.EditedMessage;
+import com.devcool.domain.chat.model.MessageUpdatedEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.policy.MessageContentPolicy;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
@@ -73,6 +74,16 @@ public class EditMessageService implements EditMessageUseCase {
     if (!messagePort.updateContent(message.id(), message.version(), command.content(), now)) {
       throw new MessageVersionConflictException();
     }
+    eventPublisher.publishAfterCommit(
+        new MessageUpdatedEvent(
+            message.channelId(),
+            message.id(),
+            message.seq(),
+            message.createdTime(),
+            command.content(),
+            message.version() + 1,
+            now),
+        command.connectionId());
     return result(message, command.content(), message.version() + 1, now);
   }
 

@@ -4,6 +4,7 @@ import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.ReactionLimitException;
 import com.devcool.domain.chat.model.Emoji;
+import com.devcool.domain.chat.model.ReactionEvent;
 import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.policy.ReactionPolicy;
 import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
@@ -50,24 +51,34 @@ public class ReactionService implements ReactToMessageUseCase {
   @Transactional
   public void react(ReactionCommand command) {
     Emoji emoji = new Emoji(command.emoji());
-    requireReactable(command);
+    Long channelId = requireReactable(command);
     // Not atomic: concurrent new emojis may overshoot the cap slightly.
     if (!ReactionPolicy.mayAdd(reactionPort.distinctEmojis(command.messageId()), emoji)) {
       throw new ReactionLimitException(ReactionPolicy.MAX_DISTINCT_EMOJIS);
     }
-    reactionPort.add(command.messageId(), command.userId(), emoji, Instant.now(clock));
+    if (reactionPort.add(command.messageId(), command.userId(), emoji, Instant.now(clock))) {
+      publish(channelId, command, emoji, true);
+    }
   }
 
   @Override
   @Transactional
   public void unreact(ReactionCommand command) {
     Emoji emoji = new Emoji(command.emoji());
-    requireReactable(command);
-    reactionPort.remove(command.messageId(), command.userId(), emoji);
+    Long channelId = requireReactable(command);
+    if (reactionPort.remove(command.messageId(), command.userId(), emoji)) {
+      publish(channelId, command, emoji, false);
+    }
   }
 
-  /** Unknown, deleted or not the caller's channel: one 404, no id probing. */
-  private void requireReactable(ReactionCommand command) {
+  private void publish(Long channelId, ReactionCommand command, Emoji emoji, boolean on) {
+    eventPublisher.publishAfterCommit(
+        new ReactionEvent(channelId, command.messageId(), emoji.value(), command.userId(), on),
+        command.connectionId());
+  }
+
+  /** Unknown, deleted or not the caller's channel: one 404, no id probing. Returns the channel. */
+  private Long requireReactable(ReactionCommand command) {
     // Reuses the reply lookup (channel + deletedTime); rename to MessageRef later.
     ReplyTarget target =
         messagePort
@@ -81,5 +92,6 @@ public class ReactionService implements ReactToMessageUseCase {
           command.messageId());
       throw new MessageNotFoundException(command.messageId());
     }
+    return target.channelId();
   }
 }

@@ -4,8 +4,11 @@ import com.devcool.domain.chat.model.RealtimeEvent;
 import com.devcool.domain.chat.port.out.ConnectionRegistryPort;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Fans an event out to the channel's local subscribers once the current transaction commits (never
@@ -23,6 +26,24 @@ public class ChannelEventPublisher {
 
   /** {@code originConnectionId} (the actor's socket, null over REST) gets no copy. */
   public void publishAfterCommit(RealtimeEvent event, String originConnectionId) {
-    throw new UnsupportedOperationException("P4-T04 Red");
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      publish(event, originConnectionId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            publish(event, originConnectionId);
+          }
+        });
+  }
+
+  private void publish(RealtimeEvent event, String originConnectionId) {
+    for (String connectionId : connectionRegistryPort.getConnectionsByChannel(event.channelId())) {
+      if (!Objects.equals(originConnectionId, connectionId)) {
+        realtimeEmitterPort.send(connectionId, event);
+      }
+    }
   }
 }
