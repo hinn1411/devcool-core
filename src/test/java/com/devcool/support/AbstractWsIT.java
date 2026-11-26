@@ -7,12 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.devcool.adapters.in.web.dto.request.CreateChannelRequest;
 import com.devcool.adapters.in.web.dto.request.RegisterUserRequest;
-import com.devcool.adapters.in.websocket.dto.ClientFrame;
-import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.domain.auth.port.out.TokenIssuerPort;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
-import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.user.port.out.UserPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
@@ -20,9 +17,12 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +35,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
@@ -65,8 +66,11 @@ public abstract class AbstractWsIT {
 
   protected record Account(Long id, String accessToken) {}
 
-  /** A test-side WS connection; every text frame the server sends lands in {@code inbox}. */
-  protected record Client(WebSocketSession session, BlockingQueue<String> inbox) {}
+  /** Test-side WS connection; frames land in {@code inbox}, the close in {@code closed}. */
+  protected record Client(
+      WebSocketSession session,
+      BlockingQueue<String> inbox,
+      CompletableFuture<CloseStatus> closed) {}
 
   @AfterEach
   void closeSessions() throws Exception {
@@ -81,6 +85,7 @@ public abstract class AbstractWsIT {
 
   protected Client connect(Account account) throws Exception {
     BlockingQueue<String> inbox = new LinkedBlockingQueue<>();
+    CompletableFuture<CloseStatus> closed = new CompletableFuture<>();
     var headers = new WebSocketHttpHeaders();
     headers.setBearerAuth(account.accessToken());
     WebSocketSession session =
@@ -91,38 +96,68 @@ public abstract class AbstractWsIT {
                   protected void handleTextMessage(WebSocketSession s, TextMessage message) {
                     inbox.add(message.getPayload());
                   }
+
+                  @Override
+                  public void afterConnectionClosed(WebSocketSession s, CloseStatus status) {
+                    closed.complete(status);
+                  }
                 },
                 headers,
                 URI.create("ws://localhost:" + port + "/ws"))
             .get(TIMEOUT.toSeconds(), SECONDS);
     openSessions.add(session);
-    return new Client(session, inbox);
+    return new Client(session, inbox, closed);
   }
 
   protected void subscribe(Client client, Long channelId) throws Exception {
-    sendFrame(client, new ClientFrame(FrameType.SUBSCRIBE, channelId, null, null, uuid()));
-    assertThat(awaitFrame(client)).contains("Subscribe successfully");
+    String reqId = uuid();
+    sendFrame(client, v2("SUBSCRIBE", channelId, reqId, null));
+    assertAck(awaitFrame(client), reqId);
   }
 
   protected void unsubscribe(Client client, Long channelId) throws Exception {
-    sendFrame(client, new ClientFrame(FrameType.UNSUBSCRIBE, channelId, null, null, uuid()));
-    assertThat(awaitFrame(client)).contains("\"type\":\"ACK\"");
+    String reqId = uuid();
+    sendFrame(client, v2("UNSUBSCRIBE", channelId, reqId, null));
+    assertAck(awaitFrame(client), reqId);
   }
 
   /** Sends and waits for the ACK; fan-out to listeners finishes before the ACK is written. */
   protected void sendAndAwaitAck(Client client, Long channelId, String content) throws Exception {
-    send(client, channelId, content);
-    assertThat(awaitFrame(client)).contains("\"type\":\"ACK\"");
+    String reqId = send(client, channelId, content);
+    assertAck(awaitFrame(client), reqId);
   }
 
-  protected void send(Client client, Long channelId, String content) throws Exception {
+  /** A v2 SEND with a fresh key; returns its reqId. */
+  protected String send(Client client, Long channelId, String content) throws Exception {
+    String reqId = uuid();
     sendFrame(
         client,
-        new ClientFrame(FrameType.SEND_MESSAGE, channelId, ContentType.TEXT, content, uuid()));
+        v2(
+            "SEND",
+            channelId,
+            reqId,
+            Map.of("clientMsgId", uuid(), "contentType", "TEXT", "content", content)));
+    return reqId;
   }
 
-  protected void sendFrame(Client client, ClientFrame frame) throws Exception {
+  protected void sendFrame(Client client, Object frame) throws Exception {
     client.session().sendMessage(new TextMessage(json.writeValueAsString(frame)));
+  }
+
+  /** A v2 envelope (ADR-0005). */
+  protected static Map<String, Object> v2(
+      String type, Long channelId, String reqId, Object payload) {
+    Map<String, Object> frame = new LinkedHashMap<>();
+    frame.put("v", 2);
+    frame.put("type", type);
+    frame.put("reqId", reqId);
+    frame.put("channelId", channelId);
+    frame.put("payload", payload);
+    return frame;
+  }
+
+  private static void assertAck(String frame, String reqId) {
+    assertThat(frame).contains("\"type\":\"ACK\"").contains("\"reqId\":\"" + reqId + "\"");
   }
 
   protected static String awaitFrame(Client client) throws InterruptedException {

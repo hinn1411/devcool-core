@@ -1,6 +1,8 @@
 package com.devcool.adapters.in.websocket.session;
 
 import com.devcool.adapters.in.websocket.dto.MessagePush;
+import com.devcool.adapters.in.websocket.dto.v2.MessageNewPayload;
+import com.devcool.adapters.in.websocket.dto.v2.ServerEnvelope;
 import com.devcool.domain.chat.model.MessageEvent;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,7 +35,7 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
       return;
     }
     try {
-      writer.send(session, MessagePush.from(event));
+      writer.send(session, push(session, event));
     } catch (JsonProcessingException ex) {
       // Payload bug, not transport: keep the connection.
       log.error("Push of message {} could not be serialized", event.messageId(), ex);
@@ -42,5 +44,11 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
       log.warn("Push of message {} to {} failed, closing", event.messageId(), connectionId, ex);
       writer.closeAsync(session, CloseStatus.SESSION_NOT_RELIABLE);
     }
+  }
+
+  private static Object push(WebSocketSession session, MessageEvent event) {
+    return ProtocolVersions.isV2(session)
+        ? ServerEnvelope.event("MESSAGE_NEW", event.channelId(), MessageNewPayload.from(event))
+        : MessagePush.from(event);
   }
 }

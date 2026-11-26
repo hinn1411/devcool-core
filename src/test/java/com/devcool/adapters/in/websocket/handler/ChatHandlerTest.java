@@ -3,6 +3,7 @@ package com.devcool.adapters.in.websocket.handler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -12,14 +13,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.devcool.adapters.in.websocket.config.WsProtocolProps;
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.dto.ServerFrame;
 import com.devcool.adapters.in.websocket.handler.action.PingAction;
 import com.devcool.adapters.in.websocket.handler.action.SendMessageAction;
 import com.devcool.adapters.in.websocket.handler.action.SubscribeAction;
 import com.devcool.adapters.in.websocket.handler.action.UnsubscribeAction;
+import com.devcool.adapters.in.websocket.handler.v2.FrameDispatcher;
+import com.devcool.adapters.in.websocket.handler.v2.SendHandler;
+import com.devcool.adapters.in.websocket.handler.v2.SubscribeHandler;
+import com.devcool.adapters.in.websocket.handler.v2.UnsubscribeHandler;
 import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
+import com.devcool.adapters.in.websocket.session.ProtocolVersions;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
 import com.devcool.domain.chat.model.ClientMsgId;
@@ -74,22 +81,14 @@ class ChatHandlerTest {
 
   private ChatHandler handler;
 
+  private final HashMap<String, Object> attributes = new HashMap<>();
+
   @BeforeEach
   void setUp() {
-    FrameWriter writer = new FrameWriter(objectMapper);
-    handler =
-        new ChatHandler(
-            objectMapper,
-            sessionRegistry,
-            connections,
-            writer,
-            List.of(
-                new PingAction(writer),
-                new SubscribeAction(writer, subscriptions),
-                new UnsubscribeAction(writer, subscriptions),
-                new SendMessageAction(writer, sendMessageUseCase)));
+    handler = handler(true);
+    attributes.put(AuthHandshakeInterceptor.ATTR_USER_ID, 7L);
     lenient().when(session.getId()).thenReturn("conn-1");
-    lenient().when(session.getAttributes()).thenReturn(new HashMap<>());
+    lenient().when(session.getAttributes()).thenReturn(attributes);
     // Frames are answered through the registered session; here, the mock itself.
     lenient().when(sessionRegistry.get("conn-1")).thenReturn(session);
   }
@@ -133,6 +132,103 @@ class ChatHandlerTest {
     verify(session).close(CloseStatus.SESSION_NOT_RELIABLE);
     assertThatCode(() -> handler.afterConnectionClosed(session, CloseStatus.SESSION_NOT_RELIABLE))
         .doesNotThrowAnyException();
+  }
+
+  // ---- Protocol routing (P4-T02) ----
+
+  @Test
+  void v2Frame_isAnsweredWithAV2Ack() throws Exception {
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"v\":2,\"type\":\"SUBSCRIBE\",\"reqId\":\"r-1\",\"channelId\":42}"));
+
+    verify(subscriptions).subscribe(new SubscribeCommand("conn-1", 7L, 42L));
+    JsonNode reply = onlyRawReply();
+    assertThat(reply.path("v").asInt()).isEqualTo(2);
+    assertThat(reply.path("type").asText()).isEqualTo("ACK");
+    assertThat(reply.path("reqId").asText()).isEqualTo("r-1");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"not json", "{\"v\":2,", "[1,2]", "\"SUBSCRIBE\""})
+  void unparseableFrame_repliesV2ErrorInvalid_andKeepsTheSocketOpen(String raw) throws Exception {
+    handler.handleTextMessage(session, new TextMessage(raw));
+
+    JsonNode reply = onlyRawReply();
+    assertThat(reply.path("v").asInt()).isEqualTo(2);
+    assertThat(reply.path("type").asText()).isEqualTo("ERROR");
+    assertThat(reply.path("payload").path("code").asText()).isEqualTo("INVALID");
+    verify(session, never()).close(any(CloseStatus.class));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"{\"v\":3,\"type\":\"SUBSCRIBE\"}", "{\"v\":\"two\",\"type\":\"SUBSCRIBE\"}"})
+  void unknownVersion_closesWith4400_andRepliesNothing(String raw) throws Exception {
+    handler.handleTextMessage(session, new TextMessage(raw));
+
+    verify(session).close(argThat(status -> status.getCode() == 4400));
+    verify(session, never()).sendMessage(any());
+    verifyNoInteractions(subscriptions, sendMessageUseCase);
+  }
+
+  @Test
+  void explicitV1Frame_takesTheLegacyPath() throws Exception {
+    handler.handleTextMessage(
+        session,
+        new TextMessage(
+            "{\"v\":1,\"action\":\"UNSUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-2\"}"));
+
+    verify(subscriptions).unsubscribe(new UnsubscribeCommand("conn-1", 42L));
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ACK);
+    assertThat(frame.clientMsgId()).isEqualTo("r-2");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"action\":\"SUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-3\"}",
+        "{\"v\":1,\"action\":\"SUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-3\"}"
+      })
+  void v1Frame_withTheLegacyFlagOff_closesWith4400(String raw) throws Exception {
+    handler = handler(false);
+
+    handler.handleTextMessage(session, new TextMessage(raw));
+
+    verify(session).close(argThat(status -> status.getCode() == 4400));
+    verify(session, never()).sendMessage(any());
+    verifyNoInteractions(subscriptions);
+  }
+
+  @Test
+  void unexpectedFailureOnTheV1Path_repliesErrorInternal_andKeepsTheSocketOpen() throws Exception {
+    doThrow(new IllegalStateException("db timeout"))
+        .when(subscriptions)
+        .subscribe(any(SubscribeCommand.class));
+
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"action\":\"SUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-4\"}"));
+
+    ServerFrame frame = onlyReply();
+    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
+    assertThat(frame.clientMsgId()).isEqualTo("r-4");
+    assertThat(frame.data()).isEqualTo("INTERNAL");
+    verify(session, never()).close(any(CloseStatus.class));
+  }
+
+  @Test
+  void theLatestFramesVersion_isRecordedOnTheSession() throws Exception {
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"v\":2,\"type\":\"SUBSCRIBE\",\"reqId\":\"r-5\",\"channelId\":42}"));
+    assertThat(ProtocolVersions.isV2(session)).isTrue();
+
+    handler.handleTextMessage(
+        session,
+        new TextMessage("{\"action\":\"SUBSCRIBE\",\"channelId\":42,\"clientMsgId\":\"r-6\"}"));
+    assertThat(ProtocolVersions.isV2(session)).isFalse();
   }
 
   // ---- SUBSCRIBE ----
@@ -306,6 +402,36 @@ class ChatHandlerTest {
             + "\"content\":\"hi\""
             + key
             + "}");
+  }
+
+  private ChatHandler handler(boolean legacyV1Enabled) {
+    FrameWriter writer = new FrameWriter(objectMapper);
+    FrameDispatcher dispatcher =
+        new FrameDispatcher(
+            objectMapper,
+            writer,
+            List.of(
+                new SubscribeHandler(writer, subscriptions),
+                new UnsubscribeHandler(writer, subscriptions),
+                new SendHandler(writer, sendMessageUseCase)));
+    return new ChatHandler(
+        objectMapper,
+        sessionRegistry,
+        connections,
+        writer,
+        List.of(
+            new PingAction(writer),
+            new SubscribeAction(writer, subscriptions),
+            new UnsubscribeAction(writer, subscriptions),
+            new SendMessageAction(writer, sendMessageUseCase)),
+        dispatcher,
+        new WsProtocolProps(legacyV1Enabled));
+  }
+
+  private JsonNode onlyRawReply() throws Exception {
+    ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
+    verify(session).sendMessage(reply.capture());
+    return objectMapper.readTree(reply.getValue().getPayload());
   }
 
   private ServerFrame onlyReply() throws Exception {

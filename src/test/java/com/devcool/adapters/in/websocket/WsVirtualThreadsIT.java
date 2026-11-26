@@ -59,7 +59,7 @@ class WsVirtualThreadsIT extends AbstractWsIT {
     send(sending, channelId, "hello");
 
     assertThat(awaitFrame(sending)).contains("\"type\":\"ACK\"").contains("\"messageId\"");
-    assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE\"").contains("hello");
+    assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE_NEW\"").contains("hello");
     assertThat(handlerThreads).singleElement().satisfies(t -> assertThat(t.isVirtual()).isTrue());
   }
 
@@ -99,7 +99,7 @@ class WsVirtualThreadsIT extends AbstractWsIT {
     }
 
     for (int i = 0; i < senders.size() * SENDS_PER_CLIENT; i++) {
-      assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE\"");
+      assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE_NEW\"");
     }
 
     assertThat(handlerThreads)
