@@ -1,17 +1,23 @@
 package com.devcool.adapters.in.websocket.session;
 
+import java.util.Map;
+import java.util.Objects;
 import org.springframework.web.socket.WebSocketSession;
 
-/** The protocol version of a connection's latest frame; pushes follow it. */
+/** The protocol version of a connection's latest frame; pushes follow it (P4-T02). */
 public final class ProtocolVersions {
+
+  static final String ATTR_VERSION = "devcool.ws.protocolVersion";
 
   private ProtocolVersions() {}
 
   public static void mark(WebSocketSession session, int version) {
-    throw new UnsupportedOperationException();
+    session.getAttributes().put(ATTR_VERSION, version);
   }
 
+  /** No frame yet counts as v1: a connection only gets pushes after it subscribes. */
   public static boolean isV2(WebSocketSession session) {
-    throw new UnsupportedOperationException();
+    Map<String, Object> attributes = session.getAttributes();
+    return Objects.nonNull(attributes) && Integer.valueOf(2).equals(attributes.get(ATTR_VERSION));
   }
 }

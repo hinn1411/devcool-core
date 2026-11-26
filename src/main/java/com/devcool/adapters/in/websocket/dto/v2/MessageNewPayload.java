@@ -14,6 +14,13 @@ public record MessageNewPayload(
     Instant createdTime) {
 
   public static MessageNewPayload from(MessageEvent event) {
-    throw new UnsupportedOperationException();
+    return new MessageNewPayload(
+        event.messageId(),
+        event.seq(),
+        event.senderId(),
+        event.contentType().name(),
+        event.content(),
+        event.replyToId(),
+        event.createdTime());
   }
 }
