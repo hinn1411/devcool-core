@@ -35,9 +35,16 @@ public class InMemoryConnectionRegistryAdapter implements ConnectionRegistryPort
 
   @Override
   public void subscribe(String connectionId, Long channelId) {
-    channelToConnections
-        .computeIfAbsent(channelId, k -> ConcurrentHashMap.newKeySet())
-        .add(connectionId);
+    if (!connectionToUser.containsKey(connectionId)) {
+      return;
+    }
+    Set<String> connections =
+        channelToConnections.computeIfAbsent(channelId, k -> ConcurrentHashMap.newKeySet());
+    connections.add(connectionId);
+    // Raced with removeConnection (it clears connectionToUser first): undo.
+    if (!connectionToUser.containsKey(connectionId)) {
+      connections.remove(connectionId);
+    }
   }
 
   @Override

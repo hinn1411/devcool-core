@@ -1,13 +1,16 @@
 package com.devcool.adapters.in.websocket.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.dto.ServerFrame;
@@ -15,6 +18,7 @@ import com.devcool.adapters.in.websocket.handler.action.PingAction;
 import com.devcool.adapters.in.websocket.handler.action.SendMessageAction;
 import com.devcool.adapters.in.websocket.handler.action.SubscribeAction;
 import com.devcool.adapters.in.websocket.handler.action.UnsubscribeAction;
+import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
 import com.devcool.domain.chat.exception.ClientMsgIdReusedException;
@@ -23,6 +27,8 @@ import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.port.in.ChannelSubscriptionUseCase;
 import com.devcool.domain.chat.port.in.ConnectionLifecycleUseCase;
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
+import com.devcool.domain.chat.port.in.command.ConnectCommand;
+import com.devcool.domain.chat.port.in.command.DisconnectCommand;
 import com.devcool.domain.chat.port.in.command.SendMessageCommand;
 import com.devcool.domain.chat.port.in.command.SubscribeCommand;
 import com.devcool.domain.chat.port.in.command.UnsubscribeCommand;
@@ -30,6 +36,7 @@ import com.devcool.domain.common.ForbiddenException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -83,38 +90,49 @@ class ChatHandlerTest {
                 new SendMessageAction(writer, sendMessageUseCase)));
     lenient().when(session.getId()).thenReturn("conn-1");
     lenient().when(session.getAttributes()).thenReturn(new HashMap<>());
+    // Frames are answered through the registered session; here, the mock itself.
+    lenient().when(sessionRegistry.get("conn-1")).thenReturn(session);
+  }
+
+  // ---- Session lifecycle (P4-T01) ----
+
+  @Test
+  void connect_registersTheSession() {
+    HashMap<String, Object> attributes = new HashMap<>();
+    attributes.put(AuthHandshakeInterceptor.ATTR_USER_ID, 7L);
+    when(session.getAttributes()).thenReturn(attributes);
+
+    handler.afterConnectionEstablished(session);
+
+    verify(sessionRegistry).register(session);
+    verify(connections).connect(new ConnectCommand("conn-1", 7L));
   }
 
   @Test
-  void handleTextMessage_malformedJson_repliesWithInvalidJsonErrorAndCallsNoUseCase()
-      throws Exception {
-    handler.handleTextMessage(session, new TextMessage("{not json"));
+  void frames_areAnsweredThroughTheRegisteredWrapper_notTheRawSession() throws Exception {
+    WebSocketSession wrapped = mock(WebSocketSession.class);
+    lenient().when(wrapped.getId()).thenReturn("conn-1");
+    lenient().when(wrapped.getAttributes()).thenReturn(new HashMap<>());
+    when(sessionRegistry.get("conn-1")).thenReturn(wrapped);
 
-    ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
-    verify(session).sendMessage(reply.capture());
-    ServerFrame frame = objectMapper.readValue(reply.getValue().getPayload(), ServerFrame.class);
-    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
-    assertThat(frame.data()).isEqualTo("Invalid JSON");
-    verifyNoInteractions(subscriptions, sendMessageUseCase);
-  }
-
-  @Test
-  void handleTextMessage_unknownAction_repliesWithInvalidJsonError() throws Exception {
-    handler.handleTextMessage(session, new TextMessage("{\"action\":\"NOPE\"}"));
-
-    ArgumentCaptor<TextMessage> reply = ArgumentCaptor.forClass(TextMessage.class);
-    verify(session).sendMessage(reply.capture());
-    assertThat(reply.getValue().getPayload()).contains("Invalid JSON");
-  }
-
-  @Test
-  void clientSendsAnAckFrame_repliesUnsupportedAction() throws Exception {
     handler.handleTextMessage(
-        session, new TextMessage("{\"action\":\"ACK\",\"clientMsgId\":\"r-0\"}"));
+        session, new TextMessage("{\"action\":\"PING\",\"clientMsgId\":\"r-9\"}"));
 
-    ServerFrame frame = onlyReply();
-    assertThat(frame.type()).isEqualTo(FrameType.ERROR);
-    assertThat(frame.data()).isEqualTo("Unsupported action");
+    verify(wrapped).sendMessage(any(TextMessage.class));
+    verify(session, never()).sendMessage(any());
+  }
+
+  @Test
+  void transportError_cleansUpAndCloses_andTheLaterCloseCallbackIsANoOp() throws Exception {
+    lenient().when(session.isOpen()).thenReturn(true);
+
+    handler.handleTransportError(session, new IOException("connection reset"));
+
+    verify(sessionRegistry).remove("conn-1");
+    verify(connections).disconnect(new DisconnectCommand("conn-1"));
+    verify(session).close(CloseStatus.SESSION_NOT_RELIABLE);
+    assertThatCode(() -> handler.afterConnectionClosed(session, CloseStatus.SESSION_NOT_RELIABLE))
+        .doesNotThrowAnyException();
   }
 
   // ---- SUBSCRIBE ----

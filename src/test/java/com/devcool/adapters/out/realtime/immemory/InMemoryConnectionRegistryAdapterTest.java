@@ -15,6 +15,29 @@ class InMemoryConnectionRegistryAdapterTest {
   @BeforeEach
   void setUp() {
     registry = new InMemoryConnectionRegistryAdapter();
+    // Only live connections can subscribe (P4-T01).
+    for (String c : List.of("c", "c1", "c2", "c3")) {
+      registry.registerConnection(c, 100L);
+    }
+  }
+
+  @Nested
+  class SubscribeAfterCleanup {
+    @Test
+    void unregisteredConnection_isNotSubscribed() {
+      registry.subscribe("ghost", 1L);
+
+      assertThat(registry.getConnectionsByChannel(1L)).isEmpty();
+    }
+
+    @Test
+    void removedConnection_isNotSubscribedAgain() {
+      registry.removeConnection("c1");
+
+      registry.subscribe("c1", 1L);
+
+      assertThat(registry.getConnectionsByChannel(1L)).isEmpty();
+    }
   }
 
   @Nested

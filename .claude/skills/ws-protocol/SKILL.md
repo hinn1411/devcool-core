@@ -54,7 +54,7 @@ Each client frame with a `reqId` gets exactly one `ACK` or `NACK` with the same 
 | `PONG` | — |
 
 ## Close codes
-`1012` restart (after `RECONNECT`) · `1013` overloaded / slow consumer · `4400` protocol version not supported · `4401` unauthenticated.
+`1012` restart (after `RECONNECT`) · `1013` overloaded · `4500` slow consumer (send limit tripped; a stuck write ends as 1001/1006) · `4400` protocol version not supported · `4401` unauthenticated.
 
 ## Invariants
 - Commit → ACK → publish, always.

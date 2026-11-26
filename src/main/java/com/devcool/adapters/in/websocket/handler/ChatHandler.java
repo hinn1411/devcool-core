@@ -18,6 +18,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -30,6 +32,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
     justification = "Spring injects shared singleton beans; they are not owned state")
 public final class ChatHandler extends TextWebSocketHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(ChatHandler.class);
   private final ObjectMapper objectMapper;
   private final SessionRegistry sessionRegistry;
   private final ConnectionLifecycleUseCase connections;
@@ -55,13 +58,19 @@ public final class ChatHandler extends TextWebSocketHandler {
 
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
-    sessionRegistry.put(session);
+    sessionRegistry.register(session);
     connections.connect(
         new ConnectCommand(session.getId(), AuthHandshakeInterceptor.userIdOf(session)));
   }
 
   @Override
-  public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+  public void handleTextMessage(WebSocketSession raw, TextMessage message) throws IOException {
+    // Write only through the wrapper; none means already cleaned up.
+    WebSocketSession session = sessionRegistry.get(raw.getId());
+    if (Objects.isNull(session)) {
+      log.debug("Frame on unregistered session {} dropped", raw.getId());
+      return;
+    }
     ClientFrame frame;
     try {
       frame = objectMapper.readValue(message.getPayload(), ClientFrame.class);
@@ -77,8 +86,22 @@ public final class ChatHandler extends TextWebSocketHandler {
   }
 
   @Override
+  public void handleTransportError(WebSocketSession session, Throwable exception)
+      throws IOException {
+    cleanUp(session.getId());
+    if (session.isOpen()) {
+      // Raw close on purpose: the transport is broken, so queued sends are moot.
+      session.close(CloseStatus.SESSION_NOT_RELIABLE);
+    }
+  }
+
+  @Override
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-    String connectionId = session.getId();
+    cleanUp(session.getId());
+  }
+
+  /** Idempotent: runs on transport error, then again on close. */
+  private void cleanUp(String connectionId) {
     sessionRegistry.remove(connectionId);
     connections.disconnect(new DisconnectCommand(connectionId));
   }
