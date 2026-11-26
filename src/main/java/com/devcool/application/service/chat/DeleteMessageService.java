@@ -29,13 +29,19 @@ public class DeleteMessageService implements DeleteMessageUseCase {
   private final MemberPort memberPort;
   private final ChannelPort channelPort;
   private final Clock clock;
+  private final ChannelEventPublisher eventPublisher;
 
   public DeleteMessageService(
-      MessagePort messagePort, MemberPort memberPort, ChannelPort channelPort, Clock clock) {
+      MessagePort messagePort,
+      MemberPort memberPort,
+      ChannelPort channelPort,
+      Clock clock,
+      ChannelEventPublisher eventPublisher) {
     this.messagePort = messagePort;
     this.memberPort = memberPort;
     this.channelPort = channelPort;
     this.clock = clock;
+    this.eventPublisher = eventPublisher;
   }
 
   @Override

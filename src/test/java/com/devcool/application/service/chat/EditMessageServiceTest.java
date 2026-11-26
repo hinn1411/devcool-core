@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.application.service.channel.ChannelAuthorizer;
@@ -18,6 +19,7 @@ import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.MessageVersionConflictException;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.EditedMessage;
+import com.devcool.domain.chat.model.MessageUpdatedEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
@@ -49,6 +51,7 @@ class EditMessageServiceTest {
   @Mock private MessagePort messagePort;
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
+  @Mock private ChannelEventPublisher eventPublisher;
 
   private EditMessageService service;
 
@@ -58,7 +61,8 @@ class EditMessageServiceTest {
         new EditMessageService(
             messagePort,
             new ChannelAuthorizer(channelPort, memberPort),
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            eventPublisher);
   }
 
   // ---- 1. happy path ---------------------------------------------------------------------------
@@ -212,6 +216,43 @@ class EditMessageServiceTest {
     assertThatThrownBy(() -> service.edit(edit(ALICE, "new", CURRENT)))
         .isInstanceOf(MessageNotFoundException.class);
     neverUpdated();
+  }
+
+  // ---- 7. live event (P4-T04) ------------------------------------------------------------------
+
+  @Test
+  void edit_publishesMessageUpdatedAfterCommit_skippingTheActorsSocket() {
+    Instant created = NOW.minus(Duration.ofHours(1));
+    stored(ContentType.TEXT, created);
+    when(messagePort.updateContent(MESSAGE, CURRENT, "new", NOW)).thenReturn(true);
+
+    service.edit(new EditMessageCommand("conn-a", ALICE, MESSAGE, "new", CURRENT));
+
+    verify(eventPublisher)
+        .publishAfterCommit(
+            new MessageUpdatedEvent(CHANNEL, MESSAGE, SEQ, created, "new", CURRENT + 1, NOW),
+            "conn-a");
+  }
+
+  @Test
+  void sameContentEdit_publishesNothing() {
+    stored(ContentType.TEXT, NOW.minus(Duration.ofHours(1)));
+
+    service.edit(edit(ALICE, "old", CURRENT));
+
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void conflictOrDenial_publishesNothing() {
+    stored(ContentType.TEXT, NOW.minus(Duration.ofHours(1)));
+    when(messagePort.updateContent(MESSAGE, CURRENT, "new", NOW)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.edit(edit(ALICE, "new", CURRENT)))
+        .isInstanceOf(MessageVersionConflictException.class);
+    assertThatThrownBy(() -> service.edit(edit(ALICE, "new", CURRENT - 1)))
+        .isInstanceOf(MessageVersionConflictException.class);
+    verifyNoInteractions(eventPublisher);
   }
 
   // ---- helpers ---------------------------------------------------------------------------------

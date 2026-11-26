@@ -165,7 +165,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   @Query(
       """
       SELECT new com.devcool.domain.chat.model.DeletableMessage(
-      ms.id, ms.channel.id, ms.user.id, ms.deletedTime)
+      ms.id, ms.channel.id, ms.user.id, ms.deletedTime, ms.seq, ms.createdTime)
       FROM MessageEntity ms
       WHERE ms.id = :id
       """)

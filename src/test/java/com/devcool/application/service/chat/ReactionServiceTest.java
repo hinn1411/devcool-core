@@ -14,6 +14,7 @@ import com.devcool.domain.chat.exception.InvalidEmojiException;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.ReactionLimitException;
 import com.devcool.domain.chat.model.Emoji;
+import com.devcool.domain.chat.model.ReactionEvent;
 import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.policy.ReactionPolicy;
 import com.devcool.domain.chat.port.in.command.ReactionCommand;
@@ -45,6 +46,7 @@ class ReactionServiceTest {
   @Mock private MessagePort messagePort;
   @Mock private ChannelPort channelPort;
   @Mock private MemberPort memberPort;
+  @Mock private ChannelEventPublisher eventPublisher;
 
   private ReactionService service;
 
@@ -55,7 +57,8 @@ class ReactionServiceTest {
             reactionPort,
             messagePort,
             new ChannelAuthorizer(channelPort, memberPort),
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            eventPublisher);
   }
 
   @Nested
@@ -162,6 +165,62 @@ class ReactionServiceTest {
       assertThatThrownBy(() -> service.unreact(command("")))
           .isInstanceOf(InvalidEmojiException.class);
       verifyNoInteractions(messagePort, memberPort, reactionPort);
+    }
+  }
+
+  // ---- live event (P4-T04) ----------------------------------------------------------------------
+
+  @Nested
+  class LiveEvent {
+
+    @Test
+    void newReaction_publishesReactionOn_skippingTheActorsSocket() {
+      liveMessage();
+      aliceIsMember(true);
+      when(reactionPort.add(MESSAGE, ALICE, new Emoji(THUMBS), NOW)).thenReturn(true);
+
+      service.react(new ReactionCommand("conn-a", ALICE, MESSAGE, THUMBS));
+
+      verify(eventPublisher)
+          .publishAfterCommit(
+              new ReactionEvent(CHANNEL, MESSAGE, new Emoji(THUMBS).value(), ALICE, true),
+              "conn-a");
+    }
+
+    @Test
+    void removedReaction_publishesReactionOff() {
+      liveMessage();
+      aliceIsMember(true);
+      when(reactionPort.remove(MESSAGE, ALICE, new Emoji(THUMBS))).thenReturn(true);
+
+      service.unreact(new ReactionCommand("conn-a", ALICE, MESSAGE, THUMBS));
+
+      verify(eventPublisher)
+          .publishAfterCommit(
+              new ReactionEvent(CHANNEL, MESSAGE, new Emoji(THUMBS).value(), ALICE, false),
+              "conn-a");
+    }
+
+    @Test
+    void repeatedReactOrUnreact_publishesNothing() {
+      liveMessage();
+      aliceIsMember(true);
+      when(reactionPort.add(MESSAGE, ALICE, new Emoji(THUMBS), NOW)).thenReturn(false);
+      when(reactionPort.remove(MESSAGE, ALICE, new Emoji(THUMBS))).thenReturn(false);
+
+      service.react(command(THUMBS));
+      service.unreact(command(THUMBS));
+
+      verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void nonMember_publishesNothing() {
+      liveMessage();
+      aliceIsMember(false);
+
+      assertNotFound(service::react);
+      verifyNoInteractions(eventPublisher);
     }
   }
 

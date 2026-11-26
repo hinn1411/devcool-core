@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.devcool.domain.channel.model.ChannelAccessInfo;
@@ -14,6 +15,7 @@ import com.devcool.domain.channel.model.enums.ChannelType;
 import com.devcool.domain.channel.port.out.ChannelPort;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.model.DeletableMessage;
+import com.devcool.domain.chat.model.MessageDeletedEvent;
 import com.devcool.domain.chat.port.in.command.DeleteMessageCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.common.ForbiddenException;
@@ -39,10 +41,13 @@ class DeleteMessageServiceTest {
   private static final long MESSAGE = 500L, CHANNEL = 1L, ALICE = 10L, BOB = 11L;
   private static final Instant NOW = Instant.parse("2026-11-11T12:00:00Z");
   private static final Instant DELETED_BEFORE = NOW.minusSeconds(600);
+  private static final Instant CREATED = NOW.minusSeconds(3600);
+  private static final long SEQ = 7L;
 
   @Mock private MessagePort messagePort;
   @Mock private MemberPort memberPort;
   @Mock private ChannelPort channelPort;
+  @Mock private ChannelEventPublisher eventPublisher;
 
   private DeleteMessageService service;
 
@@ -50,7 +55,7 @@ class DeleteMessageServiceTest {
   void setUp() {
     service =
         new DeleteMessageService(
-            messagePort, memberPort, channelPort, Clock.fixed(NOW, ZoneOffset.UTC));
+            messagePort, memberPort, channelPort, Clock.fixed(NOW, ZoneOffset.UTC), eventPublisher);
   }
 
   // ---- 1. sender -------------------------------------------------------------------------------
@@ -162,11 +167,48 @@ class DeleteMessageServiceTest {
     assertThatCode(() -> service.delete(delete(ALICE))).doesNotThrowAnyException();
   }
 
+  // ---- 5. live event (P4-T04) ------------------------------------------------------------------
+
+  @Test
+  void delete_publishesMessageDeletedAfterCommit_skippingTheActorsSocket() {
+    aliceMessage(null);
+    caller(ALICE, MemberType.MEMBER, ChannelType.LOUNGE);
+    when(messagePort.markDeleted(MESSAGE, NOW)).thenReturn(true);
+
+    service.delete(new DeleteMessageCommand("conn-a", ALICE, MESSAGE));
+
+    verify(eventPublisher)
+        .publishAfterCommit(new MessageDeletedEvent(CHANNEL, MESSAGE, SEQ, CREATED), "conn-a");
+  }
+
+  @Test
+  void repeatOrLostRaceDelete_publishesNothing() {
+    aliceMessage(DELETED_BEFORE);
+    caller(ALICE, MemberType.MEMBER, ChannelType.LOUNGE);
+    service.delete(delete(ALICE));
+
+    aliceMessage(null);
+    when(messagePort.markDeleted(MESSAGE, NOW)).thenReturn(false);
+    service.delete(delete(ALICE));
+
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void forbiddenDelete_publishesNothing() {
+    aliceMessage(null);
+    caller(BOB, MemberType.MEMBER, ChannelType.LOUNGE);
+
+    assertThatThrownBy(() -> service.delete(delete(BOB))).isInstanceOf(ForbiddenException.class);
+    verifyNoInteractions(eventPublisher);
+  }
+
   // ---- helpers ---------------------------------------------------------------------------------
 
   private void aliceMessage(Instant deletedTime) {
     when(messagePort.findForDelete(MESSAGE))
-        .thenReturn(Optional.of(new DeletableMessage(MESSAGE, CHANNEL, ALICE, deletedTime)));
+        .thenReturn(
+            Optional.of(new DeletableMessage(MESSAGE, CHANNEL, ALICE, deletedTime, SEQ, CREATED)));
   }
 
   /** Lenient channel stub: a sender may be allowed without the service reading the type. */

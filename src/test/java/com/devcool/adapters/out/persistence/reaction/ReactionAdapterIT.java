@@ -53,8 +53,8 @@ class ReactionAdapterIT extends AbstractJpaIT {
   void addTwice_keepsOneRow() {
     Long message = message();
 
-    reactions.add(message, alice.getId(), THUMBS, T0);
-    reactions.add(message, alice.getId(), THUMBS, T0.plusSeconds(1));
+    assertThat(reactions.add(message, alice.getId(), THUMBS, T0)).isTrue();
+    assertThat(reactions.add(message, alice.getId(), THUMBS, T0.plusSeconds(1))).isFalse();
     resetPersistenceContext();
 
     assertThat(reactions.summarize(List.of(message), alice.getId()))
@@ -108,7 +108,7 @@ class ReactionAdapterIT extends AbstractJpaIT {
     reactions.add(message, alice.getId(), THUMBS, T0);
     reactions.add(message, bob.getId(), THUMBS, T0.plusSeconds(1));
 
-    reactions.remove(message, alice.getId(), THUMBS);
+    assertThat(reactions.remove(message, alice.getId(), THUMBS)).isTrue();
     resetPersistenceContext();
 
     assertThat(reactions.summarize(List.of(message), alice.getId()))
@@ -120,8 +120,8 @@ class ReactionAdapterIT extends AbstractJpaIT {
     Long message = message();
     reactions.add(message, bob.getId(), PARTY, T0);
 
-    reactions.remove(message, alice.getId(), PARTY);
-    reactions.remove(message, bob.getId(), THUMBS);
+    assertThat(reactions.remove(message, alice.getId(), PARTY)).isFalse();
+    assertThat(reactions.remove(message, bob.getId(), THUMBS)).isFalse();
     resetPersistenceContext();
 
     assertThat(reactions.summarize(List.of(message), bob.getId()))

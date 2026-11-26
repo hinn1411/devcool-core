@@ -4,6 +4,7 @@ import com.devcool.adapters.in.websocket.dto.MessagePush;
 import com.devcool.adapters.in.websocket.dto.v2.MessageNewPayload;
 import com.devcool.adapters.in.websocket.dto.v2.ServerEnvelope;
 import com.devcool.domain.chat.model.MessageEvent;
+import com.devcool.domain.chat.model.RealtimeEvent;
 import com.devcool.domain.chat.port.out.RealtimeEmitterPort;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -29,7 +30,10 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
   private final FrameWriter writer;
 
   @Override
-  public void send(String connectionId, MessageEvent event) {
+  public void send(String connectionId, RealtimeEvent realtimeEvent) {
+    if (!(realtimeEvent instanceof MessageEvent event)) {
+      return; // P4-T04 Red
+    }
     WebSocketSession session = sessionRegistry.get(connectionId);
     if (Objects.isNull(session) || !session.isOpen()) {
       return;

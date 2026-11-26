@@ -28,12 +28,17 @@ public class EditMessageService implements EditMessageUseCase {
   private final MessagePort messagePort;
   private final ChannelAuthorizer channelAuthorizer;
   private final Clock clock;
+  private final ChannelEventPublisher eventPublisher;
 
   public EditMessageService(
-      MessagePort messagePort, ChannelAuthorizer channelAuthorizer, Clock clock) {
+      MessagePort messagePort,
+      ChannelAuthorizer channelAuthorizer,
+      Clock clock,
+      ChannelEventPublisher eventPublisher) {
     this.messagePort = messagePort;
     this.channelAuthorizer = channelAuthorizer;
     this.clock = clock;
+    this.eventPublisher = eventPublisher;
   }
 
   @Override

@@ -31,16 +31,19 @@ public class ReactionService implements ReactToMessageUseCase {
   private final MessagePort messagePort;
   private final ChannelAuthorizer channelAuthorizer;
   private final Clock clock;
+  private final ChannelEventPublisher eventPublisher;
 
   public ReactionService(
       ReactionPort reactionPort,
       MessagePort messagePort,
       ChannelAuthorizer channelAuthorizer,
-      Clock clock) {
+      Clock clock,
+      ChannelEventPublisher eventPublisher) {
     this.reactionPort = reactionPort;
     this.messagePort = messagePort;
     this.channelAuthorizer = channelAuthorizer;
     this.clock = clock;
+    this.eventPublisher = eventPublisher;
   }
 
   @Override

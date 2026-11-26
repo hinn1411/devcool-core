@@ -10,6 +10,7 @@ import com.devcool.domain.chat.model.MessageList;
 import com.devcool.domain.chat.port.in.command.EditMessageCommand;
 import com.devcool.domain.chat.port.in.command.GetMessageCommand;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
@@ -22,6 +23,8 @@ public interface MessageDtoMapper {
 
   MessageItemResponse toItemResponse(MessageItem item);
 
+  /** REST has no socket to skip. */
+  @Mapping(target = "connectionId", ignore = true)
   EditMessageCommand toEditCommand(Long userId, Long messageId, EditMessageRequest request);
 
   EditMessageResponse toEditResponse(EditedMessage message);

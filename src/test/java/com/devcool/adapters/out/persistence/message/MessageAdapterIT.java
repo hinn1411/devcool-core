@@ -381,8 +381,11 @@ class MessageAdapterIT extends AbstractJpaIT {
       Long gone = deletedText(channelA, "gone");
       resetPersistenceContext();
 
+      MessageEntity row = em.find(MessageEntity.class, live);
       assertThat(messagePort.findForDelete(live))
-          .contains(new DeletableMessage(live, channelA.getId(), alice.getId(), null));
+          .contains(
+              new DeletableMessage(
+                  live, channelA.getId(), alice.getId(), null, row.getSeq(), row.getCreatedTime()));
       assertThat(messagePort.findForDelete(gone))
           .hasValueSatisfying(m -> assertThat(m.deletedTime()).isNotNull());
     }

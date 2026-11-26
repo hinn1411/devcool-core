@@ -4,5 +4,6 @@ import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
 
 /** Moves the caller's read marker forward in a channel (P3-T10). */
 public interface MarkChannelReadUseCase {
-  void markRead(MarkChannelReadCommand command);
+  /** Returns the marker after the call (clamped to the last seq, never lower than before). */
+  long markRead(MarkChannelReadCommand command);
 }

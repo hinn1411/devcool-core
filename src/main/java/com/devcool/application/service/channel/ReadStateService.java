@@ -1,5 +1,6 @@
 package com.devcool.application.service.channel;
 
+import com.devcool.application.service.chat.ChannelEventPublisher;
 import com.devcool.domain.channel.exception.ChannelNotFoundException;
 import com.devcool.domain.channel.port.in.MarkChannelReadUseCase;
 import com.devcool.domain.channel.port.in.command.MarkChannelReadCommand;
@@ -20,20 +21,25 @@ public class ReadStateService implements MarkChannelReadUseCase {
   private static final Logger log = LoggerFactory.getLogger(ReadStateService.class);
 
   private final MemberPort memberPort;
+  private final ChannelEventPublisher eventPublisher;
 
-  public ReadStateService(MemberPort memberPort) {
+  public ReadStateService(MemberPort memberPort, ChannelEventPublisher eventPublisher) {
     this.memberPort = memberPort;
+    this.eventPublisher = eventPublisher;
   }
 
   @Override
   @Transactional
-  public void markRead(MarkChannelReadCommand command) {
-    if (!memberPort.advanceLastReadSeq(command.channelId(), command.userId(), command.seq())) {
+  public long markRead(MarkChannelReadCommand command) {
+    if (memberPort
+        .advanceLastReadSeq(command.channelId(), command.userId(), command.seq())
+        .isEmpty()) {
       log.warn(
           "User {} marked channel {} read outside their channels",
           command.userId(),
           command.channelId());
       throw new ChannelNotFoundException(command.channelId());
     }
+    return command.seq(); // P4-T04 Red
   }
 }
