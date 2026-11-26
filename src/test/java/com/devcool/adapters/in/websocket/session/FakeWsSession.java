@@ -18,17 +18,14 @@ import org.springframework.web.socket.WebSocketExtension;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/**
- * A raw session that behaves like Tomcat's: two overlapping {@code sendMessage} calls fail with
- * {@code IllegalStateException}. {@link #block()} makes the next send hang until {@link
- * #unblock()}, standing in for a client whose TCP buffer is full.
- */
+/** Like Tomcat's session: overlapping sends throw. {@link #block()} simulates a full TCP buffer. */
 final class FakeWsSession implements WebSocketSession {
 
   private final String id;
   private final Queue<String> received = new ConcurrentLinkedQueue<>();
   private final AtomicInteger inFlight = new AtomicInteger();
   private final AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
+  private final AtomicReference<Thread> closeThread = new AtomicReference<>();
   private final Map<String, Object> attributes = new ConcurrentHashMap<>();
   private volatile CountDownLatch gate = new CountDownLatch(0);
   private final CountDownLatch sendStarted = new CountDownLatch(1);
@@ -45,7 +42,6 @@ final class FakeWsSession implements WebSocketSession {
     gate.countDown();
   }
 
-  /** Waits until a send is inside the socket write. */
   void awaitSendStarted() throws InterruptedException {
     if (!sendStarted.await(5, TimeUnit.SECONDS)) {
       throw new AssertionError("no send started on " + id);
@@ -58,6 +54,10 @@ final class FakeWsSession implements WebSocketSession {
 
   CloseStatus closeStatus() {
     return closeStatus.get();
+  }
+
+  Thread closeThread() {
+    return closeThread.get();
   }
 
   @Override
@@ -89,7 +89,9 @@ final class FakeWsSession implements WebSocketSession {
 
   @Override
   public void close(CloseStatus status) {
-    closeStatus.compareAndSet(null, status);
+    if (closeStatus.compareAndSet(null, status)) {
+      closeThread.set(Thread.currentThread());
+    }
   }
 
   @Override

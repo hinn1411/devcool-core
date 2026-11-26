@@ -68,9 +68,8 @@ class WsVirtualThreadsIT extends AbstractWsIT {
    * or JDBC call inside {@code synchronized} on Java 21). Localhost writes rarely block, so zero
    * events is a guard, not a proof; the Tomcat {@code javap} audit in the PR is the proof.
    *
-   * <p>Senders don't subscribe, so each only ever writes its own ACKs. Two fan-outs can still hit
-   * the receiver at once and one may be dropped (concurrent writes on one session, fixed by
-   * P4-T01), so the receiver's frame count isn't asserted here.
+   * <p>Two fan-outs hit the receiver at once; the session decorator (P4-T01) must deliver every
+   * frame.
    */
   @Test
   void concurrentSendsDoNotPinCarrierThreads() throws Exception {
@@ -97,6 +96,10 @@ class WsVirtualThreadsIT extends AbstractWsIT {
       }
 
       jfr.stop(); // flushes buffered events before we read them
+    }
+
+    for (int i = 0; i < senders.size() * SENDS_PER_CLIENT; i++) {
+      assertThat(awaitFrame(listening)).contains("\"type\":\"MESSAGE\"");
     }
 
     assertThat(handlerThreads)

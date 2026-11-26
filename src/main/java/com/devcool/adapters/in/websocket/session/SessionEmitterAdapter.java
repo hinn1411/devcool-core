@@ -35,22 +35,12 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
     try {
       writer.send(session, MessagePush.from(event));
     } catch (JsonProcessingException ex) {
-      // A bug in the payload, not the transport: keep the connection.
+      // Payload bug, not transport: keep the connection.
       log.error("Push of message {} could not be serialized", event.messageId(), ex);
-    } catch (IOException ex) {
+    } catch (IOException | RuntimeException ex) {
       // At-most-once: the client reconnects and catches up by seq.
       log.warn("Push of message {} to {} failed, closing", event.messageId(), connectionId, ex);
-      closeQuietly(session);
-    } catch (IllegalStateException ex) {
-      log.warn("Push of message {} to {} failed", event.messageId(), connectionId, ex);
-    }
-  }
-
-  private static void closeQuietly(WebSocketSession session) {
-    try {
-      session.close(CloseStatus.SESSION_NOT_RELIABLE);
-    } catch (IOException ex) {
-      log.debug("Close of {} failed", session.getId(), ex);
+      writer.closeAsync(session, CloseStatus.SESSION_NOT_RELIABLE);
     }
   }
 }

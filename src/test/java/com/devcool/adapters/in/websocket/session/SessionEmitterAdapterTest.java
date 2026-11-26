@@ -16,6 +16,7 @@ import com.devcool.domain.chat.model.enums.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,10 +32,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.SessionLimitExceededException;
 
-/**
- * Backpressure on the push path (P4-T01). Real decorator over {@link FakeWsSession}s: a blocked
- * fake stands in for a slow client whose TCP buffer is full.
- */
+/** Push-path backpressure (P4-T01): real decorator over {@link FakeWsSession}s. */
 class SessionEmitterAdapterTest {
 
   private static final Duration LONG = Duration.ofHours(1);
@@ -94,8 +92,24 @@ class SessionEmitterAdapterTest {
 
     assertThat(alice.received()).singleElement().asString().contains("\"seq\":2");
     assertThat(carol.received()).singleElement().asString().contains("\"seq\":2");
-    assertThat(bob.closeStatus()).isEqualTo(CloseStatus.SESSION_NOT_RELIABLE);
+    await()
+        .atMost(NO_WAIT)
+        .untilAsserted(
+            () -> assertThat(bob.closeStatus()).isEqualTo(CloseStatus.SESSION_NOT_RELIABLE));
     assertThat(bob.closeStatus().getCode()).isEqualTo(4500);
+  }
+
+  @Test
+  void overflowClose_runsOffTheCallerThread() throws Exception {
+    SessionRegistry registry = registry(LONG, DataSize.ofBytes(1));
+    SessionEmitterAdapter emitter = emitter(registry);
+    FakeWsSession bob = registered(registry, "bob");
+    pushStuckOn(bob, emitter);
+
+    emitter.send("bob", event(2L));
+
+    await().atMost(NO_WAIT).untilAsserted(() -> assertThat(bob.closeThread()).isNotNull());
+    assertThat(bob.closeThread()).isNotSameAs(Thread.currentThread());
   }
 
   @Test
@@ -126,7 +140,20 @@ class SessionEmitterAdapterTest {
     assertThatCode(() -> emitter(registryWith(session)).send("conn-1", event(1L)))
         .doesNotThrowAnyException();
 
-    verify(session).close(CloseStatus.SESSION_NOT_RELIABLE);
+    awaitClosed(session);
+  }
+
+  @Test
+  void anyRuntimeFailure_closesSession_andDoesNotThrow() throws Exception {
+    WebSocketSession session = openSession();
+    doThrow(new UncheckedIOException(new IOException("broken pipe")))
+        .when(session)
+        .sendMessage(any(TextMessage.class));
+
+    assertThatCode(() -> emitter(registryWith(session)).send("conn-1", event(1L)))
+        .doesNotThrowAnyException();
+
+    awaitClosed(session);
   }
 
   @Test
@@ -136,12 +163,18 @@ class SessionEmitterAdapterTest {
 
     emitter(registryWith(session)).send("conn-1", event(1L));
 
-    verify(session).close(CloseStatus.SESSION_NOT_RELIABLE);
+    awaitClosed(session);
   }
 
   // --- fixtures ---
 
-  /** Starts a push of seq 1 on another thread and waits until it hangs in the socket write. */
+  private static void awaitClosed(WebSocketSession session) {
+    await()
+        .atMost(NO_WAIT)
+        .untilAsserted(() -> verify(session).close(CloseStatus.SESSION_NOT_RELIABLE));
+  }
+
+  /** Pushes seq 1 on another thread and waits until it hangs in the write. */
   private void pushStuckOn(FakeWsSession session, SessionEmitterAdapter emitter)
       throws InterruptedException {
     session.block();

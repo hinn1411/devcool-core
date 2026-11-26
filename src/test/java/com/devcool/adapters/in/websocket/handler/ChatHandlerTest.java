@@ -90,11 +90,11 @@ class ChatHandlerTest {
                 new SendMessageAction(writer, sendMessageUseCase)));
     lenient().when(session.getId()).thenReturn("conn-1");
     lenient().when(session.getAttributes()).thenReturn(new HashMap<>());
-    // Frames are answered through the registered session (P4-T01); here that's the mock itself.
+    // Frames are answered through the registered session; here, the mock itself.
     lenient().when(sessionRegistry.get("conn-1")).thenReturn(session);
   }
 
-  // ---- Session lifecycle (P4-T01) ---------------------------------------------------------------
+  // ---- Session lifecycle (P4-T01) ----
 
   @Test
   void connect_registersTheSession() {

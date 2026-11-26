@@ -50,7 +50,7 @@
 
 The full type list is in [03 §5](../03-chat-system-design.md#5-the-websocket-protocol). Rules:
 1. Each client frame with a `reqId` gets exactly one `ACK` or `NACK` with that `reqId`.
-2. A frame error never closes the socket. Close codes are reserved for auth failure (4401), protocol version mismatch (4400), overload (1013), restart (1012) and slow consumer (4500: a send limit was exceeded, Spring's `SESSION_NOT_RELIABLE`; the client reconnects and resumes, P4-T01).
+2. A frame error never closes the socket. Close codes are reserved for auth failure (4401), protocol version mismatch (4400), overload (1013), restart (1012) and slow consumer (4500, P4-T01: a send limit tripped; a write stuck past Tomcat's timeout ends as 1001/1006 instead). Clients reconnect and resume.
 3. Every message event carries `messageId`, `seq` and `createdTime`.
 4. Unknown `type` → `NACK{code: UNSUPPORTED}`. Unknown fields are ignored, so it's forward compatible.
 5. Missing `v` or `v: 1` → the server accepts the legacy frames during P4 only, then removes them.

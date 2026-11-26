@@ -12,12 +12,12 @@ import org.springframework.web.socket.adapter.NativeWebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator.OverflowStrategy;
 
-/** Live sessions of this node, each wrapped once for safe concurrent, bounded sends (P4-T01). */
+/** This node's sessions, each wrapped once for serialized, bounded sends (P4-T01). */
 @Component
 @RequiredArgsConstructor
 public class SessionRegistry {
 
-  /** Tomcat reads it per blocking write, as a {@code Long} in milliseconds (default 20 s). */
+  /** A {@code Long} in ms; Tomcat's default is 20 s. */
   static final String TOMCAT_BLOCKING_SEND_TIMEOUT =
       "org.apache.tomcat.websocket.BLOCKING_SEND_TIMEOUT";
 
@@ -49,10 +49,7 @@ public class SessionRegistry {
     return sessions.get(connectionId);
   }
 
-  /**
-   * The decorator checks its time limit only when another send arrives; this bounds the thread that
-   * is stuck in the socket write itself.
-   */
+  /** The decorator's time limit only trips on the next send; this bounds the stuck write itself. */
   private void bound(WebSocketSession raw) {
     if (raw instanceof NativeWebSocketSession nativeAware) {
       Session nativeSession = nativeAware.getNativeSession(Session.class);
