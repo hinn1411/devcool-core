@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.devcool.adapters.in.websocket.config.WsSendLimitsProps;
 import com.devcool.domain.chat.model.MessageEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
@@ -164,6 +165,44 @@ class SessionEmitterAdapterTest {
     emitter(registryWith(session)).send("conn-1", event(1L));
 
     awaitClosed(session);
+  }
+
+  // --- push format follows the connection's protocol (P4-T02) ---
+
+  @Test
+  void v2Connection_receivesAMessageNewEnvelope() throws Exception {
+    SessionRegistry registry = registry(LONG, DataSize.ofMegabytes(1));
+    FakeWsSession alice = registered(registry, "alice");
+    ProtocolVersions.mark(registry.get("alice"), 2);
+
+    emitter(registry).send("alice", event(1L));
+
+    JsonNode push = objectMapper.readTree(alice.received().peek());
+    assertThat(push.path("v").asInt()).isEqualTo(2);
+    assertThat(push.path("type").asText()).isEqualTo("MESSAGE_NEW");
+    assertThat(push.path("channelId").asLong()).isEqualTo(42L);
+    assertThat(push.hasNonNull("reqId")).isFalse();
+    JsonNode payload = push.path("payload");
+    assertThat(payload.path("messageId").asLong()).isEqualTo(101L);
+    assertThat(payload.path("seq").asLong()).isEqualTo(1L);
+    assertThat(payload.path("createdTime").asText()).isEqualTo("2026-11-26T10:00:00Z");
+    assertThat(payload.path("senderId").asLong()).isEqualTo(7L);
+    assertThat(payload.path("contentType").asText()).isEqualTo("TEXT");
+    assertThat(payload.path("content").asText()).isEqualTo("hi");
+  }
+
+  @Test
+  void v1Connection_keepsTheLegacyMessagePush() throws Exception {
+    SessionRegistry registry = registry(LONG, DataSize.ofMegabytes(1));
+    FakeWsSession alice = registered(registry, "alice");
+    ProtocolVersions.mark(registry.get("alice"), 1);
+
+    emitter(registry).send("alice", event(1L));
+
+    JsonNode push = objectMapper.readTree(alice.received().peek());
+    assertThat(push.path("type").asText()).isEqualTo("MESSAGE");
+    assertThat(push.path("messageId").asLong()).isEqualTo(101L);
+    assertThat(push.has("v")).isFalse();
   }
 
   // --- fixtures ---

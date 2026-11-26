@@ -1,8 +1,10 @@
 package com.devcool.adapters.in.websocket.handler;
 
+import com.devcool.adapters.in.websocket.config.WsProtocolProps;
 import com.devcool.adapters.in.websocket.dto.ClientFrame;
 import com.devcool.adapters.in.websocket.dto.FrameType;
 import com.devcool.adapters.in.websocket.handler.action.FrameAction;
+import com.devcool.adapters.in.websocket.handler.v2.FrameDispatcher;
 import com.devcool.adapters.in.websocket.security.AuthHandshakeInterceptor;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import com.devcool.adapters.in.websocket.session.SessionRegistry;
@@ -38,17 +40,23 @@ public final class ChatHandler extends TextWebSocketHandler {
   private final ConnectionLifecycleUseCase connections;
   private final FrameWriter writer;
   private final Map<FrameType, FrameAction> actions = new EnumMap<>(FrameType.class);
+  private final FrameDispatcher dispatcher;
+  private final WsProtocolProps protocol;
 
   public ChatHandler(
       ObjectMapper objectMapper,
       SessionRegistry sessionRegistry,
       ConnectionLifecycleUseCase connections,
       FrameWriter writer,
-      List<FrameAction> actions) {
+      List<FrameAction> actions,
+      FrameDispatcher dispatcher,
+      WsProtocolProps protocol) {
     this.objectMapper = objectMapper;
     this.sessionRegistry = sessionRegistry;
     this.connections = connections;
     this.writer = writer;
+    this.dispatcher = dispatcher;
+    this.protocol = protocol;
     for (FrameAction action : actions) {
       if (Objects.nonNull(this.actions.put(action.type(), action))) {
         throw new IllegalStateException("Two actions for " + action.type());
