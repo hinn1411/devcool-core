@@ -2,6 +2,7 @@ package com.devcool.adapters.in.websocket.handler.v2;
 
 import com.devcool.adapters.in.websocket.dto.v2.ClientEnvelope;
 import com.devcool.adapters.in.websocket.dto.v2.EmptyPayload;
+import com.devcool.adapters.in.websocket.dto.v2.ServerEnvelope;
 import com.devcool.adapters.in.websocket.session.FrameWriter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -32,6 +33,6 @@ public class PingHandler implements FrameHandler<EmptyPayload> {
   @Override
   public void handle(WebSocketSession session, ClientEnvelope frame, EmptyPayload payload)
       throws IOException {
-    throw new UnsupportedOperationException("P4-T03");
+    writer.send(session, ServerEnvelope.pong(frame.reqId()));
   }
 }

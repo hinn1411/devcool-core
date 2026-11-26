@@ -22,6 +22,13 @@ public class SessionRegistry {
   static final String TOMCAT_BLOCKING_SEND_TIMEOUT =
       "org.apache.tomcat.websocket.BLOCKING_SEND_TIMEOUT";
 
+  /**
+   * A {@code Long} in ms (P4-T03). Only client frames reset it, so pushes to a dead client don't
+   * keep its socket open; Tomcat then closes it with 1001 and {@code afterConnectionClosed} cleans
+   * up.
+   */
+  static final String TOMCAT_READ_IDLE_TIMEOUT = "org.apache.tomcat.websocket.READ_IDLE_TIMEOUT_MS";
+
   private final WsSendLimitsProps limits;
   private final WsIdleProps idle;
   private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -51,14 +58,17 @@ public class SessionRegistry {
     return sessions.get(connectionId);
   }
 
-  /** The decorator's time limit only trips on the next send; this bounds the stuck write itself. */
+  /**
+   * Tomcat-side limits: the decorator's time limit only trips on the next send, so the blocking
+   * timeout bounds the stuck write itself; the read-idle timeout closes a silent client.
+   */
   private void bound(WebSocketSession raw) {
     if (raw instanceof NativeWebSocketSession nativeAware) {
       Session nativeSession = nativeAware.getNativeSession(Session.class);
       if (Objects.nonNull(nativeSession)) {
-        nativeSession
-            .getUserProperties()
-            .put(TOMCAT_BLOCKING_SEND_TIMEOUT, limits.blockingTimeout().toMillis());
+        Map<String, Object> properties = nativeSession.getUserProperties();
+        properties.put(TOMCAT_BLOCKING_SEND_TIMEOUT, limits.blockingTimeout().toMillis());
+        properties.put(TOMCAT_READ_IDLE_TIMEOUT, idle.idleTimeout().toMillis());
       }
     }
   }

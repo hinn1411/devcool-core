@@ -16,6 +16,11 @@ public record ServerEnvelope(int v, String type, String reqId, Long channelId, O
     return new ServerEnvelope(VERSION, "NACK", reqId, null, new ErrorPayload(code, message));
   }
 
+  /** The heartbeat reply (P4-T03): PING's one reply, in place of an ACK. */
+  public static ServerEnvelope pong(String reqId) {
+    return new ServerEnvelope(VERSION, "PONG", reqId, null, null);
+  }
+
   /** For a frame with no parsable envelope. */
   public static ServerEnvelope error(NackCode code, String message) {
     return new ServerEnvelope(VERSION, "ERROR", null, null, new ErrorPayload(code, message));
