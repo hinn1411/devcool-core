@@ -8,7 +8,7 @@
 
 - **The handshake is HTTP.** A WebSocket starts as an HTTP/1.1 `GET` with `Upgrade: websocket`. That is why `Origin` checks, handshake interceptors and query-string tickets work, and why the browser `WebSocket` API cannot set an `Authorization` header.
 - **Frames and control frames.** Text/binary data frames plus `ping`, `pong` and `close`. Browsers don't expose protocol-level ping, so apps add their own `PING`/`PONG` frames. *In DevCool:* `PING` every 25 s, server idle close after 90 s.
-- **Close codes.** 1000 normal, 1001 going away, 1008 policy violation, 1011 server error, 1012 service restart, 1013 try again later; 4000–4999 are for applications. *In DevCool:* 4400 protocol mismatch, 4401 auth, 1012 on deploy, 1013 overload.
+- **Close codes.** 1000 normal, 1001 going away, 1008 policy violation, 1011 server error, 1012 service restart, 1013 try again later; 4000–4999 are for applications. *In DevCool:* 4400 protocol mismatch, 4401 auth, 1012 on deploy, 1013 overload, 4500 slow consumer.
 - **Application protocol on top.** Raw WS gives you a pipe. The envelope (`v`, `type`, `reqId`, `payload`), ACK/NACK per request, error frames that don't close the socket, and forward compatibility (ignore unknown fields) are yours to design.
 - **Backpressure.** A socket's send buffer fills when a client reads slowly. Without a limit, one slow client blocks the sender thread or eats heap. *In DevCool:* `ConcurrentWebSocketSessionDecorator` with a 5 s send-time limit, 512 KB buffer and `TERMINATE`.
 - **Heartbeats and idle timeouts.** Every hop (ALB, CloudFront, NAT, proxies) has an idle timeout. The heartbeat interval must be shorter than the smallest one.

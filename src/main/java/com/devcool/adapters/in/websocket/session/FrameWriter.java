@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.SessionLimitExceededException;
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +28,13 @@ public class FrameWriter {
     send(session, new ServerFrame(FrameType.ERROR, clientMsgId, data));
   }
 
+  /** Over a send limit, the decorator only flags the session (TERMINATE): closing it is ours. */
   public void send(WebSocketSession session, Object frame) throws IOException {
-    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(frame)));
+    TextMessage message = new TextMessage(objectMapper.writeValueAsString(frame));
+    try {
+      session.sendMessage(message);
+    } catch (SessionLimitExceededException ex) {
+      session.close(ex.getStatus());
+    }
   }
 }

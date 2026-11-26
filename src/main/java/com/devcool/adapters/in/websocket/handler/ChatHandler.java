@@ -55,13 +55,18 @@ public final class ChatHandler extends TextWebSocketHandler {
 
   @Override
   public void afterConnectionEstablished(WebSocketSession session) {
-    sessionRegistry.put(session);
+    sessionRegistry.register(session);
     connections.connect(
         new ConnectCommand(session.getId(), AuthHandshakeInterceptor.userIdOf(session)));
   }
 
   @Override
-  public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+  public void handleTextMessage(WebSocketSession raw, TextMessage message) throws IOException {
+    // Write only through the registered wrapper; none means the connection is already cleaned up.
+    WebSocketSession session = sessionRegistry.get(raw.getId());
+    if (Objects.isNull(session)) {
+      return;
+    }
     ClientFrame frame;
     try {
       frame = objectMapper.readValue(message.getPayload(), ClientFrame.class);
@@ -76,9 +81,23 @@ public final class ChatHandler extends TextWebSocketHandler {
     dispatch(session, frame);
   }
 
+  /** Cleans up now rather than relying on the container's later close callback. */
+  @Override
+  public void handleTransportError(WebSocketSession session, Throwable exception)
+      throws IOException {
+    cleanUp(session.getId());
+    if (session.isOpen()) {
+      session.close(CloseStatus.SESSION_NOT_RELIABLE);
+    }
+  }
+
   @Override
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-    String connectionId = session.getId();
+    cleanUp(session.getId());
+  }
+
+  /** Idempotent: runs on transport error and again on the close callback. */
+  private void cleanUp(String connectionId) {
     sessionRegistry.remove(connectionId);
     connections.disconnect(new DisconnectCommand(connectionId));
   }
