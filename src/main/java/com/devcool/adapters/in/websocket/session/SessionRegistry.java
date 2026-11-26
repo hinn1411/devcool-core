@@ -1,5 +1,6 @@
 package com.devcool.adapters.in.websocket.session;
 
+import com.devcool.adapters.in.websocket.config.WsIdleProps;
 import com.devcool.adapters.in.websocket.config.WsSendLimitsProps;
 import jakarta.websocket.Session;
 import java.util.Map;
@@ -22,6 +23,7 @@ public class SessionRegistry {
       "org.apache.tomcat.websocket.BLOCKING_SEND_TIMEOUT";
 
   private final WsSendLimitsProps limits;
+  private final WsIdleProps idle;
   private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
   /**

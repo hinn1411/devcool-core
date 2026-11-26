@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.devcool.adapters.in.websocket.config.WsIdleProps;
 import com.devcool.adapters.in.websocket.config.WsSendLimitsProps;
 import jakarta.websocket.Session;
 import java.time.Duration;
@@ -21,7 +22,9 @@ class SessionRegistryTest {
       new WsSendLimitsProps(
           Duration.ofSeconds(5), DataSize.ofKilobytes(512), Duration.ofSeconds(5));
 
-  private final SessionRegistry registry = new SessionRegistry(LIMITS);
+  private static final WsIdleProps IDLE = new WsIdleProps(Duration.ofSeconds(90));
+
+  private final SessionRegistry registry = new SessionRegistry(LIMITS, IDLE);
 
   @Test
   void registerStoresADecoratorWithConfiguredLimits() {
@@ -50,6 +53,23 @@ class SessionRegistryTest {
 
     assertThat(userProperties)
         .containsEntry("org.apache.tomcat.websocket.BLOCKING_SEND_TIMEOUT", 5_000L);
+  }
+
+  /** P4-T03: read-idle, so pushes to a dead client don't keep its socket alive. */
+  @Test
+  void registerSetsTomcatReadIdleTimeout() {
+    Map<String, Object> userProperties = new HashMap<>();
+    Session nativeSession = mock(Session.class);
+    when(nativeSession.getUserProperties()).thenReturn(userProperties);
+    NativeWebSocketSession raw = mock(NativeWebSocketSession.class);
+    when(raw.getId()).thenReturn("conn-1");
+    when(raw.getNativeSession(Session.class)).thenReturn(nativeSession);
+
+    registry.register(raw);
+
+    assertThat(userProperties)
+        .containsEntry("org.apache.tomcat.websocket.READ_IDLE_TIMEOUT_MS", 90_000L)
+        .doesNotContainKey("org.apache.tomcat.websocket.WRITE_IDLE_TIMEOUT_MS");
   }
 
   @Test

@@ -153,7 +153,7 @@ class FrameDispatcherTest {
   // ---- 2. unknown types and fields ----
 
   @ParameterizedTest
-  @ValueSource(strings = {"EDIT", "PING", "RESUME", "NOT_A_TYPE"})
+  @ValueSource(strings = {"EDIT", "TYPING", "RESUME", "NOT_A_TYPE"})
   void unknownOrNotYetBuiltType_nacksUnsupported(String type) throws Exception {
     dispatch("{\"v\":2,\"type\":\"" + type + "\",\"reqId\":\"r-4\",\"channelId\":42}");
 
