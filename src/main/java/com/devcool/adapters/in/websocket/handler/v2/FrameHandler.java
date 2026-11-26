@@ -4,10 +4,7 @@ import com.devcool.adapters.in.websocket.dto.v2.ClientEnvelope;
 import java.io.IOException;
 import org.springframework.web.socket.WebSocketSession;
 
-/**
- * Handles one v2 frame type. Exceptions propagate to {@link FrameDispatcher}, which turns each into
- * a NACK.
- */
+/** One v2 frame type; exceptions become NACKs in {@link FrameDispatcher}. */
 public interface FrameHandler<P> {
 
   String type();

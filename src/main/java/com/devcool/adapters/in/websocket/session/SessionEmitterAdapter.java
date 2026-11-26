@@ -46,7 +46,6 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
     }
   }
 
-  /** The push follows the protocol of the connection's latest frame (P4-T02). */
   private static Object push(WebSocketSession session, MessageEvent event) {
     return ProtocolVersions.isV2(session)
         ? ServerEnvelope.event("MESSAGE_NEW", event.channelId(), MessageNewPayload.from(event))

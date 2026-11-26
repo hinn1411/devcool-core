@@ -45,7 +45,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 frames (P4-T02): one ACK/NACK per reqId, and no frame error closes the socket. */
+/** v2 frames (P4-T02): one ACK/NACK per reqId, never a close. */
 @ExtendWith(MockitoExtension.class)
 class FrameDispatcherTest {
 
@@ -322,7 +322,7 @@ class FrameDispatcherTest {
     return replies(1).get(0);
   }
 
-  /** Every reply went through the session, and none of them closed it. */
+  /** Also asserts the session was never closed. */
   private List<JsonNode> replies(int count) throws Exception {
     ArgumentCaptor<TextMessage> sent = ArgumentCaptor.forClass(TextMessage.class);
     verify(session, times(count)).sendMessage(sent.capture());

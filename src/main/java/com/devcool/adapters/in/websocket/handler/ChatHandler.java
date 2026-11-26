@@ -40,7 +40,7 @@ public final class ChatHandler extends TextWebSocketHandler {
 
   private static final Logger log = LoggerFactory.getLogger(ChatHandler.class);
 
-  /** ADR-0005 rule 2: the client must reload for a protocol this server speaks. */
+  /** ADR-0005 rule 2. */
   static final CloseStatus PROTOCOL_MISMATCH =
       new CloseStatus(4400, "Unsupported protocol version");
 
@@ -104,7 +104,7 @@ public final class ChatHandler extends TextWebSocketHandler {
     }
   }
 
-  /** v1 frames (ADR-0005 rule 5): accepted behind the flag until P4-T17. */
+  /** v1, behind the flag until P4-T17. */
   private void handleLegacy(WebSocketSession session, JsonNode tree) throws IOException {
     if (!protocol.legacyV1Enabled()) {
       session.close(PROTOCOL_MISMATCH);
@@ -114,7 +114,7 @@ public final class ChatHandler extends TextWebSocketHandler {
     ClientFrame frame;
     try {
       frame = objectMapper.treeToValue(tree, ClientFrame.class);
-    } catch (JsonProcessingException ex) {
+    } catch (JsonProcessingException | IllegalArgumentException ex) {
       writer.error(session, null, "Invalid JSON");
       return;
     }
@@ -158,7 +158,7 @@ public final class ChatHandler extends TextWebSocketHandler {
     connections.disconnect(new DisconnectCommand(connectionId));
   }
 
-  /** Any exception becomes an ERROR frame: an escaping one makes Spring close the socket. */
+  /** An escaping exception would make Spring close the socket. */
   private void dispatch(WebSocketSession session, ClientFrame frame) throws IOException {
     FrameAction action = actions.get(frame.action());
     if (Objects.isNull(action)) {

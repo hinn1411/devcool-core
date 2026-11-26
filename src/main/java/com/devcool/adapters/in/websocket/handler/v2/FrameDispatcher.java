@@ -19,15 +19,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-/**
- * Routes a v2 frame to its {@link FrameHandler}. Every failure becomes one NACK; none closes the
- * socket (ADR-0005 rules 1, 2, 4).
- */
+/** Routes v2 frames by type; every failure is one NACK, never a close (ADR-0005). */
 @Component
 @SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared singleton beans; they are not owned state")
-public class FrameDispatcher {
+public final class FrameDispatcher {
 
   private static final Logger log = LoggerFactory.getLogger(FrameDispatcher.class);
 
@@ -48,25 +45,27 @@ public class FrameDispatcher {
 
   public void dispatch(WebSocketSession session, JsonNode frame) throws IOException {
     String reqId = textOrNull(frame.get("reqId"));
+    String type = textOrNull(frame.get("type"));
     try {
-      route(session, frame, reqId);
+      route(session, frame, type, reqId);
     } catch (InvalidFrameException ex) {
       nack(session, reqId, NackCode.INVALID, ex.getMessage());
     } catch (DomainException ex) {
       nack(session, reqId, NackCodeMapper.toNackCode(ex.getErrorCode()), ex.getErrorCode().code());
     } catch (RuntimeException ex) {
       // MDC already carries userId and connectionId.
-      log.error("Unhandled {} frame failure", textOrNull(frame.get("type")), ex);
+      log.error("Unhandled {} frame failure", type, ex);
       nack(session, reqId, NackCode.INTERNAL, "Internal error");
     }
   }
 
-  private void route(WebSocketSession session, JsonNode tree, String reqId) throws IOException {
-    ClientEnvelope frame = read(tree, ClientEnvelope.class, "Invalid envelope");
-    if (Objects.isNull(textOrNull(tree.get("type")))) {
+  private void route(WebSocketSession session, JsonNode tree, String type, String reqId)
+      throws IOException {
+    if (Objects.isNull(type)) {
       throw new InvalidFrameException("Missing type");
     }
-    FrameHandler<?> handler = handlers.get(frame.type());
+    ClientEnvelope frame = read(tree, ClientEnvelope.class, "Invalid envelope");
+    FrameHandler<?> handler = handlers.get(type);
     if (Objects.isNull(handler)) {
       nack(session, reqId, NackCode.UNSUPPORTED, "Unsupported type");
       return;
@@ -99,7 +98,7 @@ public class FrameDispatcher {
     writer.send(session, ServerEnvelope.nack(reqId, code, message));
   }
 
-  /** A non-blank string, else null: a blank reqId correlates nothing. */
+  /** Blank counts as missing. */
   private static String textOrNull(JsonNode node) {
     return Objects.nonNull(node) && node.isTextual() && !node.asText().isBlank()
         ? node.asText()

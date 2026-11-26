@@ -19,6 +19,7 @@ The source of truth is ADR-0005 (`docs/plans/architecture/adr/0005-raw-websocket
 { "v": 2, "type": "TYPE", "reqId": "string, client-chosen", "channelId": 12, "payload": {} }
 ```
 Each client frame with a `reqId` gets exactly one `ACK` or `NACK` with the same `reqId`.
+Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-enabled=true` (P4 only, removed in P4-T17); any other `v` → close 4400.
 
 ## Client → server
 | type | payload | server reply |
@@ -40,7 +41,7 @@ Each client frame with a `reqId` gets exactly one `ACK` or `NACK` with the same 
 | type | payload |
 |---|---|
 | `ACK` / `NACK` | `{…result}` / `{code, message, retryAfterMs?}`. Codes: `UNSUPPORTED`, `INVALID`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL` |
-| `MESSAGE_NEW` | `{messageId, seq, senderId, contentType, content, mediaKey?, replyTo?, createdTime}` |
+| `MESSAGE_NEW` | `{messageId, seq, senderId, contentType, content, mediaKey?, replyToId?, createdTime}` |
 | `MESSAGE_UPDATED` | `{messageId, seq, content, version, editedTime}` |
 | `MESSAGE_DELETED` | `{messageId, seq}` |
 | `REACTION` | `{messageId, emoji, userId, on}` |

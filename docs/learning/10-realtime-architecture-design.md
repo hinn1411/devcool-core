@@ -470,7 +470,7 @@ The recommendation was written when there was no evidence of a need for more tha
 |---|---|---|
 | Wrap stored sessions in `ConcurrentWebSocketSessionDecorator` | 04 §2 | open, P4-T01. `FrameWriter:31` still writes to the raw session |
 | Clean up on every exit path (`handleTransportError` is not overridden). A reverse index `connectionToChannels` would make `removeConnection` O(1) instead of a scan over all channels, but is optional | 04 §3 | open, P4-T01 |
-| Catch per frame and reply `ERROR`, instead of closing the socket | 04 §7 | partly done: `DomainException` → `ERROR` (`ChatHandler:93-97`). Any other exception (for example the `UncheckedIOException` from a failed SEND ACK, `SendMessageAction:64`) still closes the socket with 1011. P4-T02 |
+| Catch per frame and reply `ERROR`, instead of closing the socket | 04 §7 | done, P4-T02: `FrameDispatcher` NACKs every failure (`INTERNAL` for unexpected ones); the v1 path replies `ERROR "INTERNAL"` |
 | Put the persisted message id, `seq` and `createdTime` in the push | 04 §6 | **done**, P3-T03/T04 (`MessagePush`, `SendAck`) |
 | Wire `UNSUBSCRIBE` end to end | 04 §8 | **done**, P3-T16 |
 | Cut off live pushes when a member is removed or leaves | — | **done**, P3-T16 (`unsubscribeUser` after commit) |

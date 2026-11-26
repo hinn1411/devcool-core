@@ -66,10 +66,7 @@ public abstract class AbstractWsIT {
 
   protected record Account(Long id, String accessToken) {}
 
-  /**
-   * A test-side WS connection; every text frame the server sends lands in {@code inbox}, and the
-   * close status in {@code closed}.
-   */
+  /** Test-side WS connection; frames land in {@code inbox}, the close in {@code closed}. */
   protected record Client(
       WebSocketSession session,
       BlockingQueue<String> inbox,
@@ -147,7 +144,7 @@ public abstract class AbstractWsIT {
     client.session().sendMessage(new TextMessage(json.writeValueAsString(frame)));
   }
 
-  /** A v2 envelope (ADR-0005); null fields are sent as JSON null. */
+  /** A v2 envelope (ADR-0005). */
   protected static Map<String, Object> v2(
       String type, Long channelId, String reqId, Object payload) {
     Map<String, Object> frame = new LinkedHashMap<>();

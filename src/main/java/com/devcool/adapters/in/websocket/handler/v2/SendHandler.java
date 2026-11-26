@@ -53,7 +53,7 @@ public class SendHandler implements FrameHandler<SendPayload> {
         saved -> ack(session, frame.reqId(), clientMsgId, saved));
   }
 
-  /** Runs after commit (commit → ACK → publish); the dispatcher NACKs a failed write. */
+  /** Called after commit; a failed write becomes NACK INTERNAL. */
   private void ack(
       WebSocketSession session, String reqId, ClientMsgId clientMsgId, SavedMessage saved) {
     try {

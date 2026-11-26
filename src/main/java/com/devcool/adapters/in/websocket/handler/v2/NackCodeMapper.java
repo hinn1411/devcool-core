@@ -3,7 +3,7 @@ package com.devcool.adapters.in.websocket.handler.v2;
 import com.devcool.adapters.in.websocket.dto.v2.NackCode;
 import com.devcool.domain.common.ErrorCode;
 
-/** The WebSocket twin of {@code HttpErrorMapper}: same buckets, one client reaction each. */
+/** WS twin of {@code HttpErrorMapper}. */
 public final class NackCodeMapper {
 
   private NackCodeMapper() {}
@@ -36,7 +36,7 @@ public final class NackCodeMapper {
               UNSUPPORTED_MEDIA_TYPE,
               TOO_LARGE_MEDIA ->
           NackCode.INVALID;
-        // The socket was authenticated at the handshake; a later auth error is a denial.
+        // Authenticated at the handshake, so an auth error here is a denial.
       case REFRESH_TOKEN_INVALID,
               INVALID_CREDENTIALS,
               UNAUTHENTICATED,

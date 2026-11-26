@@ -1,4 +1,4 @@
 package com.devcool.adapters.in.websocket.dto.v2;
 
-/** For frame types that carry everything in the envelope (SUBSCRIBE, UNSUBSCRIBE). */
+/** SUBSCRIBE, UNSUBSCRIBE: all fields are on the envelope. */
 public record EmptyPayload() {}
