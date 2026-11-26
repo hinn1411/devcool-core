@@ -20,7 +20,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 heartbeat (P4-T03): PING → one PONG with the same reqId, never a close. */
+/** PING → one PONG with the same reqId, never a close (P4-T03). */
 @ExtendWith(MockitoExtension.class)
 class PingHandlerTest {
 
@@ -48,7 +48,7 @@ class PingHandlerTest {
     verify(session, never()).close(any(CloseStatus.class));
   }
 
-  /** Brief decision: reqId required (ADR-0005 rule 1); the dispatcher rejects it, no PONG. */
+  /** Brief decision: reqId is required (ADR-0005 rule 1). */
   @Test
   void pingWithoutReqId_nacksInvalid() throws Exception {
     dispatch("{\"v\":2,\"type\":\"PING\"}");

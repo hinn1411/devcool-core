@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-/** Client heartbeat (P4-T03): {@code PING} → {@code PONG} with the same reqId. */
+/** {@code PING} → {@code PONG} with the same reqId (P4-T03). */
 @Component
 @RequiredArgsConstructor
 @SuppressFBWarnings(

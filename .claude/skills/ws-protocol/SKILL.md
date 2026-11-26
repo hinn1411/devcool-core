@@ -33,7 +33,7 @@ Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-e
 | `TYPING` | — | none (fire-and-forget, rate-limited) |
 | `READ` | `{seq}` | none |
 | `RESUME` | `{lastSeq}` | `MESSAGE_NEW` × k in seq order, then `ACK {upToSeq}`; or `RESYNC_REQUIRED` |
-| `PING` | — | `PONG` (refreshes presence) |
+| `PING` | — | `PONG` with the same `reqId` (refreshes presence from P4-T10) |
 | `ASK` | `{question}` | `AI_CHUNK`… then `AI_DONE` or `AI_ERROR`, all with the same `reqId` |
 | `ASK_CANCEL` | `{askReqId}` | `ACK` |
 
@@ -55,7 +55,7 @@ Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-e
 | `PONG` | — |
 
 ## Close codes
-`1012` restart (after `RECONNECT`) · `1013` overloaded · `4500` slow consumer (send limit tripped; a stuck write ends as 1001/1006) · `4400` protocol version not supported · `4401` unauthenticated.
+`1001` idle: no client frame for 90 s (the client sends `PING` every 25 s) · `1012` restart (after `RECONNECT`) · `1013` overloaded · `4500` slow consumer (send limit tripped; a stuck write ends as 1001/1006) · `4400` protocol version not supported · `4401` unauthenticated.
 
 ## Invariants
 - Commit → ACK → publish, always.

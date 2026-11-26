@@ -15,14 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.socket.CloseStatus;
 
-/**
- * Heartbeat and server idle close (P4-T03). A 2 s idle timeout keeps the run short; Tomcat checks
- * expiry on its background period (~10 s), so a close lands within timeout + period.
- */
+/** Heartbeat and idle close (P4-T03); Tomcat checks expiry every ~10 s, hence the 25 s wait. */
 @TestPropertySource(properties = "devcool.ws.idle-timeout=2s")
 class WsHeartbeatIT extends AbstractWsIT {
 
-  /** Idle timeout + Tomcat's background period + slack. */
   private static final Duration CLOSE_WITHIN = Duration.ofSeconds(25);
 
   @Autowired ConnectionRegistryPort connectionRegistry;

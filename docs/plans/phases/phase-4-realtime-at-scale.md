@@ -49,7 +49,7 @@ This is the heart of any chat system design interview: *"How do two users connec
 ### Stage 1: harden a single node
 - [x] **P4-T01** Wrap sessions in `ConcurrentWebSocketSessionDecorator` (sendTimeLimit 5 s, buffer 512 KB, TERMINATE). Clean up on every exit path (`afterConnectionClosed`, `handleTransportError`)
 - [x] **P4-T02** Protocol v2 envelope + frame DTOs + dispatcher (a `Map<type, FrameHandler>` instead of a `switch`). Per-frame try/catch → `NACK`/`ERROR`, never close. Legacy v1 accepted behind a flag
-- [ ] **P4-T03** `PING`/`PONG` heartbeat; server-side idle close after 90 s without frames
+- [x] **P4-T03** `PING`/`PONG` heartbeat; server-side idle close after 90 s without frames
 - [ ] **P4-T04** `EDIT`, `DELETE`, `REACT`, `READ` frames call the P3 use cases, and broadcast `MESSAGE_UPDATED`, `MESSAGE_DELETED`, `REACTION`, `READ_RECEIPT`
 ### Auth and origin
 - [ ] **P4-T05** Valkey in Terraform (`data` stack behind the `enable_valkey` hibernate toggle, ADR-0013; ElastiCache Serverless) and in local compose (`valkey/valkey`). Spring Data Redis (Lettuce). **Verify pub/sub support on the serverless offering** and record the result in ADR-0006
