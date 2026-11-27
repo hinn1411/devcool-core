@@ -22,7 +22,11 @@ public interface MessageDtoMapper {
 
   MessageItemResponse toItemResponse(MessageItem item);
 
-  EditMessageCommand toEditCommand(Long userId, Long messageId, EditMessageRequest request);
+  /** Hand-written: the REST constructor has no socket to skip. */
+  default EditMessageCommand toEditCommand(
+      Long userId, Long messageId, EditMessageRequest request) {
+    return new EditMessageCommand(userId, messageId, request.content(), request.version());
+  }
 
   EditMessageResponse toEditResponse(EditedMessage message);
 }

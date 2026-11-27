@@ -4,7 +4,7 @@ import com.devcool.adapters.out.persistence.message.entity.MessageEntity;
 import com.devcool.adapters.out.persistence.message.projection.EditableMessageRow;
 import com.devcool.adapters.out.persistence.message.projection.MessageKeyRow;
 import com.devcool.domain.chat.model.DeletableMessage;
-import com.devcool.domain.chat.model.ReplyTarget;
+import com.devcool.domain.chat.model.MessageRef;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -165,7 +165,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   @Query(
       """
       SELECT new com.devcool.domain.chat.model.DeletableMessage(
-      ms.id, ms.channel.id, ms.user.id, ms.deletedTime)
+      ms.id, ms.channel.id, ms.user.id, ms.deletedTime, ms.seq, ms.createdTime)
       FROM MessageEntity ms
       WHERE ms.id = :id
       """)
@@ -174,11 +174,11 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
   /** Deleted rows included: the caller tells unknown, other channel and deleted apart. */
   @Query(
       """
-      SELECT new com.devcool.domain.chat.model.ReplyTarget(ms.channel.id, ms.deletedTime)
+      SELECT new com.devcool.domain.chat.model.MessageRef(ms.channel.id, ms.deletedTime)
       FROM MessageEntity ms
       WHERE ms.id = :id
       """)
-  Optional<ReplyTarget> findReplyTarget(@Param("id") Long id);
+  Optional<MessageRef> findMessageRef(@Param("id") Long id);
 
   /** Only the first delete matches, so its timestamp is the one kept. */
   @Modifying(flushAutomatically = true, clearAutomatically = true)

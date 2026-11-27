@@ -26,8 +26,8 @@ public class ReactionAdapter implements ReactionPort {
   private final MessageReactionRepository repo;
 
   @Override
-  public void add(Long messageId, Long userId, Emoji emoji, Instant reactedAt) {
-    repo.insertIfAbsent(messageId, userId, emoji.value(), reactedAt);
+  public boolean add(Long messageId, Long userId, Emoji emoji, Instant reactedAt) {
+    return repo.insertIfAbsent(messageId, userId, emoji.value(), reactedAt) == 1;
   }
 
   @Override
@@ -36,8 +36,8 @@ public class ReactionAdapter implements ReactionPort {
   }
 
   @Override
-  public void remove(Long messageId, Long userId, Emoji emoji) {
-    repo.deleteOwn(messageId, userId, emoji.value());
+  public boolean remove(Long messageId, Long userId, Emoji emoji) {
+    return repo.deleteOwn(messageId, userId, emoji.value()) == 1;
   }
 
   @Override

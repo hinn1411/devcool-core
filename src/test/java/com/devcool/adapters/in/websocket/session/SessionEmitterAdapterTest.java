@@ -12,7 +12,12 @@ import static org.mockito.Mockito.when;
 
 import com.devcool.adapters.in.websocket.config.WsIdleProps;
 import com.devcool.adapters.in.websocket.config.WsSendLimitsProps;
+import com.devcool.domain.chat.model.MessageDeletedEvent;
 import com.devcool.domain.chat.model.MessageEvent;
+import com.devcool.domain.chat.model.MessageUpdatedEvent;
+import com.devcool.domain.chat.model.ReactionEvent;
+import com.devcool.domain.chat.model.ReadReceiptEvent;
+import com.devcool.domain.chat.model.RealtimeEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -204,6 +209,94 @@ class SessionEmitterAdapterTest {
     assertThat(push.path("type").asText()).isEqualTo("MESSAGE");
     assertThat(push.path("messageId").asLong()).isEqualTo(101L);
     assertThat(push.has("v")).isFalse();
+  }
+
+  // --- edit/delete/reaction/receipt events ---
+
+  private static final Instant CREATED = Instant.parse("2026-11-26T10:00:00Z");
+  private static final Instant EDITED = Instant.parse("2026-11-26T10:05:00Z");
+
+  @Test
+  void v2Connection_receivesMessageUpdated() throws Exception {
+    JsonNode push = pushToV2(new MessageUpdatedEvent(42L, 101L, 1L, CREATED, "fixed", 4, EDITED));
+
+    assertThat(push.path("type").asText()).isEqualTo("MESSAGE_UPDATED");
+    assertThat(push.path("channelId").asLong()).isEqualTo(42L);
+    JsonNode payload = push.path("payload");
+    assertThat(payload.path("messageId").asLong()).isEqualTo(101L);
+    assertThat(payload.path("seq").asLong()).isEqualTo(1L);
+    assertThat(payload.path("createdTime").asText()).isEqualTo("2026-11-26T10:00:00Z");
+    assertThat(payload.path("content").asText()).isEqualTo("fixed");
+    assertThat(payload.path("version").asInt()).isEqualTo(4);
+    assertThat(payload.path("editedTime").asText()).isEqualTo("2026-11-26T10:05:00Z");
+  }
+
+  @Test
+  void v2Connection_receivesMessageDeleted() throws Exception {
+    JsonNode push = pushToV2(new MessageDeletedEvent(42L, 101L, 1L, CREATED));
+
+    assertThat(push.path("type").asText()).isEqualTo("MESSAGE_DELETED");
+    assertThat(push.path("channelId").asLong()).isEqualTo(42L);
+    JsonNode payload = push.path("payload");
+    assertThat(payload.path("messageId").asLong()).isEqualTo(101L);
+    assertThat(payload.path("seq").asLong()).isEqualTo(1L);
+    assertThat(payload.path("createdTime").asText()).isEqualTo("2026-11-26T10:00:00Z");
+    assertThat(payload.has("content")).isFalse();
+  }
+
+  @Test
+  void v2Connection_receivesReaction() throws Exception {
+    JsonNode push = pushToV2(new ReactionEvent(42L, 101L, "👍", 7L, false));
+
+    assertThat(push.path("type").asText()).isEqualTo("REACTION");
+    assertThat(push.path("channelId").asLong()).isEqualTo(42L);
+    JsonNode payload = push.path("payload");
+    assertThat(payload.path("messageId").asLong()).isEqualTo(101L);
+    assertThat(payload.path("emoji").asText()).isEqualTo("👍");
+    assertThat(payload.path("userId").asLong()).isEqualTo(7L);
+    assertThat(payload.path("on").isBoolean()).isTrue();
+    assertThat(payload.path("on").asBoolean()).isFalse();
+  }
+
+  @Test
+  void v2Connection_receivesReadReceipt() throws Exception {
+    JsonNode push = pushToV2(new ReadReceiptEvent(42L, 7L, 30L));
+
+    assertThat(push.path("type").asText()).isEqualTo("READ_RECEIPT");
+    assertThat(push.path("channelId").asLong()).isEqualTo(42L);
+    assertThat(push.path("payload").path("userId").asLong()).isEqualTo(7L);
+    assertThat(push.path("payload").path("seq").asLong()).isEqualTo(30L);
+  }
+
+  /** v1 has no shape for these. */
+  @Test
+  void v1Connection_getsNoneOfTheNewEvents() {
+    SessionRegistry registry = registry(LONG, DataSize.ofMegabytes(1));
+    FakeWsSession alice = registered(registry, "alice");
+    ProtocolVersions.mark(registry.get("alice"), 1);
+    SessionEmitterAdapter emitter = emitter(registry);
+
+    emitter.send("alice", new MessageUpdatedEvent(42L, 101L, 1L, CREATED, "fixed", 4, EDITED));
+    emitter.send("alice", new MessageDeletedEvent(42L, 101L, 1L, CREATED));
+    emitter.send("alice", new ReactionEvent(42L, 101L, "👍", 7L, true));
+    emitter.send("alice", new ReadReceiptEvent(42L, 7L, 30L));
+
+    assertThat(alice.received()).isEmpty();
+    assertThat(alice.closeStatus()).isNull();
+  }
+
+  private JsonNode pushToV2(RealtimeEvent event) throws Exception {
+    SessionRegistry registry = registry(LONG, DataSize.ofMegabytes(1));
+    FakeWsSession alice = registered(registry, "alice");
+    ProtocolVersions.mark(registry.get("alice"), 2);
+
+    emitter(registry).send("alice", event);
+
+    assertThat(alice.received()).hasSize(1);
+    JsonNode push = objectMapper.readTree(alice.received().peek());
+    assertThat(push.path("v").asInt()).isEqualTo(2);
+    assertThat(push.hasNonNull("reqId")).isFalse();
+    return push;
   }
 
   // --- fixtures ---

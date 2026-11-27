@@ -11,7 +11,7 @@ The protocol is specified in `docs/plans/architecture/adr/0005-raw-websocket-pro
 
 - Envelope: `{v, type, reqId, channelId, payload}`. Each client frame with a `reqId` gets exactly one `ACK` or `NACK` carrying that `reqId`.
 - A bad frame → `NACK`/`ERROR`. **Never close the socket for a frame-level error.** Close codes are reserved: 4401 auth, 4400 protocol, 1013 overload, 1012 restart, 4500 slow consumer. Tomcat closes a socket with no client frame for 90 s with 1001.
-- Order of operations when sending: **commit → ACK → publish**. Never broadcast something that isn't committed.
+- **Never broadcast something that isn't committed.** `SEND`: commit → ACK → publish. Other mutations publish via `ChannelEventPublisher` (afterCommit), so commit → publish → ACK.
 - Every message event carries `messageId`, `seq` and `createdTime`.
 - The sender's own connection is skipped by `originConnectionId`; a node ignores its own backplane echo via `originNodeId`.
 - Never do blocking I/O on a Redis/Lettuce callback thread. Hand off to the delivery executor.

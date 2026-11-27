@@ -3,6 +3,7 @@ package com.devcool.domain.chat.model;
 import com.devcool.domain.chat.model.enums.ContentType;
 import java.time.Instant;
 
+/** {@code MESSAGE_NEW}. */
 public record MessageEvent(
     Long channelId,
     Long senderId,
@@ -11,4 +12,5 @@ public record MessageEvent(
     Long messageId,
     Long seq,
     Instant createdTime,
-    Long replyToId) {}
+    Long replyToId)
+    implements RealtimeEvent {}

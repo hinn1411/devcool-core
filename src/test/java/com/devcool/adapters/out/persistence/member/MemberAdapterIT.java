@@ -8,6 +8,7 @@ import com.devcool.adapters.out.persistence.member.mapper.MemberMapperImpl;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.channel.model.enums.BoundaryType;
 import com.devcool.domain.channel.model.enums.ChannelType;
+import com.devcool.domain.member.model.ReadMarker;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import com.devcool.domain.user.model.enums.Role;
@@ -44,15 +45,18 @@ class MemberAdapterIT extends AbstractJpaIT {
 
   @Test
   void advance_movesForward_neverBack() {
-    assertThat(members.advanceLastReadSeq(channel.getId(), alice.getId(), 5)).isTrue();
-    assertThat(members.advanceLastReadSeq(channel.getId(), alice.getId(), 3)).isTrue();
+    assertThat(members.advanceLastReadSeq(channel.getId(), alice.getId(), 5))
+        .contains(new ReadMarker(0, 5));
+    assertThat(members.advanceLastReadSeq(channel.getId(), alice.getId(), 3))
+        .contains(new ReadMarker(5, 5));
 
     assertThat(lastReadSeq(alice, channel)).isEqualTo(5);
   }
 
   @Test
   void advance_clampsToLastSeq() {
-    members.advanceLastReadSeq(channel.getId(), alice.getId(), 9_999);
+    assertThat(members.advanceLastReadSeq(channel.getId(), alice.getId(), 9_999))
+        .contains(new ReadMarker(0, LAST_SEQ));
 
     assertThat(lastReadSeq(alice, channel)).isEqualTo(LAST_SEQ);
   }
@@ -61,7 +65,7 @@ class MemberAdapterIT extends AbstractJpaIT {
   void advance_nonMember_matchesNoRow() {
     UserEntity outsider = user();
 
-    assertThat(members.advanceLastReadSeq(channel.getId(), outsider.getId(), 5)).isFalse();
+    assertThat(members.advanceLastReadSeq(channel.getId(), outsider.getId(), 5)).isEmpty();
     assertThat(lastReadSeq(alice, channel)).isZero();
   }
 

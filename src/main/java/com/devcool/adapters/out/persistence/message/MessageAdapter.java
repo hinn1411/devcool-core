@@ -10,7 +10,7 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
-import com.devcool.domain.chat.model.ReplyTarget;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.port.out.MessagePort;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
@@ -142,7 +142,7 @@ public class MessageAdapter implements MessagePort {
   }
 
   @Override
-  public Optional<ReplyTarget> findReplyTarget(Long messageId) {
-    return repo.findReplyTarget(messageId);
+  public Optional<MessageRef> findMessageRef(Long messageId) {
+    return repo.findMessageRef(messageId);
   }
 }

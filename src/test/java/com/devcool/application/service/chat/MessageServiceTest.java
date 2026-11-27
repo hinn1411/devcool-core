@@ -22,8 +22,8 @@ import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.model.ReactionSummary;
-import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.policy.MessageCreationStrategy;
@@ -222,14 +222,14 @@ class MessageServiceTest {
       service.save(text(CHANNEL));
 
       assertThat(storedMessage().getReplyToId()).isNull();
-      verify(messagePort, never()).findReplyTarget(anyLong());
+      verify(messagePort, never()).findMessageRef(anyLong());
     }
 
     @Test
     void reply_toLiveParentInTheSameChannel_savesReplyToId() {
       aliceIsMember();
       freshSend(42L);
-      parentIs(new ReplyTarget(CHANNEL, null));
+      parentIs(new MessageRef(CHANNEL, null));
 
       service.save(reply(PARENT));
 
@@ -240,7 +240,7 @@ class MessageServiceTest {
     void reply_toUnknownParent_isRejected_beforeAnyBump() {
       aliceIsMember();
       noReplay();
-      when(messagePort.findReplyTarget(PARENT)).thenReturn(Optional.empty());
+      when(messagePort.findMessageRef(PARENT)).thenReturn(Optional.empty());
 
       assertRejectedWithoutBump(reply(PARENT));
     }
@@ -250,7 +250,7 @@ class MessageServiceTest {
       // Otherwise any member could pull a preview of a channel they can't read (BOLA).
       aliceIsMember();
       noReplay();
-      parentIs(new ReplyTarget(OTHER_CHANNEL, null));
+      parentIs(new MessageRef(OTHER_CHANNEL, null));
 
       assertRejectedWithoutBump(reply(PARENT));
     }
@@ -259,7 +259,7 @@ class MessageServiceTest {
     void reply_toDeletedParent_isRejected_beforeAnyBump() {
       aliceIsMember();
       noReplay();
-      parentIs(new ReplyTarget(CHANNEL, PARENT_DELETED));
+      parentIs(new MessageRef(CHANNEL, PARENT_DELETED));
 
       assertRejectedWithoutBump(reply(PARENT));
     }
@@ -284,11 +284,11 @@ class MessageServiceTest {
       SavedMessage saved = service.save(reply(PARENT));
 
       assertThat(saved.duplicate()).isTrue();
-      verify(messagePort, never()).findReplyTarget(anyLong());
+      verify(messagePort, never()).findMessageRef(anyLong());
     }
 
-    private void parentIs(ReplyTarget target) {
-      when(messagePort.findReplyTarget(PARENT)).thenReturn(Optional.of(target));
+    private void parentIs(MessageRef target) {
+      when(messagePort.findMessageRef(PARENT)).thenReturn(Optional.of(target));
     }
 
     private void assertRejectedWithoutBump(CreateMessageCommand command) {

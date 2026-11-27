@@ -1,4 +1,9 @@
 package com.devcool.domain.channel.port.in.command;
 
-/** "I have seen everything up to {@code seq}" from {@code userId} in {@code channelId}. */
-public record MarkChannelReadCommand(Long channelId, Long userId, long seq) {}
+/** "Seen up to {@code seq}". {@code connectionId}: the actor's socket, or null over REST. */
+public record MarkChannelReadCommand(String connectionId, Long channelId, Long userId, long seq) {
+
+  public MarkChannelReadCommand(Long channelId, Long userId, long seq) {
+    this(null, channelId, userId, seq);
+  }
+}

@@ -1,6 +1,7 @@
 package com.devcool.domain.member.port.out;
 
 import com.devcool.domain.member.model.Member;
+import com.devcool.domain.member.model.ReadMarker;
 import com.devcool.domain.member.model.enums.MemberType;
 import java.util.List;
 import java.util.Optional;
@@ -23,10 +24,10 @@ public interface MemberPort {
   boolean addMembers(Long channelId, Set<Long> memberIds);
 
   /**
-   * {@code last_read_seq = GREATEST(last_read_seq, LEAST(seq, channel.last_seq))}. False when the
-   * user is not a member of the channel (no row matched).
+   * {@code last_read_seq = GREATEST(last_read_seq, LEAST(seq, channel.last_seq))}; the marker
+   * before and after, empty for a non-member.
    */
-  boolean advanceLastReadSeq(Long channelId, Long userId, long seq);
+  Optional<ReadMarker> advanceLastReadSeq(Long channelId, Long userId, long seq);
 
   /** False when there was no row. */
   boolean removeMember(Long channelId, Long userId);

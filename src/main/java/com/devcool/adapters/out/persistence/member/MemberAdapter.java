@@ -6,6 +6,7 @@ import com.devcool.adapters.out.persistence.member.mapper.MemberMapper;
 import com.devcool.adapters.out.persistence.member.repository.MemberRepository;
 import com.devcool.adapters.out.persistence.user.entity.UserEntity;
 import com.devcool.domain.member.model.Member;
+import com.devcool.domain.member.model.ReadMarker;
 import com.devcool.domain.member.model.enums.MemberType;
 import com.devcool.domain.member.port.out.MemberPort;
 import jakarta.persistence.EntityManager;
@@ -69,8 +70,9 @@ public class MemberAdapter implements MemberPort {
   }
 
   @Override
-  public boolean advanceLastReadSeq(Long channelId, Long userId, long seq) {
-    return repo.advanceLastReadSeq(channelId, userId, seq) > 0;
+  public Optional<ReadMarker> advanceLastReadSeq(Long channelId, Long userId, long seq) {
+    return repo.advanceLastReadSeq(channelId, userId, seq)
+        .map(row -> new ReadMarker(row.getPreviousSeq(), row.getSeq()));
   }
 
   @Override

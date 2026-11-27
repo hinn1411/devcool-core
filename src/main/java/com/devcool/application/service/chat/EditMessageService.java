@@ -7,6 +7,7 @@ import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.MessageVersionConflictException;
 import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.EditedMessage;
+import com.devcool.domain.chat.model.MessageUpdatedEvent;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.policy.MessageContentPolicy;
 import com.devcool.domain.chat.port.in.EditMessageUseCase;
@@ -28,12 +29,17 @@ public class EditMessageService implements EditMessageUseCase {
   private final MessagePort messagePort;
   private final ChannelAuthorizer channelAuthorizer;
   private final Clock clock;
+  private final ChannelEventPublisher eventPublisher;
 
   public EditMessageService(
-      MessagePort messagePort, ChannelAuthorizer channelAuthorizer, Clock clock) {
+      MessagePort messagePort,
+      ChannelAuthorizer channelAuthorizer,
+      Clock clock,
+      ChannelEventPublisher eventPublisher) {
     this.messagePort = messagePort;
     this.channelAuthorizer = channelAuthorizer;
     this.clock = clock;
+    this.eventPublisher = eventPublisher;
   }
 
   @Override
@@ -58,7 +64,6 @@ public class EditMessageService implements EditMessageUseCase {
       throw new MessageEditWindowClosedException();
     }
     MessageContentPolicy.requireValidText(command.content());
-    // Null-safe: the WS EDIT frame (P4-T04) has no @NotNull.
     if (!Objects.equals(command.version(), message.version())) {
       throw new MessageVersionConflictException();
     }
@@ -68,6 +73,16 @@ public class EditMessageService implements EditMessageUseCase {
     if (!messagePort.updateContent(message.id(), message.version(), command.content(), now)) {
       throw new MessageVersionConflictException();
     }
+    eventPublisher.publishAfterCommit(
+        new MessageUpdatedEvent(
+            message.channelId(),
+            message.id(),
+            message.seq(),
+            message.createdTime(),
+            command.content(),
+            message.version() + 1,
+            now),
+        command.connectionId());
     return result(message, command.content(), message.version() + 1, now);
   }
 
