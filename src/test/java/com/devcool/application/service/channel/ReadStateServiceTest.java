@@ -19,7 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/** P3-T10 loop 1: one guarded UPDATE; no matched row = not your channel = 404. P4-T04: receipt. */
+/** One guarded UPDATE (non-member = 404); a receipt only when the marker moves. */
 @ExtendWith(MockitoExtension.class)
 class ReadStateServiceTest {
 

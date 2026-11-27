@@ -167,7 +167,7 @@ class DeleteMessageServiceTest {
     assertThatCode(() -> service.delete(delete(ALICE))).doesNotThrowAnyException();
   }
 
-  // ---- 5. live event (P4-T04) ------------------------------------------------------------------
+  // ---- 5. live event ---------------------------------------------------------------------------
 
   @Test
   void delete_publishesMessageDeletedAfterCommit_skippingTheActorsSocket() {

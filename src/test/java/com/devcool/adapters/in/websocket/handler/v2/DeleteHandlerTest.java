@@ -15,7 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 DELETE (P4-T04): frame → command → ACK. */
+/** v2 DELETE: frame → command → ACK. */
 @ExtendWith(MockitoExtension.class)
 class DeleteHandlerTest {
 

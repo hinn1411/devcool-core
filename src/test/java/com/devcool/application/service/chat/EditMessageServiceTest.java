@@ -218,7 +218,7 @@ class EditMessageServiceTest {
     neverUpdated();
   }
 
-  // ---- 7. live event (P4-T04) ------------------------------------------------------------------
+  // ---- 7. live event ---------------------------------------------------------------------------
 
   @Test
   void edit_publishesMessageUpdatedAfterCommit_skippingTheActorsSocket() {

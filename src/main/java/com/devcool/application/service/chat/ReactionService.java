@@ -4,8 +4,8 @@ import com.devcool.application.service.channel.ChannelAuthorizer;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.ReactionLimitException;
 import com.devcool.domain.chat.model.Emoji;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.model.ReactionEvent;
-import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.policy.ReactionPolicy;
 import com.devcool.domain.chat.port.in.ReactToMessageUseCase;
 import com.devcool.domain.chat.port.in.command.ReactionCommand;
@@ -77,12 +77,11 @@ public class ReactionService implements ReactToMessageUseCase {
         command.connectionId());
   }
 
-  /** Unknown, deleted or not the caller's channel: one 404, no id probing. Returns the channel. */
+  /** One 404 for unknown, deleted or not your channel; returns the channel id. */
   private Long requireReactable(ReactionCommand command) {
-    // Reuses the reply lookup (channel + deletedTime); rename to MessageRef later.
-    ReplyTarget target =
+    MessageRef target =
         messagePort
-            .findReplyTarget(command.messageId())
+            .findMessageRef(command.messageId())
             .filter(message -> message.deletedTime() == null)
             .orElseThrow(() -> new MessageNotFoundException(command.messageId()));
     if (!channelAuthorizer.isMember(target.channelId(), command.userId())) {

@@ -1,13 +1,9 @@
 package com.devcool.domain.chat.port.in.command;
 
-/**
- * {@code version} is the version the client last saw (optimistic lock). {@code connectionId} is the
- * actor's socket, skipped by the broadcast; null over REST.
- */
+/** {@code version}: the one the client last saw. {@code connectionId}: actor's socket, or null. */
 public record EditMessageCommand(
     String connectionId, Long userId, Long messageId, String content, Integer version) {
 
-  /** REST: no socket to skip. */
   public EditMessageCommand(Long userId, Long messageId, String content, Integer version) {
     this(null, userId, messageId, content, version);
   }

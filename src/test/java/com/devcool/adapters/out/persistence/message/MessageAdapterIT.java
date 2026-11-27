@@ -15,8 +15,8 @@ import com.devcool.domain.chat.model.EditableMessage;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageKey;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.model.ReplyPreview;
-import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.port.out.MessagePort;
 import com.devcool.domain.user.model.enums.Role;
@@ -437,14 +437,13 @@ class MessageAdapterIT extends AbstractJpaIT {
     }
 
     @Test
-    void findReplyTarget_returnsChannelAndDeletedTime_evenIfDeleted() {
+    void findMessageRef_returnsChannelAndDeletedTime_evenIfDeleted() {
       Long live = text(channelA, "live");
       Long gone = deletedText(channelB, "gone");
       resetPersistenceContext();
 
-      assertThat(messagePort.findReplyTarget(live))
-          .contains(new ReplyTarget(channelA.getId(), null));
-      assertThat(messagePort.findReplyTarget(gone))
+      assertThat(messagePort.findMessageRef(live)).contains(new MessageRef(channelA.getId(), null));
+      assertThat(messagePort.findMessageRef(gone))
           .hasValueSatisfying(
               target -> {
                 assertThat(target.channelId()).isEqualTo(channelB.getId());
@@ -453,8 +452,8 @@ class MessageAdapterIT extends AbstractJpaIT {
     }
 
     @Test
-    void findReplyTarget_unknownId_isEmpty() {
-      assertThat(messagePort.findReplyTarget(-1L)).isEmpty();
+    void findMessageRef_unknownId_isEmpty() {
+      assertThat(messagePort.findMessageRef(-1L)).isEmpty();
     }
 
     @ParameterizedTest

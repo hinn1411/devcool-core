@@ -2,7 +2,7 @@ package com.devcool.adapters.in.websocket.handler.v2;
 
 import java.util.Objects;
 
-/** A payload field the frame can't do without; missing → {@code NACK INVALID}. */
+/** Missing required payload field → {@code NACK INVALID}. */
 final class Required {
 
   private Required() {}

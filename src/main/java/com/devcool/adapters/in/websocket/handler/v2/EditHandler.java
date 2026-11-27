@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 {@code EDIT} (P4-T04). */
+/** v2 {@code EDIT}. */
 @Component
 @RequiredArgsConstructor
 @SuppressFBWarnings(
@@ -46,7 +46,7 @@ public class EditHandler implements FrameHandler<EditPayload> {
                 AuthHandshakeInterceptor.userIdOf(session),
                 Required.field(payload.messageId(), "messageId"),
                 payload.content(),
-                payload.expectedVersion()));
+                Required.field(payload.expectedVersion(), "expectedVersion")));
     writer.send(session, ServerEnvelope.ack(frame.reqId(), EditAckPayload.from(edited)));
   }
 }

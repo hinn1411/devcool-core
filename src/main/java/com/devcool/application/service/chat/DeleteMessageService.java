@@ -65,7 +65,7 @@ public class DeleteMessageService implements DeleteMessageUseCase {
     if (!MessageDeletePolicy.mayDelete(isSender, channelType, role)) {
       throw new ForbiddenException("Only the sender or a channel admin can delete this message");
     }
-    // A lost race to another delete answers the same, but only the winner broadcasts.
+    // Only the delete that wins a race broadcasts.
     if (message.deletedTime() == null
         && messagePort.markDeleted(message.id(), Instant.now(clock))) {
       eventPublisher.publishAfterCommit(

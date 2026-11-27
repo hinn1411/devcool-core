@@ -9,13 +9,13 @@ import java.util.Map;
 import java.util.Set;
 
 public interface ReactionPort {
-  /** No-op if the row exists, also under concurrent inserts; true if this call inserted it. */
+  /** True if this call inserted the row (a no-op otherwise, also under races). */
   boolean add(Long messageId, Long userId, Emoji emoji, Instant reactedAt);
 
   /** The emojis already on the message. */
   Set<String> distinctEmojis(Long messageId);
 
-  /** Deletes the row if present; true if this call deleted it. */
+  /** True if this call deleted the row. */
   boolean remove(Long messageId, Long userId, Emoji emoji);
 
   /** One query: per message, emojis by first use; messages without any are absent. */

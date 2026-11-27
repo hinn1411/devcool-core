@@ -24,8 +24,8 @@ public interface MemberPort {
   boolean addMembers(Long channelId, Set<Long> memberIds);
 
   /**
-   * {@code last_read_seq = GREATEST(last_read_seq, LEAST(seq, channel.last_seq))}, with the marker
-   * before and after. Empty when the user is not a member of the channel (no row matched).
+   * {@code last_read_seq = GREATEST(last_read_seq, LEAST(seq, channel.last_seq))}; the marker
+   * before and after, empty for a non-member.
    */
   Optional<ReadMarker> advanceLastReadSeq(Long channelId, Long userId, long seq);
 

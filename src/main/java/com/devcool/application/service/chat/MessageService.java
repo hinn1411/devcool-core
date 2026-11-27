@@ -9,8 +9,8 @@ import com.devcool.domain.chat.exception.InvalidMessageConfigException;
 import com.devcool.domain.chat.model.Message;
 import com.devcool.domain.chat.model.MessageItem;
 import com.devcool.domain.chat.model.MessageList;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.model.ReactionSummary;
-import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.model.SavedMessage;
 import com.devcool.domain.chat.model.enums.ContentType;
 import com.devcool.domain.chat.policy.MessageCreationStrategy;
@@ -138,9 +138,9 @@ public class MessageService implements SaveMessageUseCase, GetMessageQuery {
     if (Objects.isNull(command.replyToId())) {
       return;
     }
-    ReplyTarget parent =
+    MessageRef parent =
         messagePort
-            .findReplyTarget(command.replyToId())
+            .findMessageRef(command.replyToId())
             .orElseThrow(
                 () -> {
                   log.warn(

@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 REACT (P4-T04): {@code on} picks react or unreact; then ACK. */
+/** v2 REACT: {@code on} picks react or unreact. */
 @ExtendWith(MockitoExtension.class)
 class ReactHandlerTest {
 

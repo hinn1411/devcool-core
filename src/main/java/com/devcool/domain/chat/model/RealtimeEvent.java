@@ -1,6 +1,6 @@
 package com.devcool.domain.chat.model;
 
-/** Something every live subscriber of {@link #channelId()} should see (ADR-0005 event types). */
+/** A push to every live subscriber of {@link #channelId()}. */
 public sealed interface RealtimeEvent
     permits MessageEvent,
         MessageUpdatedEvent,

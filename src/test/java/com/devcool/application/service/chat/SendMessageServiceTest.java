@@ -27,11 +27,11 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,7 +44,15 @@ class SendMessageServiceTest {
   @Mock private ConnectionRegistryPort connectionRegistryPort;
   @Mock private RealtimeEmitterPort realtimeEmitterPort;
   @Mock private SaveMessageUseCase saveMessageUseCase;
-  @InjectMocks private SendMessageService service;
+  private SendMessageService service;
+
+  @BeforeEach
+  void setUp() {
+    service =
+        new SendMessageService(
+            new ChannelEventPublisher(connectionRegistryPort, realtimeEmitterPort),
+            saveMessageUseCase);
+  }
 
   @SuppressWarnings("unchecked")
   private final Consumer<SavedMessage> onCommitted = mock(Consumer.class);

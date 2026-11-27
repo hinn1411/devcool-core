@@ -20,7 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 EDIT (P4-T04): frame → command → ACK {messageId, version, editedTime}. */
+/** v2 EDIT: frame → command → ACK {messageId, version, editedTime}. */
 @ExtendWith(MockitoExtension.class)
 class EditHandlerTest {
 
@@ -81,6 +81,18 @@ class EditHandlerTest {
 
     JsonNode nack = harness.onlyReply();
     assertThat(nack.path("type").asText()).isEqualTo("NACK");
+    assertThat(nack.path("payload").path("code").asText()).isEqualTo("INVALID");
+    verify(useCase, never()).edit(any());
+  }
+
+  @Test
+  void missingExpectedVersion_nacksInvalid_withoutCallingTheUseCase() throws Exception {
+    harness.dispatch(
+        """
+        {"v":2,"type":"EDIT","reqId":"e-4","payload":{"messageId":500,"content":"fixed"}}
+        """);
+
+    JsonNode nack = harness.onlyReply();
     assertThat(nack.path("payload").path("code").asText()).isEqualTo("INVALID");
     verify(useCase, never()).edit(any());
   }

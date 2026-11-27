@@ -17,7 +17,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/** One handler behind the real dispatcher, on a mocked session of user 10 / connection conn-1. */
+/** One handler behind the real dispatcher; user 10 on connection conn-1. */
 final class V2Harness {
 
   static final long USER = 10L;

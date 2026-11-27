@@ -211,7 +211,7 @@ class SessionEmitterAdapterTest {
     assertThat(push.has("v")).isFalse();
   }
 
-  // --- the P4-T04 event types ---
+  // --- edit/delete/reaction/receipt events ---
 
   private static final Instant CREATED = Instant.parse("2026-11-26T10:00:00Z");
   private static final Instant EDITED = Instant.parse("2026-11-26T10:05:00Z");
@@ -268,7 +268,7 @@ class SessionEmitterAdapterTest {
     assertThat(push.path("payload").path("seq").asLong()).isEqualTo(30L);
   }
 
-  /** Brief: v1 has no shape for these; it is removed in P4-T17. */
+  /** v1 has no shape for these. */
   @Test
   void v1Connection_getsNoneOfTheNewEvents() {
     SessionRegistry registry = registry(LONG, DataSize.ofMegabytes(1));

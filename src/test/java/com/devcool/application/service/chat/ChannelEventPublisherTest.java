@@ -1,5 +1,6 @@
 package com.devcool.application.service.chat;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -22,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/** P4-T04: commit → publish; the actor's socket is skipped; a rollback publishes nothing. */
+/** Publish after commit, skip the actor's socket, nothing on rollback. */
 @ExtendWith(MockitoExtension.class)
 class ChannelEventPublisherTest {
 
@@ -80,6 +81,13 @@ class ChannelEventPublisherTest {
 
     verify(emitter).send("b", EVENT);
     verify(emitter, never()).send(eq("a"), any());
+  }
+
+  @Test
+  void failingRegistryLookup_isLoggedNotThrown() {
+    when(registry.getConnectionsByChannel(42L)).thenThrow(new IllegalStateException("down"));
+
+    assertThatCode(() -> publisher.publishAfterCommit(EVENT, "a")).doesNotThrowAnyException();
   }
 
   @Test

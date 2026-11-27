@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 {@code READ} (P4-T04). */
+/** v2 {@code READ}. */
 @Component
 @RequiredArgsConstructor
 @SuppressFBWarnings(

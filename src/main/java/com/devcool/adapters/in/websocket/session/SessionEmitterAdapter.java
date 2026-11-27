@@ -64,9 +64,7 @@ public class SessionEmitterAdapter implements RealtimeEmitterPort {
     }
   }
 
-  /**
-   * Null when the connection's protocol has no shape for the event (v1 knows only new messages).
-   */
+  /** Null when the session's protocol has no shape for the event (v1: MESSAGE_NEW only). */
   private static Object push(WebSocketSession session, RealtimeEvent event) {
     if (!ProtocolVersions.isV2(session)) {
       return event instanceof MessageEvent message ? MessagePush.from(message) : null;

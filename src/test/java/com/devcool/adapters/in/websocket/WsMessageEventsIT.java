@@ -1,7 +1,9 @@
 package com.devcool.adapters.in.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.devcool.domain.chat.port.in.SendMessageUseCase;
@@ -13,15 +15,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * P4-T04: EDIT/DELETE/REACT/READ over a real socket. The actor gets one ACK/NACK, the channel's
- * other subscribers one event, only after commit and only on a real change. "No event" is proven by
- * a PING whose PONG is the next frame: any event is written before the actor's ACK.
+ * EDIT/DELETE/REACT/READ over real sockets. "No event" = the next frame after a PING is its PONG
+ * (events are written before the actor's ACK).
  */
 class WsMessageEventsIT extends AbstractWsIT {
 
-  /** Same spy as {@link WsProtocolV2IT}, so all three share one cached context. */
+  /** Same spy as {@link WsProtocolV2IT}: one cached context. */
   @MockitoSpyBean SendMessageUseCase sendMessageUseCase;
 
   private Account alice;
@@ -188,6 +190,32 @@ class WsMessageEventsIT extends AbstractWsIT {
     }
   }
 
+  @Test
+  void restDelete_restReact_restRead_reachEveryWsSubscriber() throws Exception {
+    mvc.perform(
+            withAuth(put("/api/v1/channels/{id}/read", channelId), bob)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"seq\":" + seq + "}"))
+        .andExpect(status().isNoContent());
+    assertEveryoneGets("READ_RECEIPT");
+
+    mvc.perform(withAuth(put("/api/v1/messages/{id}/reactions/{emoji}", messageId, "👍"), bob))
+        .andExpect(status().isNoContent());
+    assertEveryoneGets("REACTION");
+
+    mvc.perform(withAuth(delete("/api/v1/messages/{id}", messageId), alice))
+        .andExpect(status().isNoContent());
+    assertEveryoneGets("MESSAGE_DELETED");
+  }
+
+  @Test
+  void badEmoji_nacksInvalid_andNobodyGetsAnEvent() throws Exception {
+    assertNack(
+        request(bobWs, "REACT", Map.of("messageId", messageId, "emoji", "", "on", true)),
+        "INVALID");
+    assertNoEvent(aliceWs);
+  }
+
   // ---- negative authz --------------------------------------------------------------------------
 
   @Test
@@ -209,6 +237,17 @@ class WsMessageEventsIT extends AbstractWsIT {
 
   // ---- helpers ---------------------------------------------------------------------------------
 
+  private static MockHttpServletRequestBuilder withAuth(
+      MockHttpServletRequestBuilder request, Account account) {
+    return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + account.accessToken());
+  }
+
+  private void assertEveryoneGets(String type) throws Exception {
+    for (Client subscriber : new Client[] {aliceWs, bobWs}) {
+      assertThat(event(subscriber).path("type").asText()).isEqualTo(type);
+    }
+  }
+
   /** Sends one frame on {@link #channelId} and returns the reply carrying its reqId. */
   private JsonNode request(Client client, String type, Map<String, Object> payload)
       throws Exception {
@@ -217,7 +256,7 @@ class WsMessageEventsIT extends AbstractWsIT {
     return json.readTree(awaitFrame(client, reqId));
   }
 
-  /** The next frame with this reqId; fails on anything else in between. */
+  /** The next frame, which must carry this reqId. */
   private String awaitFrame(Client client, String reqId) throws Exception {
     String frame = awaitFrame(client);
     assertThat(json.readTree(frame).path("reqId").asText()).as(frame).isEqualTo(reqId);

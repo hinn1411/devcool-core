@@ -3,7 +3,7 @@ package com.devcool.adapters.in.websocket.dto.v2;
 import com.devcool.domain.chat.model.MessageUpdatedEvent;
 import java.time.Instant;
 
-/** {@code MESSAGE_UPDATED}; the channel id is on the envelope. */
+/** {@code MESSAGE_UPDATED} */
 public record MessageUpdatedPayload(
     Long messageId,
     Long seq,

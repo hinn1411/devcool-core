@@ -47,9 +47,8 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
       @Param("role") MemberType role);
 
   /**
-   * Forward-only, clamped read marker (P3-T10) with its value before and after (P4-T04). Empty when
-   * the user is not a member. A no-op (older seq) still matches, with both values equal. The CTE
-   * locks the row first, so a concurrent advance can't make "before" stale.
+   * Forward-only, clamped read marker, before and after; empty for a non-member. The CTE locks the
+   * row so "before" can't go stale.
    */
   @Query(
       value =

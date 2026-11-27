@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.socket.WebSocketSession;
 
-/** v2 READ (P4-T04): ACK {seq} with the marker after the call (brief: ACK, not "none"). */
+/** v2 READ: ACK {seq} with the marker after the call. */
 @ExtendWith(MockitoExtension.class)
 class ReadHandlerTest {
 

@@ -1,6 +1,6 @@
 package com.devcool.domain.member.model;
 
-/** A member's read marker before and after one advance; equal when nothing moved. */
+/** A read marker before and after one advance. */
 public record ReadMarker(long previousSeq, long seq) {
 
   public boolean advanced() {

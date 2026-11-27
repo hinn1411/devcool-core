@@ -27,11 +27,11 @@ Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-e
 | `SUBSCRIBE` | — (uses `channelId`) | `ACK`; membership required |
 | `UNSUBSCRIBE` | — | `ACK` |
 | `SEND` | `{clientMsgId: uuid, contentType: TEXT\|MARKDOWN\|IMAGE\|VIDEO, content?, mediaKey?, replyToId?}` | `ACK {clientMsgId, messageId, seq, createdTime}`; the same result is returned for a retried `clientMsgId` |
-| `EDIT` | `{messageId, content, expectedVersion}` | `ACK {version}` or `NACK {code: CONFLICT\|FORBIDDEN\|EDIT_WINDOW_EXPIRED}` |
-| `DELETE` | `{messageId}` | `ACK` |
-| `REACT` | `{messageId, emoji, on: bool}` | `ACK` |
+| `EDIT` | `{messageId, content, expectedVersion}` | `ACK {messageId, version, editedTime}`; `NACK CONFLICT` (stale version), `FORBIDDEN` (not sender, or 24 h window closed), `NOT_FOUND`, `INVALID` |
+| `DELETE` | `{messageId}` | `ACK`; repeat = `ACK`, no event |
+| `REACT` | `{messageId, emoji, on: bool}` | `ACK`; `NACK CONFLICT` (emoji cap), `INVALID` (bad emoji) |
 | `TYPING` | — | none (fire-and-forget, rate-limited) |
-| `READ` | `{seq}` | none |
+| `READ` | `{seq}` (uses `channelId`) | `ACK {seq}`: the marker after the call (clamped, never moves back) |
 | `RESUME` | `{lastSeq}` | `MESSAGE_NEW` × k in seq order, then `ACK {upToSeq}`; or `RESYNC_REQUIRED` |
 | `PING` | — | `PONG` with the same `reqId` (refreshes presence from P4-T10) |
 | `ASK` | `{question}` | `AI_CHUNK`… then `AI_DONE` or `AI_ERROR`, all with the same `reqId` |
@@ -42,8 +42,8 @@ Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-e
 |---|---|
 | `ACK` / `NACK` | `{…result}` / `{code, message, retryAfterMs?}`. Codes: `UNSUPPORTED`, `INVALID`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL` |
 | `MESSAGE_NEW` | `{messageId, seq, senderId, contentType, content, mediaKey?, replyToId?, createdTime}` |
-| `MESSAGE_UPDATED` | `{messageId, seq, content, version, editedTime}` |
-| `MESSAGE_DELETED` | `{messageId, seq}` |
+| `MESSAGE_UPDATED` | `{messageId, seq, createdTime, content, version, editedTime}`; keep the highest `version` |
+| `MESSAGE_DELETED` | `{messageId, seq, createdTime}`; the seq stays as a tombstone |
 | `REACTION` | `{messageId, emoji, userId, on}` |
 | `TYPING` | `{userId}` (client expires it after 5 s) |
 | `PRESENCE` | `{userId, status: online\|offline, lastSeen?}` |
@@ -58,7 +58,8 @@ Legacy v1 (no `v`, or `v: 1`) is accepted while `devcool.ws.protocol.legacy-v1-e
 `1001` idle: no client frame for 90 s (the client sends `PING` every 25 s) · `1012` restart (after `RECONNECT`) · `1013` overloaded · `4500` slow consumer (send limit tripped; a stuck write ends as 1001/1006) · `4400` protocol version not supported · `4401` unauthenticated.
 
 ## Invariants
-- Commit → ACK → publish, always.
+- Never publish before commit. `SEND`: commit → ACK → publish. `EDIT`/`DELETE`/`REACT`/`READ`: commit → publish → ACK.
+- Events only on a real change; REST changes publish the same events. v1 sessions get only `MESSAGE_NEW`.
 - Message events always carry `messageId` and `seq`. Clients dedupe by `messageId` and detect gaps by `seq`.
 - A frame error never closes the socket.
 - The sender's connection is skipped via `originConnectionId`.

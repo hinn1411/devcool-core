@@ -64,7 +64,6 @@ public class EditMessageService implements EditMessageUseCase {
       throw new MessageEditWindowClosedException();
     }
     MessageContentPolicy.requireValidText(command.content());
-    // Null-safe: the WS EDIT frame (P4-T04) has no @NotNull.
     if (!Objects.equals(command.version(), message.version())) {
       throw new MessageVersionConflictException();
     }

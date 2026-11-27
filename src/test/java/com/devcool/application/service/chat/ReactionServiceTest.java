@@ -14,8 +14,8 @@ import com.devcool.domain.chat.exception.InvalidEmojiException;
 import com.devcool.domain.chat.exception.MessageNotFoundException;
 import com.devcool.domain.chat.exception.ReactionLimitException;
 import com.devcool.domain.chat.model.Emoji;
+import com.devcool.domain.chat.model.MessageRef;
 import com.devcool.domain.chat.model.ReactionEvent;
-import com.devcool.domain.chat.model.ReplyTarget;
 import com.devcool.domain.chat.policy.ReactionPolicy;
 import com.devcool.domain.chat.port.in.command.ReactionCommand;
 import com.devcool.domain.chat.port.out.MessagePort;
@@ -102,15 +102,15 @@ class ReactionServiceTest {
 
     @Test
     void unknownMessage_is404_andWritesNothing() {
-      when(messagePort.findReplyTarget(MESSAGE)).thenReturn(Optional.empty());
+      when(messagePort.findMessageRef(MESSAGE)).thenReturn(Optional.empty());
 
       assertNotFound(service::react);
     }
 
     @Test
     void deletedMessage_is404_andWritesNothing() {
-      when(messagePort.findReplyTarget(MESSAGE))
-          .thenReturn(Optional.of(new ReplyTarget(CHANNEL, NOW.minusSeconds(5))));
+      when(messagePort.findMessageRef(MESSAGE))
+          .thenReturn(Optional.of(new MessageRef(CHANNEL, NOW.minusSeconds(5))));
 
       assertNotFound(service::react);
     }
@@ -146,8 +146,8 @@ class ReactionServiceTest {
 
     @Test
     void deletedMessage_is404() {
-      when(messagePort.findReplyTarget(MESSAGE))
-          .thenReturn(Optional.of(new ReplyTarget(CHANNEL, NOW.minusSeconds(5))));
+      when(messagePort.findMessageRef(MESSAGE))
+          .thenReturn(Optional.of(new MessageRef(CHANNEL, NOW.minusSeconds(5))));
 
       assertNotFound(service::unreact);
     }
@@ -168,7 +168,7 @@ class ReactionServiceTest {
     }
   }
 
-  // ---- live event (P4-T04) ----------------------------------------------------------------------
+  // ---- live event -------------------------------------------------------------------------------
 
   @Nested
   class LiveEvent {
@@ -227,8 +227,8 @@ class ReactionServiceTest {
   // ---- helpers ---------------------------------------------------------------------------------
 
   private void liveMessage() {
-    when(messagePort.findReplyTarget(MESSAGE))
-        .thenReturn(Optional.of(new ReplyTarget(CHANNEL, null)));
+    when(messagePort.findMessageRef(MESSAGE))
+        .thenReturn(Optional.of(new MessageRef(CHANNEL, null)));
   }
 
   private void aliceIsMember(boolean member) {
